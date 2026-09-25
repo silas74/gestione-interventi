@@ -270,10 +270,10 @@ export function App() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
         
         {/* Project Selector Bar */}
-        <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <div className="mb-4 sm:mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <FolderKanban className="w-5 h-5 text-blue-400" />
