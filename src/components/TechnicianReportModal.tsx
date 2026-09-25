@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, PhoneCall, MessageCircle } from 'lucide-react';
+import { X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, PhoneCall, MessageCircle, Share2, Tag } from 'lucide-react';
 import { InterventionRequest, TechnicianReport } from '../types';
-import { downloadInterventionPDF, getInterventionPDFDataUri } from '../lib/pdfGenerator';
+import { downloadInterventionPDF, getInterventionPDFDataUri, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
 import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
+import { COMMON_MATERIALS } from '../lib/materialsData';
 
 interface TechnicianReportModalProps {
   isOpen: boolean;
@@ -73,6 +74,29 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
     };
 
     downloadInterventionPDF(tempIntervention);
+  };
+
+  const handleShareWhatsAppPDF = async () => {
+    const tempReport: TechnicianReport = {
+      technicianName,
+      interventionDate,
+      hoursWorked: Number(hoursWorked),
+      workDone: workDone.trim() || 'On-site technical inspection, testing and maintenance performed.',
+      materialsUsed: materialsUsed.trim(),
+      technicalNotes: technicalNotes.trim(),
+      statusOutcome,
+      technicianSignature,
+      completedAt: new Date().toISOString(),
+    };
+
+    const tempIntervention: InterventionRequest = {
+      ...intervention,
+      status: 'completed',
+      assignedTechnician: technicianName,
+      report: tempReport
+    };
+
+    await shareInterventionPDFViaWhatsApp(tempIntervention);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -242,11 +266,47 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
             />
           </div>
 
-          {/* Replaced Parts and Materials */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Replaced Parts & Materials Used (optional)
-            </label>
+          {/* Replaced Parts and Materials with Quick-Pick Chips */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-300">
+                Replaced Parts & Materials Used (optional)
+              </label>
+              <span className="text-[10px] text-slate-400">Tap below to add common items</span>
+            </div>
+
+            {/* Quick Pick Chips */}
+            <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-1.5 mb-2 text-[11px] text-blue-400 font-semibold">
+                <Tag className="w-3.5 h-3.5" />
+                <span>Quick-Pick Common Spare Parts (Click to add):</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                {COMMON_MATERIALS.map((mat) => (
+                  <button
+                    key={mat.id}
+                    type="button"
+                    onClick={() => {
+                      setMaterialsUsed(prev => {
+                        const trimmed = prev.trim();
+                        if (!trimmed) return `1x ${mat.name}`;
+                        if (trimmed.includes(mat.name)) return trimmed;
+                        return `${trimmed}, 1x ${mat.name}`;
+                      });
+                    }}
+                    className="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-800 hover:bg-blue-600/30 text-slate-300 hover:text-blue-300 border border-slate-700/60 transition active:scale-95 flex items-center gap-1.5"
+                    title={`Add ${mat.name}`}
+                  >
+                    <span className="text-blue-400 font-bold">+</span>
+                    <span>{mat.name}</span>
+                    <span className="text-[9px] px-1 rounded bg-slate-900 text-slate-400 font-mono">
+                      {mat.category}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <input
               type="text"
               value={materialsUsed}
@@ -323,15 +383,27 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
 
           {/* Footer Actions */}
           <div className="pt-3.5 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-            <button
-              type="button"
-              onClick={handlePreviewPDF}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
-              title="Generate and download PDF preview with your signature"
-            >
-              <FileDown className="w-4 h-4 text-blue-400" />
-              <span>Download PDF Preview</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePreviewPDF}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
+                title="Generate and download PDF preview with your signature"
+              >
+                <FileDown className="w-4 h-4 text-blue-400" />
+                <span>PDF Preview</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShareWhatsAppPDF}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-700/60 transition active:scale-95"
+                title="Share PDF report directly on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <span>Share PDF (WhatsApp)</span>
+              </button>
+            </div>
 
             <div className="flex items-center gap-2">
               <button
