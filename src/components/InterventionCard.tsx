@@ -34,6 +34,9 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
   const isPending = !isCompleted; // All open tasks (pending, scheduled, in_progress)
   const isWaiting = intervention.status === 'pending' || intervention.status === 'in_attesa';
   const isUrgent = intervention.priority === 'urgent' || intervention.priority === 'urgente';
+  const isWaitingForParts = (intervention.report?.statusOutcome === 'waiting_for_parts' || 
+                            (intervention.report?.statusOutcome as string) === 'in_attesa_ricambi');
+  const isInProgress = (intervention.status === 'in_progress' || intervention.status === 'in_corso') && !isCompleted;
 
   const isAdmin = currentRole === 'admin';
   const isTechOrAdmin = currentRole === 'admin' || currentRole === 'technician' || currentRole === 'tecnico';
@@ -59,7 +62,11 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
       isPending
         ? isUrgent
           ? 'bg-gradient-to-b from-rose-950/35 via-slate-900 to-slate-900 animate-flash-card-urgent ring-1 ring-red-500/40'
-          : 'bg-gradient-to-b from-rose-950/25 via-slate-900 to-slate-900 border-rose-800/45 hover:border-rose-600/70 shadow-rose-950/20'
+          : isWaitingForParts
+            ? 'bg-gradient-to-b from-pink-950/35 via-slate-900 to-slate-900 border-pink-700/60 hover:border-pink-500/80 shadow-pink-950/30 ring-1 ring-pink-500/30'
+            : isInProgress
+              ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-900 border-amber-700/60 hover:border-amber-500/80 shadow-amber-950/25'
+              : 'bg-gradient-to-b from-rose-950/25 via-slate-900 to-slate-900 border-rose-800/45 hover:border-rose-600/70 shadow-rose-950/20'
         : 'bg-gradient-to-b from-emerald-950/25 via-slate-900 to-slate-900 border-emerald-800/45 hover:border-emerald-600/70 shadow-emerald-950/20'
     }`}>
       
@@ -77,14 +84,18 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
           </div>
         )}
 
-        {/* Top bar: Code, Project, State Badge (RED = TO DO / GREEN = COMPLETED), Priority & Delete */}
+        {/* Top bar: Code, Project, State Badge, Priority & Delete */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             
             {/* Code */}
             <span className={`font-mono text-xs font-bold px-2.5 py-1 rounded-md border ${
               isPending 
-                ? 'bg-rose-950/50 text-rose-200 border-rose-700/50' 
+                ? isWaitingForParts
+                  ? 'bg-pink-950/60 text-pink-200 border-pink-600/60 shadow-sm shadow-pink-900/30'
+                  : isInProgress
+                    ? 'bg-amber-950/50 text-amber-200 border-amber-700/50'
+                    : 'bg-rose-950/50 text-rose-200 border-rose-700/50' 
                 : 'bg-emerald-950/50 text-emerald-200 border-emerald-700/50'
             }`}>
               {intervention.code}
@@ -98,16 +109,26 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               </span>
             )}
 
-            {/* MAIN STATUS BADGE (RED = TO DO, GREEN = COMPLETED) */}
-            {isPending ? (
-              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                <span>TO DO {intervention.status === 'in_progress' || intervention.status === 'in_corso' ? '(In Progress)' : ''}</span>
-              </span>
-            ) : (
+            {/* MAIN STATUS BADGE (PINK = WORKING IN PROGRESS / WAITING FOR PARTS, AMBER = IN PROGRESS, RED = TO DO, GREEN = COMPLETED) */}
+            {isCompleted ? (
               <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>COMPLETED</span>
+              </span>
+            ) : isWaitingForParts ? (
+              <span className="flex items-center gap-1.5 text-xs font-black px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/50 shadow-sm shadow-pink-950/40">
+                <Clock className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                <span>WORKING IN PROGRESS (Waiting for Parts)</span>
+              </span>
+            ) : isInProgress ? (
+              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                <span>WORKING IN PROGRESS</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                <span>TO DO</span>
               </span>
             )}
 
@@ -152,12 +173,16 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
 
         {/* Site & Client Meta info */}
         <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 p-3 rounded-xl border ${
-          isPending
-            ? 'bg-rose-950/20 border-rose-900/40 text-rose-100/90'
-            : 'bg-emerald-950/20 border-emerald-900/40 text-emerald-100/90'
+          isCompleted
+            ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-100/90'
+            : isWaitingForParts
+              ? 'bg-pink-950/25 border-pink-800/40 text-pink-100/95 shadow-sm shadow-pink-950/20'
+              : 'bg-rose-950/20 border-rose-900/40 text-rose-100/90'
         }`}>
           <div className="flex items-start gap-1.5">
-            <MapPin className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+            <MapPin className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+              isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+            }`} />
             <div>
               <span className="font-semibold text-white">{intervention.siteName}</span>
               {intervention.siteAddress && (
@@ -168,7 +193,9 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
 
           <div className="flex flex-col justify-between">
             <div className="flex items-start gap-1.5">
-              <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+              <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+                isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+              }`} />
               <div className="min-w-0">
                 <span className="font-semibold text-white truncate block">{intervention.clientName}</span>
                 {intervention.clientContact && (
@@ -211,20 +238,28 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
         {/* Desired Access Date & Time */}
         <div className="flex items-center gap-3 text-xs mb-3">
           <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-            isPending 
-              ? 'bg-slate-800/80 text-rose-200 border-rose-800/40' 
-              : 'bg-slate-800/80 text-emerald-200 border-emerald-800/40'
+            isCompleted 
+              ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
+              : isWaitingForParts
+                ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
+                : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
           }`}>
-            <Calendar className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+            <Calendar className={`w-3.5 h-3.5 ${
+              isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+            }`} />
             <span>Date: <strong>{intervention.desiredAccessDate}</strong></span>
           </div>
           {intervention.desiredAccessTime && (
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-              isPending 
-                ? 'bg-slate-800/80 text-rose-200 border-rose-800/40' 
-                : 'bg-slate-800/80 text-emerald-200 border-emerald-800/40'
+              isCompleted 
+                ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
+                : isWaitingForParts
+                  ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
+                  : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
             }`}>
-              <Clock className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+              <Clock className={`w-3.5 h-3.5 ${
+                isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+              }`} />
               <span>Time: <strong>{intervention.desiredAccessTime}</strong></span>
             </div>
           )}
@@ -270,6 +305,66 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Waiting for Parts Interim Report Section (PINK TONES) */}
+        {!isCompleted && isWaitingForParts && intervention.report && (
+          <div className="bg-pink-950/30 border border-pink-700/50 rounded-xl p-3.5 mb-3 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-pink-300">
+                <Clock className="w-4 h-4 text-pink-400 animate-pulse" />
+                <span>Working in Progress — Waiting for Parts (Tech: {intervention.report.technicianName})</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-200 border border-pink-500/30">
+                <Clock className="w-3 h-3 text-pink-400" />
+                <span>{intervention.report.hoursWorked} hours logged</span>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-200">
+              <strong className="text-pink-300">Work performed: </strong>
+              {intervention.report.workDone}
+            </div>
+
+            {intervention.report.materialsUsed && (
+              <div className="text-xs text-slate-300">
+                <strong className="text-pink-400">Parts Needed / Materials: </strong>
+                {intervention.report.materialsUsed}
+              </div>
+            )}
+
+            {intervention.report.technicalNotes && (
+              <div className="text-xs text-slate-300">
+                <strong className="text-pink-400">Notes: </strong>
+                {intervention.report.technicalNotes}
+              </div>
+            )}
+
+            {/* Interim Report PDF & WhatsApp buttons */}
+            <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => downloadInterventionPDF(intervention)}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-900/40 transition active:scale-95"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>Interim PDF</span>
+                </button>
+                <button
+                  onClick={() => shareInterventionPDFViaWhatsApp(intervention)}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow transition active:scale-95"
+                  title="Share interim report directly via WhatsApp"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Send PDF on WhatsApp</span>
+                </button>
+              </div>
+
+              <span className="text-[11px] text-pink-300/80">
+                Logged: {intervention.report.interventionDate}
+              </span>
             </div>
           </div>
         )}
@@ -357,12 +452,18 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
 
       {/* Action Footer */}
       <div className={`pt-3 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 ${
-        isPending ? 'border-rose-900/40' : 'border-emerald-900/40'
+        isCompleted 
+          ? 'border-emerald-900/40' 
+          : isWaitingForParts
+            ? 'border-pink-800/40'
+            : 'border-rose-900/40'
       }`}>
         
         {/* Left side: assigned technician info */}
         <div className="text-xs text-slate-400 flex items-center gap-1.5">
-          <Shield className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+          <Shield className={`w-3.5 h-3.5 ${
+            isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+          }`} />
           <span className="truncate">
             {intervention.assignedTechnician ? `Assigned to ${intervention.assignedTechnician}` : 'No technician assigned'}
           </span>
@@ -389,11 +490,13 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 ${
                 isCompleted 
                   ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-700/60' 
-                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-900/30'
+                  : isWaitingForParts
+                    ? 'bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-900/30'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-900/30'
               }`}
             >
               <Wrench className="w-3.5 h-3.5" />
-              <span>{isCompleted ? 'Edit Report' : 'Execute & Complete'}</span>
+              <span>{isCompleted ? 'Edit Report' : isWaitingForParts ? 'Update Parts / Complete' : 'Execute & Complete'}</span>
             </button>
           )}
 
