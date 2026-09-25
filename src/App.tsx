@@ -83,16 +83,16 @@ export function App() {
   const handleLogin = (user: UserAccount) => {
     setCurrentUser(user);
     setCurrentSession(user);
-    showToast(`Benvenuto ${user.name}!`);
+    showToast(`Welcome ${user.name}!`);
   };
 
   const handleLogout = () => {
     clearCurrentSession();
     setCurrentUser(null);
-    showToast('Disconnesso con successo.');
+    showToast('Logged out successfully.');
   };
 
-  // User Management (Solo Costantino)
+  // User Management (Costantino Only)
   const handleSaveUser = (user: UserAccount) => {
     saveUser(user);
     const updated = fetchUsers();
@@ -101,34 +101,34 @@ export function App() {
       setCurrentUser(user);
       setCurrentSession(user);
     }
-    showToast(`Utente ${user.name} salvato con successo.`);
+    showToast(`User ${user.name} saved successfully.`);
   };
 
   const handleDeleteUser = (userId: string) => {
     deleteUser(userId);
     setUsers(fetchUsers());
-    showToast('Utente eliminato.');
+    showToast('User deleted.');
   };
 
   // Project Management
   const handleSaveProject = (project: Project) => {
     saveProject(project);
     setProjects(fetchProjects());
-    showToast(`Progetto ${project.name} salvato.`);
+    showToast(`Project ${project.name} saved.`);
   };
 
   const handleDeleteProject = (projectId: string) => {
     deleteProject(projectId);
     setProjects(fetchProjects());
     if (activeProjectId === projectId) setActiveProjectId('all');
-    showToast('Progetto eliminato.');
+    showToast('Project deleted.');
   };
 
   // Intervention Handlers
   const handleCreateIntervention = async (newReq: InterventionRequest) => {
     await saveIntervention(newReq);
     setInterventions(prev => [newReq, ...prev]);
-    showToast(`Richiesta ${newReq.code} creata per ${newReq.projectName || 'il progetto'}!`);
+    showToast(`Request ${newReq.code} created for ${newReq.projectName || 'the project'}!`);
   };
 
   const handleTakeCharge = async (id: string, technicianName: string) => {
@@ -137,14 +137,14 @@ export function App() {
 
     const updated: InterventionRequest = {
       ...item,
-      status: 'in_corso',
+      status: 'in_progress',
       assignedTechnician: technicianName,
       updatedAt: new Date().toISOString()
     };
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === id ? updated : i));
-    showToast(`Intervento ${item.code} preso in carico da ${technicianName}`);
+    showToast(`Task ${item.code} taken in charge by ${technicianName}`);
   };
 
   const handleSaveReport = async (interventionId: string, report: TechnicianReport) => {
@@ -153,7 +153,7 @@ export function App() {
 
     const updated: InterventionRequest = {
       ...item,
-      status: 'completato',
+      status: 'completed',
       assignedTechnician: report.technicianName,
       report,
       updatedAt: new Date().toISOString()
@@ -161,7 +161,7 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Rapporto salvato e verbale PDF generato per ${item.code}!`);
+    showToast(`Report saved and PDF document generated for ${item.code}!`);
   };
 
   const handleSaveFeedback = async (interventionId: string, feedback: ClientFeedback) => {
@@ -176,48 +176,48 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Riscontro registrato per ${item.code}!`);
+    showToast(`Client feedback recorded for ${item.code}!`);
   };
 
   const handleDelete = async (id: string) => {
     const item = interventions.find(i => i.id === id);
     if (!item) return;
-    if (!window.confirm(`Sei sicuro di voler eliminare la richiesta ${item.code}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete request ${item.code}?`)) return;
 
     await deleteIntervention(id);
     setInterventions(prev => prev.filter(i => i.id !== id));
-    showToast(`Intervento eliminato.`);
+    showToast(`Intervention deleted.`);
   };
 
-  // Se l'utente non è autenticato, mostra schermata di Login
+  // If user is not authenticated, show Login screen
   if (!currentUser) {
     return <LoginScreen users={users} onLogin={handleLogin} />;
   }
 
   const isAdmin = currentUser.role === 'admin';
 
-  // Progetti visibili per questo utente
+  // Visible projects for this user
   const visibleProjects = projects.filter(p => {
     if (isAdmin || currentUser.assignedProjectIds.includes('*')) return true;
     return currentUser.assignedProjectIds.includes(p.id);
   });
 
-  // Filtro interventi per permessi progetto + filtro attivo + ricerca
+  // Filter interventions by permissions + active project + search term
   const filteredInterventions = interventions.filter(item => {
-    // 1. Permesso utente sul progetto
+    // 1. User permission for project
     if (!isAdmin && !currentUser.assignedProjectIds.includes('*')) {
       if (item.projectId && !currentUser.assignedProjectIds.includes(item.projectId)) {
         return false;
       }
     }
 
-    // 2. Filtro Progetto selezionato
+    // 2. Selected project filter
     if (activeProjectId !== 'all') {
       if (item.projectId && item.projectId !== activeProjectId) return false;
       if (!item.projectId && activeProjectId !== 'proj-workbank') return false;
     }
 
-    // 3. Ricerca
+    // 3. Search query
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       const match = 
@@ -231,17 +231,21 @@ export function App() {
       if (!match) return false;
     }
 
-    // 4. Solo urgenti
-    if (onlyUrgent && item.priority !== 'urgente') {
+    // 4. Only urgent
+    if (onlyUrgent && item.priority !== 'urgent' && item.priority !== 'urgente') {
       return false;
     }
 
     return true;
   });
 
-  // ================= DIVISIONE ROSSO (DA FARE) / VERDE (FATTI) =================
-  const pendingInterventions = filteredInterventions.filter(i => i.status !== 'completato');
-  const completedInterventions = filteredInterventions.filter(i => i.status === 'completato');
+  // ================= RED (TO DO) / GREEN (COMPLETED) DIVISION =================
+  const pendingInterventions = filteredInterventions.filter(
+    i => i.status !== 'completed' && i.status !== 'completato'
+  );
+  const completedInterventions = filteredInterventions.filter(
+    i => i.status === 'completed' || i.status === 'completato'
+  );
 
   const activeProjectObj = projects.find(p => p.id === activeProjectId);
 
@@ -278,8 +282,8 @@ export function App() {
             <div className="flex items-center gap-2">
               <FolderKanban className="w-5 h-5 text-blue-400" />
               <div>
-                <h2 className="text-sm font-bold text-white">Classificazione Difetti & Interventi per Progetto</h2>
-                <p className="text-[11px] text-slate-400">Seleziona il progetto per visualizzare solo i suoi difetti specifici</p>
+                <h2 className="text-sm font-bold text-white">Project Defect & Service Classification</h2>
+                <p className="text-[11px] text-slate-400">Select a project to view only its dedicated defects and service tasks</p>
               </div>
             </div>
 
@@ -288,7 +292,7 @@ export function App() {
                 onClick={() => setIsProjectsModalOpen(true)}
                 className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 self-start sm:self-center"
               >
-                <span>Gestisci o Aggiungi Progetti &rarr;</span>
+                <span>Manage or Add Projects &rarr;</span>
               </button>
             )}
           </div>
@@ -304,7 +308,7 @@ export function App() {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Tutti i Progetti</span>
+              <span>All Projects</span>
             </button>
 
             {visibleProjects.map((p) => {
@@ -339,7 +343,7 @@ export function App() {
                 <span className="text-slate-400 ml-2">({activeProjectObj.code}) — {activeProjectObj.description}</span>
               </div>
               <div className="text-[11px] text-slate-400">
-                {activeProjectObj.siteAddress && <span>Sede: {activeProjectObj.siteAddress}</span>}
+                {activeProjectObj.siteAddress && <span>Facility: {activeProjectObj.siteAddress}</span>}
               </div>
             </div>
           )}
@@ -363,7 +367,7 @@ export function App() {
         {/* Loading state */}
         {loading && (
           <div className="py-20 text-center text-slate-400 text-sm">
-            Caricamento interventi in corso...
+            Loading service tasks...
           </div>
         )}
 
@@ -371,24 +375,24 @@ export function App() {
         {!loading && filteredInterventions.length === 0 && (
           <div className="py-16 text-center border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30 p-8">
             <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-slate-300">Nessun intervento trovato per questo filtro</h3>
+            <h3 className="text-base font-semibold text-slate-300">No service tasks found for this filter</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-              Non ci sono richieste con i parametri selezionati.
+              There are no service requests matching the selected criteria.
             </p>
             <button
               onClick={() => setIsNewModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Inserisci Nuovo Guasto / Intervento</span>
+              <span>Create New Defect / Service Ticket</span>
             </button>
           </div>
         )}
 
-        {/* ================= SEZIONE 1: 🔴 INTERVENTI DA FARE (TONALITÀ ROSSO) ================= */}
+        {/* ================= SECTION 1: 🔴 OPEN & TO DO SERVICE TASKS (RED TONES) ================= */}
         {!loading && showPendingSection && (
           <section className="mb-10">
-            {/* Header Sezione Rosso */}
+            {/* Red Section Header */}
             <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-slate-900 border border-rose-800/50 shadow-lg shadow-rose-950/20">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
@@ -396,12 +400,12 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>INTERVENTI DA FARE & APERTI</span>
+                    <span>TO DO & OPEN INTERVENTIONS</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-sm">
                       {pendingInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-rose-300/80">Lavori pianificati, in attesa di intervento tecnico o in corso on-site</p>
+                  <p className="text-[11px] text-rose-300/80">Scheduled work, awaiting technician dispatch or in progress on-site</p>
                 </div>
               </div>
 
@@ -410,14 +414,14 @@ export function App() {
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow transition active:scale-95"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Aggiungi Guasto</span>
+                <span>Add Defect</span>
               </button>
             </div>
 
-            {/* Griglia Card Da Fare */}
+            {/* Red Cards Grid */}
             {pendingInterventions.length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-rose-900/30 bg-rose-950/10 text-xs text-rose-300/60">
-                Nessun intervento da fare al momento in questa vista. Tutti i lavori sono completati!
+                No open tasks at the moment for this view. All service tickets are completed!
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -439,10 +443,10 @@ export function App() {
           </section>
         )}
 
-        {/* ================= SEZIONE 2: 🟢 INTERVENTI GIÀ FATTI (TONALITÀ VERDE) ================= */}
+        {/* ================= SECTION 2: 🟢 COMPLETED & CLOSED SERVICE TASKS (GREEN TONES) ================= */}
         {!loading && showCompletedSection && (
           <section className="mb-10">
-            {/* Header Sezione Verde */}
+            {/* Green Section Header */}
             <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-800/50 shadow-lg shadow-emerald-950/20">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
@@ -450,20 +454,20 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>INTERVENTI GIÀ FATTI & COMPLETATI</span>
+                    <span>COMPLETED INTERVENTIONS</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-extrabold shadow-sm">
                       {completedInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-emerald-300/80">Lavori terminati con ore consuntivate, verbale tecnico PDF e riscontro cliente</p>
+                  <p className="text-[11px] text-emerald-300/80">Finished tasks with logged hours, signed PDF report and client feedback</p>
                 </div>
               </div>
             </div>
 
-            {/* Griglia Card Fatti */}
+            {/* Green Cards Grid */}
             {completedInterventions.length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-emerald-900/30 bg-emerald-950/10 text-xs text-emerald-300/60">
-                Nessun intervento completato ancora per i filtri selezionati.
+                No completed interventions yet for the selected filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -489,7 +493,7 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500">
-        Gestione Interventi &copy; {new Date().getFullYear()} — Amministrato da Costantino
+        Field Service Management &copy; {new Date().getFullYear()} — Administered by Costantino
       </footer>
 
       {/* Modals */}
