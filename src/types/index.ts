@@ -73,6 +73,7 @@ export interface UserAccount {
   password: string; // Manually assigned and managed by Costantino
   name: string;
   role: AppRole; // Only Costantino is 'admin'
+  phone?: string; // Contact phone / mobile number
   assignedProjectIds: string[]; // List of project IDs or ['*'] for all
   createdAt: string;
 }
