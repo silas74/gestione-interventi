@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, FolderPlus, Folder, Trash2, Edit3 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, FolderPlus, Folder, Trash2, Edit3, Building, MapPin, Check } from 'lucide-react';
 import { Project } from '../types';
 
 interface ProjectManagementModalProps {
@@ -8,6 +8,7 @@ interface ProjectManagementModalProps {
   projects: Project[];
   onSaveProject: (project: Project) => void;
   onDeleteProject: (projectId: string) => void;
+  initialCreate?: boolean;
 }
 
 export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
@@ -16,6 +17,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
   projects,
   onSaveProject,
   onDeleteProject,
+  initialCreate = false,
 }) => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -25,6 +27,23 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
   const [description, setDescription] = useState('');
   const [clientName, setClientName] = useState('');
   const [siteAddress, setSiteAddress] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialCreate) {
+        setIsCreating(true);
+        setEditingProject(null);
+        setName('');
+        setCode('');
+        setDescription('');
+        setClientName('');
+        setSiteAddress('');
+      } else {
+        setIsCreating(false);
+        setEditingProject(null);
+      }
+    }
+  }, [isOpen, initialCreate]);
 
   if (!isOpen) return null;
 
