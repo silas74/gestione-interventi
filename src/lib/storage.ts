@@ -368,3 +368,95 @@ export function generateNextCode(currentItems: InterventionRequest[], projectCod
   const pad = String(count).padStart(3, '0');
   return `${projectCode}-${year}-${pad}`;
 }
+
+// ================= BACKUP & RESTORE (JSON) =================
+
+export interface FullBackupPayload {
+  version: string;
+  exportedAt: string;
+  app: string;
+  interventions: InterventionRequest[];
+  projects: Project[];
+  users: UserAccount[];
+}
+
+export async function createFullBackupPayload(): Promise<FullBackupPayload> {
+  const interventions = await fetchInterventions();
+  const projects = fetchProjects();
+  const users = fetchUsers();
+
+  return {
+    version: '1.0.0',
+    exportedAt: new Date().toISOString(),
+    app: 'FieldService_Interventi',
+    interventions,
+    projects,
+    users
+  };
+}
+
+export async function exportBackupToFile(): Promise<{ filename: string; sizeKb: number }> {
+  const payload = await createFullBackupPayload();
+  const jsonStr = JSON.stringify(payload, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const filename = `interventi_backup_${dateStr}.json`;
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+
+  return {
+    filename,
+    sizeKb: Math.round(blob.size / 1024)
+  };
+}
+
+export function restoreBackupFromJson(jsonString: string): {
+  success: boolean;
+  message: string;
+  interventions?: InterventionRequest[];
+  projects?: Project[];
+  users?: UserAccount[];
+} {
+  try {
+    const data = JSON.parse(jsonString);
+
+    if (!data || typeof data !== 'object') {
+      return { success: false, message: 'Invalid JSON file format.' };
+    }
+
+    if (!Array.isArray(data.interventions) && !Array.isArray(data.projects)) {
+      return { success: false, message: 'JSON file does not contain valid interventions or projects.' };
+    }
+
+    const restoredInterventions: InterventionRequest[] = Array.isArray(data.interventions) ? data.interventions : [];
+    const restoredProjects: Project[] = Array.isArray(data.projects) ? data.projects : [];
+    const restoredUsers: UserAccount[] = Array.isArray(data.users) ? data.users : [];
+
+    if (restoredInterventions.length > 0) {
+      localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(restoredInterventions));
+    }
+    if (restoredProjects.length > 0) {
+      localStorage.setItem(STORAGE_PROJECTS, JSON.stringify(restoredProjects));
+    }
+    if (restoredUsers.length > 0) {
+      localStorage.setItem(STORAGE_USERS, JSON.stringify(restoredUsers));
+    }
+
+    return {
+      success: true,
+      message: `Successfully restored ${restoredInterventions.length} interventions, ${restoredProjects.length} projects, and ${restoredUsers.length} users.`,
+      interventions: restoredInterventions,
+      projects: restoredProjects,
+      users: restoredUsers
+    };
+  } catch (err: any) {
+    return { success: false, message: `Failed to parse backup JSON: ${err?.message || 'Syntax error'}` };
+  }
+}
+
