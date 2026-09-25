@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  InterventionRequest, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
+  InterventionRequest, InterventionStatus, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
 } from './types';
 import { 
   fetchInterventions, saveIntervention, deleteIntervention,
@@ -173,9 +173,12 @@ export function App() {
     const item = interventions.find(i => i.id === interventionId);
     if (!item) return;
 
+    const isResolved = report.statusOutcome === 'resolved' || (report.statusOutcome as string) === 'risolto';
+    const newStatus: InterventionStatus = isResolved ? 'completed' : 'in_progress';
+
     const updated: InterventionRequest = {
       ...item,
-      status: 'completed',
+      status: newStatus,
       assignedTechnician: report.technicianName,
       report,
       updatedAt: new Date().toISOString()
@@ -183,7 +186,14 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Report saved and PDF document generated for ${item.code}!`);
+
+    if (report.statusOutcome === 'waiting_for_parts' || (report.statusOutcome as string) === 'in_attesa_ricambi') {
+      showToast(`Report saved: ${item.code} marked as Working in Progress (Waiting for parts) 🌸`);
+    } else if (isResolved) {
+      showToast(`Report saved and ticket completed for ${item.code}! 🟢`);
+    } else {
+      showToast(`Report saved: ${item.code} marked as Working in Progress (Partial) 🟡`);
+    }
   };
 
   const handleSaveFeedback = async (interventionId: string, feedback: ClientFeedback) => {
