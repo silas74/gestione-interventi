@@ -2,10 +2,12 @@ import React from 'react';
 import { 
   Calendar, Clock, MapPin, User, Phone, AlertTriangle, 
   CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
-  Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle
+  Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
+  PhoneCall, MessageCircle, Share2
 } from 'lucide-react';
 import { InterventionRequest, AppRole, DefectPhoto } from '../types';
 import { downloadInterventionPDF } from '../lib/pdfGenerator';
+import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
 
 interface InterventionCardProps {
   intervention: InterventionRequest;
@@ -95,16 +97,29 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             </span>
           </div>
 
-          {/* Delete button (Admin or owner) */}
-          {(isAdmin || isWaiting) && (
-            <button
-              onClick={() => onDelete(intervention.id)}
-              className="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-800 transition"
-              title="Delete request"
+          {/* Top Quick Actions: WhatsApp Share + Delete */}
+          <div className="flex items-center gap-1">
+            <a
+              href={getTicketShareWhatsAppUri(intervention)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-slate-800 transition active:scale-95"
+              title="Share ticket summary via WhatsApp"
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+              <Share2 className="w-4 h-4" />
+            </a>
+
+            {/* Delete button (Admin or owner) */}
+            {(isAdmin || isWaiting) && (
+              <button
+                onClick={() => onDelete(intervention.id)}
+                className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition active:scale-95"
+                title="Delete request"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Title */}
@@ -130,17 +145,45 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-start gap-1.5">
-            <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
-            <div>
-              <span className="font-semibold text-white">{intervention.clientName}</span>
-              {intervention.clientContact && (
-                <div className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <Phone className="w-2.5 h-2.5" />
-                  <span>{intervention.clientContact}</span>
-                </div>
-              )}
+          <div className="flex flex-col justify-between">
+            <div className="flex items-start gap-1.5">
+              <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+              <div className="min-w-0">
+                <span className="font-semibold text-white truncate block">{intervention.clientName}</span>
+                {intervention.clientContact && (
+                  <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                    <Phone className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{intervention.clientContact}</span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Quick Call & Direct WhatsApp Action Buttons */}
+            {intervention.clientContact && (
+              <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-800/60 flex-wrap">
+                {getTelUri(intervention.clientContact) && (
+                  <a
+                    href={getTelUri(intervention.clientContact)!}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                    title={`Direct Call: ${intervention.clientContact}`}
+                  >
+                    <PhoneCall className="w-3 h-3 text-blue-400" />
+                    <span>Call</span>
+                  </a>
+                )}
+                <a
+                  href={getClientWhatsAppUri(intervention)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                  title={`Direct WhatsApp chat with ${intervention.clientName}`}
+                >
+                  <MessageCircle className="w-3 h-3 text-emerald-400" />
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
