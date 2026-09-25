@@ -41,6 +41,7 @@ export function App() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
+  const [openProjectCreateDirectly, setOpenProjectCreateDirectly] = useState(false);
   const [reportModalIntervention, setReportModalIntervention] = useState<InterventionRequest | null>(null);
   const [feedbackModalIntervention, setFeedbackModalIntervention] = useState<InterventionRequest | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<DefectPhoto | null>(null);
@@ -114,8 +115,10 @@ export function App() {
   // Project Management
   const handleSaveProject = (project: Project) => {
     saveProject(project);
-    setProjects(fetchProjects());
-    showToast(`Project ${project.name} saved.`);
+    const updated = fetchProjects();
+    setProjects(updated);
+    setActiveProjectId(project.id);
+    showToast(`Project ${project.name} (${project.code}) saved successfully!`);
   };
 
   const handleDeleteProject = (projectId: string) => {
@@ -301,12 +304,29 @@ export function App() {
             </div>
 
             {isAdmin && (
-              <button
-                onClick={() => setIsProjectsModalOpen(true)}
-                className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 self-start sm:self-center"
-              >
-                <span>Manage or Add Projects &rarr;</span>
-              </button>
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  onClick={() => {
+                    setOpenProjectCreateDirectly(true);
+                    setIsProjectsModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95"
+                  title="Create a new Project"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>+ Add New Project</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setOpenProjectCreateDirectly(false);
+                    setIsProjectsModalOpen(true);
+                  }}
+                  className="text-xs text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 transition"
+                  title="Manage all projects"
+                >
+                  <span>Manage</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -346,6 +366,20 @@ export function App() {
                 </button>
               );
             })}
+
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setOpenProjectCreateDirectly(true);
+                  setIsProjectsModalOpen(true);
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 border-dashed active:scale-95 shrink-0"
+                title="Create a new Project"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-blue-400" />
+                <span>+ New Project</span>
+              </button>
+            )}
           </div>
 
           {/* Project Focus Header info */}
@@ -527,6 +561,11 @@ export function App() {
         existingInterventions={interventions}
         projects={visibleProjects}
         defaultProjectId={activeProjectId !== 'all' ? activeProjectId : undefined}
+        onAddNewProject={isAdmin ? () => {
+          setIsNewModalOpen(false);
+          setOpenProjectCreateDirectly(true);
+          setIsProjectsModalOpen(true);
+        } : undefined}
       />
 
       <TechnicianReportModal
@@ -564,10 +603,14 @@ export function App() {
       {isAdmin && (
         <ProjectManagementModal
           isOpen={isProjectsModalOpen}
-          onClose={() => setIsProjectsModalOpen(false)}
+          onClose={() => {
+            setIsProjectsModalOpen(false);
+            setOpenProjectCreateDirectly(false);
+          }}
           projects={projects}
           onSaveProject={handleSaveProject}
           onDeleteProject={handleDeleteProject}
+          initialCreate={openProjectCreateDirectly}
         />
       )}
 
