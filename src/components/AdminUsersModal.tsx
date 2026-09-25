@@ -26,7 +26,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<AppRole>('utente');
+  const [role, setRole] = useState<AppRole>('user');
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
   if (!isOpen) return null;
@@ -37,7 +37,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
     setName('');
     setUsername('');
     setPassword('');
-    setRole('utente');
+    setRole('user');
     setSelectedProjectIds(['proj-workbank']);
   };
 
@@ -58,7 +58,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
 
   const handleToggleProject = (projId: string) => {
     if (selectedProjectIds.includes('*')) {
-      // Se aveva tutti, passa a selezione singola escludendo o includendo
+      // If was all, switch to individual selection excluding or including
       setSelectedProjectIds(projects.map(p => p.id).filter(id => id !== projId));
       return;
     }
@@ -81,7 +81,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !username.trim() || !password.trim()) {
-      alert('Tutti i campi sono obbligatori.');
+      alert('All fields are required.');
       return;
     }
 
@@ -111,13 +111,13 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Pannello Amministrazione Utenti & Privilegi</span>
+                <span>User & Permissions Administration Panel</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Solo Costantino (Admin)
+                  Costantino Only (Admin)
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                Crea utenti, assegna credenziali manuali, modifica privilegi e assegna progetti
+                Create users, set manual credentials, modify permissions and allocate projects
               </p>
             </div>
           </div>
@@ -136,14 +136,14 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
           {!isCreating && !editingUser && (
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-300">
-                Utenti Registrati a Sistema ({users.length})
+                Registered System Users ({users.length})
               </span>
               <button
                 onClick={startCreate}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Nuovo Utente</span>
+                <span>New User</span>
               </button>
             </div>
           )}
@@ -154,35 +154,35 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                 <h4 className="text-sm font-bold text-white flex items-center gap-2">
                   <UserPlus className="w-4 h-4 text-blue-400" />
-                  <span>{isCreating ? 'Crea Nuovo Utente' : `Modifica Utente: ${editingUser?.name}`}</span>
+                  <span>{isCreating ? 'Create New User' : `Edit User: ${editingUser?.name}`}</span>
                 </h4>
                 <button
                   type="button"
                   onClick={cancelForm}
                   className="text-xs text-slate-400 hover:text-white"
                 >
-                  Annulla
+                  Cancel
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Nome Completo <span className="text-rose-400">*</span>
+                    Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="es. Marco Bianchi"
+                    placeholder="e.g. John Doe"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Ruolo / Privilegi <span className="text-rose-400">*</span>
+                    Role / Permissions <span className="text-rose-400">*</span>
                   </label>
                   <select
                     value={role}
@@ -190,15 +190,15 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                     onChange={(e) => setRole(e.target.value as AppRole)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                   >
-                    <option value="utente">Utente Richiedente (Invia richieste, scarica PDF e lascia riscontro)</option>
-                    <option value="tecnico">Tecnico Manutentore (Prende in carico ed esegue interventi)</option>
-                    <option value="admin">SuperAdmin (Costantino - Controllo Totale)</option>
+                    <option value="user">Requester User (Submits requests, downloads PDFs and signs feedback)</option>
+                    <option value="technician">Field Technician (Takes charge and performs service tasks)</option>
+                    <option value="admin">SuperAdmin (Costantino - Full Control)</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Username di Accesso <span className="text-rose-400">*</span>
+                    Login Username <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -206,7 +206,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                     disabled={editingUser?.username === 'costantino'}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="es. mbianchi"
+                    placeholder="e.g. jdoe"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                   />
                 </div>
@@ -214,32 +214,32 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                     <Key className="w-3.5 h-3.5 text-amber-400" />
-                    Password Assegnata <span className="text-rose-400">*</span>
+                    Assigned Password <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password manuale da comunicare all'utente"
+                    placeholder="Manual password to communicate to user"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-amber-300 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
 
-              {/* Assegnazione Progetti */}
+              {/* Assign Projects */}
               <div className="pt-2">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                     <FolderCheck className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Assegna Progetti a cui l'Utente ha Accesso:</span>
+                    <span>Assign Projects User Has Access To:</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleSelectAllProjects}
                     className="text-[11px] text-blue-400 hover:text-blue-300 underline"
                   >
-                    {selectedProjectIds.includes('*') || selectedProjectIds.length === projects.length ? 'Deseleziona tutti' : 'Assegna Tutti i Progetti'}
+                    {selectedProjectIds.includes('*') || selectedProjectIds.length === projects.length ? 'Deselect all' : 'Assign All Projects'}
                   </button>
                 </div>
 
@@ -277,13 +277,13 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                   onClick={cancelForm}
                   className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800"
                 >
-                  Annulla
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow"
                 >
-                  {isCreating ? 'Crea Utente' : 'Salva Modifiche'}
+                  {isCreating ? 'Create User' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -294,8 +294,8 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
             {users.map((u) => {
               const isCostantino = u.username === 'costantino';
               const assignedProjs = u.assignedProjectIds.includes('*')
-                ? 'Tutti i progetti'
-                : projects.filter(p => u.assignedProjectIds.includes(p.id)).map(p => p.name).join(', ') || 'Nessun progetto assegnato';
+                ? 'All projects'
+                : projects.filter(p => u.assignedProjectIds.includes(p.id)).map(p => p.name).join(', ') || 'No projects assigned';
 
               return (
                 <div
@@ -305,7 +305,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                   <div className="flex items-start gap-3">
                     <div className={`p-2 rounded-xl mt-0.5 ${
                       u.role === 'admin' ? 'bg-amber-500/10 text-amber-400' :
-                      u.role === 'tecnico' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'
+                      (u.role === 'technician' || u.role === 'tecnico') ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'
                     }`}>
                       {u.role === 'admin' ? <Shield className="w-5 h-5" /> : <User className="w-5 h-5" />}
                     </div>
@@ -315,7 +315,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                         <span className="text-sm font-bold text-white">{u.name}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
-                          u.role === 'tecnico' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          (u.role === 'technician' || u.role === 'tecnico') ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                         }`}>
                           {u.role.toUpperCase()}
                         </span>
@@ -332,7 +332,7 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                       </div>
 
                       <div className="text-xs text-slate-400 mt-1">
-                        Progetti assegnati: <span className="text-blue-300 font-medium">{assignedProjs}</span>
+                        Assigned projects: <span className="text-blue-300 font-medium">{assignedProjs}</span>
                       </div>
                     </div>
                   </div>
@@ -342,21 +342,21 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                     <button
                       onClick={() => startEdit(u)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-                      title="Modifica privilegi e password"
+                      title="Edit permissions and credentials"
                     >
                       <Edit3 className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Modifica</span>
+                      <span>Edit</span>
                     </button>
 
                     {!isCostantino && (
                       <button
                         onClick={() => {
-                          if (confirm(`Sei sicuro di voler eliminare l'utente ${u.name}?`)) {
+                          if (confirm(`Are you sure you want to delete user ${u.name}?`)) {
                             onDeleteUser(u.id);
                           }
                         }}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
-                        title="Elimina utente"
+                        title="Delete user"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
