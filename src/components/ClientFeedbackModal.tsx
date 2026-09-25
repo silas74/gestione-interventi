@@ -51,17 +51,17 @@ export const ClientFeedbackModal: React.FC<ClientFeedbackModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col max-h-[94vh] sm:max-h-[92vh] overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-950/70">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Riscontro & Risposta del Richiedente</h3>
+              <h3 className="text-sm sm:text-base font-bold text-white">Riscontro & Risposta Richiedente</h3>
               <p className="text-xs text-slate-400">Valuta il lavoro svolto dal tecnico e conferma l'esito</p>
             </div>
           </div>
@@ -74,8 +74,8 @@ export const ClientFeedbackModal: React.FC<ClientFeedbackModalProps> = ({
         </div>
 
         {/* Technician Work Summary & PDF Download */}
-        <div className="bg-slate-950 p-4 border-b border-slate-800 space-y-2">
-          <div className="flex items-center justify-between">
+        <div className="bg-slate-950 p-3.5 sm:p-4 border-b border-slate-800 space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="text-xs text-slate-300">
               <span className="font-semibold text-white">Lavoro Eseguito da: </span>
               {intervention.report?.technicianName || intervention.assignedTechnician || 'Tecnico On-Site'} (
