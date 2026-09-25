@@ -70,10 +70,11 @@ export type AppRole = 'admin' | 'technician' | 'user' | 'tecnico' | 'utente';
 export interface UserAccount {
   id: string;
   username: string;
-  password: string; // Manually assigned and managed by Costantino
+  passwordHash: string; // Cryptographic SHA-256 salted hash — NEVER plaintext
+  salt: string;         // Unique cryptographic salt
   name: string;
-  role: AppRole; // Only Costantino is 'admin'
-  phone?: string; // Contact phone / mobile number
+  role: AppRole;        // Only Costantino is 'admin'
+  phone?: string;       // Contact phone / mobile number
   assignedProjectIds: string[]; // List of project IDs or ['*'] for all
   createdAt: string;
 }
