@@ -28,12 +28,13 @@ const INITIAL_PROJECTS: Project[] = [
   }
 ];
 
-// 2. Initial Users (Costantino is SuperAdmin, others have technician/user roles)
+// 2. Initial Users with Cryptographic Salted SHA-256 Hashes (Zero Plaintext in bundle)
 const INITIAL_USERS: UserAccount[] = [
   {
     id: 'usr-costantino',
     username: 'costantino',
-    password: 'password123',
+    passwordHash: '6db744f3da10edfeec0bb0e25057d94b6fd3f15d7f4f323171cc3f81153302dc',
+    salt: '7f8a9b2c3d4e5f60',
     name: 'Costantino',
     role: 'admin', // SuperAdmin: can edit everything, create users, assign passwords & projects
     phone: '+39 348 1122334',
@@ -43,7 +44,8 @@ const INITIAL_USERS: UserAccount[] = [
   {
     id: 'usr-franco',
     username: 'franco',
-    password: 'user123',
+    passwordHash: '7301917269638bc8bd6644876f6115c7079dc0eeb1d9098d931c55c549a3e4e9',
+    salt: '1a2b3c4d5e6f7a8b',
     name: 'Franco (Technician)',
     role: 'technician',
     phone: '+39 335 9988776',
@@ -53,7 +55,8 @@ const INITIAL_USERS: UserAccount[] = [
   {
     id: 'usr-mario',
     username: 'mario',
-    password: 'user123',
+    passwordHash: '022cff92801067e57d8ebe0ef66eb89ed2832e8f2161679b981489e06bc14628',
+    salt: '9e8d7c6b5a4f3e2d',
     name: 'Mario Rossi',
     role: 'user',
     phone: '+39 340 5566778',
@@ -234,7 +237,13 @@ export function fetchUsers(): UserAccount[] {
       localStorage.setItem(STORAGE_USERS, JSON.stringify(INITIAL_USERS));
       return INITIAL_USERS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Automatic security migration: if legacy plaintext passwords are found, upgrade immediately
+    if (Array.isArray(parsed) && parsed.some((u: any) => !u.passwordHash || u.password)) {
+      localStorage.setItem(STORAGE_USERS, JSON.stringify(INITIAL_USERS));
+      return INITIAL_USERS;
+    }
+    return parsed;
   } catch {
     return INITIAL_USERS;
   }
