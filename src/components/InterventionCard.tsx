@@ -28,18 +28,22 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
   onPreviewPhoto,
   onDelete,
 }) => {
-  const isCompleted = intervention.status === 'completato';
-  const isPending = !isCompleted; // Tutto ciò che è da fare (in attesa, programmato, in corso)
-  const isWaiting = intervention.status === 'in_attesa';
+  const isCompleted = intervention.status === 'completed' || intervention.status === 'completato';
+  const isPending = !isCompleted; // All open tasks (pending, scheduled, in_progress)
+  const isWaiting = intervention.status === 'pending' || intervention.status === 'in_attesa';
 
   const isAdmin = currentRole === 'admin';
-  const isTechOrAdmin = currentRole === 'admin' || currentRole === 'tecnico';
+  const isTechOrAdmin = currentRole === 'admin' || currentRole === 'technician' || currentRole === 'tecnico';
 
   // Priority Styles
   const priorityBadge = {
+    urgent: 'bg-red-500/25 text-red-300 border-red-500/50 animate-pulse font-bold',
     urgente: 'bg-red-500/25 text-red-300 border-red-500/50 animate-pulse font-bold',
+    high: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold',
     alta: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold',
+    medium: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
     media: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
+    low: 'bg-slate-500/20 text-slate-300 border-slate-500/40',
     bassa: 'bg-slate-500/20 text-slate-300 border-slate-500/40',
   }[intervention.priority] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
 
@@ -51,11 +55,11 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
     }`}>
       
       <div>
-        {/* Top bar: Code, Project, State Badge (ROSSO = DA FARE / VERDE = FATTO), Priority & Delete */}
+        {/* Top bar: Code, Project, State Badge (RED = TO DO / GREEN = COMPLETED), Priority & Delete */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             
-            {/* Codice */}
+            {/* Code */}
             <span className={`font-mono text-xs font-bold px-2.5 py-1 rounded-md border ${
               isPending 
                 ? 'bg-rose-950/50 text-rose-200 border-rose-700/50' 
@@ -64,7 +68,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               {intervention.code}
             </span>
 
-            {/* Progetto Badge */}
+            {/* Project Badge */}
             {intervention.projectName && (
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 flex items-center gap-1.5">
                 <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
@@ -72,20 +76,20 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               </span>
             )}
 
-            {/* BADGE STATO PRINCIPALE (ROSSO = DA FARE, VERDE = FATTO) */}
+            {/* MAIN STATUS BADGE (RED = TO DO, GREEN = COMPLETED) */}
             {isPending ? (
               <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
                 <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                <span>DA FARE {intervention.status === 'in_corso' ? '(In Corso)' : ''}</span>
+                <span>TO DO {intervention.status === 'in_progress' || intervention.status === 'in_corso' ? '(In Progress)' : ''}</span>
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>FATTO (Completato)</span>
+                <span>COMPLETED</span>
               </span>
             )}
 
-            {/* Priorità */}
+            {/* Priority */}
             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityBadge}`}>
               {intervention.priority}
             </span>
@@ -96,7 +100,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             <button
               onClick={() => onDelete(intervention.id)}
               className="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-800 transition"
-              title="Elimina richiesta"
+              title="Delete request"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -148,7 +152,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               : 'bg-slate-800/80 text-emerald-200 border-emerald-800/40'
           }`}>
             <Calendar className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
-            <span>Data: <strong>{intervention.desiredAccessDate}</strong></span>
+            <span>Date: <strong>{intervention.desiredAccessDate}</strong></span>
           </div>
           {intervention.desiredAccessTime && (
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
@@ -157,21 +161,21 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                 : 'bg-slate-800/80 text-emerald-200 border-emerald-800/40'
             }`}>
               <Clock className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
-              <span>Ora: <strong>{intervention.desiredAccessTime}</strong></span>
+              <span>Time: <strong>{intervention.desiredAccessTime}</strong></span>
             </div>
           )}
         </div>
 
-        {/* Description / Spiegazione */}
+        {/* Description */}
         <div className="text-xs text-slate-300 mb-3 leading-relaxed">
-          <span className="font-semibold text-slate-200">Dettaglio intervento: </span>
+          <span className="font-semibold text-slate-200">Task details: </span>
           <span>{intervention.description}</span>
         </div>
 
         {/* Notes (Multiline) */}
         {intervention.notes && (
           <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 mb-3 whitespace-pre-wrap leading-relaxed">
-            <strong className="text-slate-400 block mb-0.5 text-[11px]">Note varie per il tecnico:</strong>
+            <strong className="text-slate-400 block mb-0.5 text-[11px]">Notes for technician:</strong>
             {intervention.notes}
           </div>
         )}
@@ -181,7 +185,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
           <div className="mb-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2">
               <ImageIcon className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
-              <span>Foto del difetto ({intervention.defectPhotos.length}):</span>
+              <span>Defect photos ({intervention.defectPhotos.length}):</span>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {intervention.defectPhotos.map((photo) => (
@@ -198,7 +202,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                     className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <span className="text-[10px] text-white font-semibold">Vedi</span>
+                    <span className="text-[10px] text-white font-semibold">View</span>
                   </div>
                 </div>
               ))}
@@ -206,28 +210,28 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
           </div>
         )}
 
-        {/* Technician Report Section (If Completed - TONALITÀ VERDE) */}
+        {/* Technician Report Section (If Completed - GREEN TONES) */}
         {isCompleted && intervention.report && (
           <div className="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3.5 mb-3 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Intervento Eseguito da {intervention.report.technicianName}</span>
+                <span>Service Completed by {intervention.report.technicianName}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
                 <Clock className="w-3 h-3 text-emerald-400" />
-                <span>{intervention.report.hoursWorked} ore lavorate</span>
+                <span>{intervention.report.hoursWorked} hours worked</span>
               </div>
             </div>
 
             <div className="text-xs text-slate-200">
-              <strong className="text-emerald-300">Lavori eseguiti: </strong>
+              <strong className="text-emerald-300">Work performed: </strong>
               {intervention.report.workDone}
             </div>
 
             {intervention.report.materialsUsed && (
               <div className="text-xs text-slate-300">
-                <strong className="text-emerald-400">Materiali: </strong>
+                <strong className="text-emerald-400">Materials: </strong>
                 {intervention.report.materialsUsed}
               </div>
             )}
@@ -239,11 +243,11 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                 className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition active:scale-95"
               >
                 <FileDown className="w-3.5 h-3.5" />
-                <span>Scarica Rapporto PDF</span>
+                <span>Download PDF Report</span>
               </button>
 
               <span className="text-[11px] text-emerald-300/80">
-                Data: {intervention.report.interventionDate}
+                Date: {intervention.report.interventionDate}
               </span>
             </div>
           </div>
@@ -255,7 +259,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200">
                 <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-                <span>Risposta Richiedente: {intervention.clientFeedback.clientName}</span>
+                <span>Client Acceptance: {intervention.clientFeedback.clientName}</span>
               </div>
               {intervention.clientFeedback.rating && (
                 <div className="flex items-center gap-0.5">
@@ -271,7 +275,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             </p>
 
             <div className="text-[10px] text-slate-500 text-right">
-              Ricevuta il {new Date(intervention.clientFeedback.submittedAt).toLocaleDateString('it-IT')}
+              Received on {new Date(intervention.clientFeedback.submittedAt).toLocaleDateString('en-US')}
             </div>
           </div>
         )}
@@ -286,7 +290,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
         <div className="text-xs text-slate-400 flex items-center gap-1.5">
           <Shield className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
           <span className="truncate">
-            {intervention.assignedTechnician ? `Assegnato a ${intervention.assignedTechnician}` : 'Nessun tecnico assegnato'}
+            {intervention.assignedTechnician ? `Assigned to ${intervention.assignedTechnician}` : 'No technician assigned'}
           </span>
         </div>
 
@@ -300,7 +304,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-900/30 transition active:scale-95"
             >
               <Wrench className="w-3.5 h-3.5" />
-              <span>Prendi in Carico</span>
+              <span>Take Charge</span>
             </button>
           )}
 
@@ -315,7 +319,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               }`}
             >
               <Wrench className="w-3.5 h-3.5" />
-              <span>{isCompleted ? 'Modifica Rapporto' : 'Esegui & Chiudi Intervento'}</span>
+              <span>{isCompleted ? 'Edit Report' : 'Execute & Complete'}</span>
             </button>
           )}
 
@@ -326,7 +330,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition active:scale-95"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>{intervention.clientFeedback ? 'Aggiorna Risposta' : 'Invia Risposta'}</span>
+              <span>{intervention.clientFeedback ? 'Update Acceptance' : 'Sign & Feedback'}</span>
             </button>
           )}
 
@@ -335,7 +339,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             <button
               onClick={() => downloadInterventionPDF(intervention)}
               className="p-1.5 rounded-lg bg-emerald-900/30 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 transition"
-              title="Scarica PDF"
+              title="Download PDF"
             >
               <FileDown className="w-4 h-4 text-emerald-400" />
             </button>
