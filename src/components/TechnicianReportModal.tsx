@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, PhoneCall, MessageCircle } from 'lucide-react';
 import { InterventionRequest, TechnicianReport } from '../types';
 import { downloadInterventionPDF, getInterventionPDFDataUri } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
+import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
 
 interface TechnicianReportModalProps {
   isOpen: boolean;
@@ -141,13 +142,40 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
           </button>
         </div>
 
-        {/* Problem Reminder Callout */}
-        <div className="bg-slate-950/80 px-4 sm:px-6 py-2.5 border-b border-slate-800 flex items-start gap-2 text-xs text-slate-300">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-white">Reported Issue / Task: </span>
-            <span>{intervention.title} — {intervention.description}</span>
+        {/* Problem Reminder Callout with Quick Call & WhatsApp */}
+        <div className="bg-slate-950/80 px-4 sm:px-6 py-2.5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-300">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-white">Reported Issue / Task: </span>
+              <span>{intervention.title} — {intervention.description}</span>
+            </div>
           </div>
+
+          {intervention.clientContact && (
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+              {getTelUri(intervention.clientContact) && (
+                <a
+                  href={getTelUri(intervention.clientContact)!}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                  title={`Call client ${intervention.clientName}`}
+                >
+                  <PhoneCall className="w-3 h-3 text-blue-400" />
+                  <span>Call Client</span>
+                </a>
+              )}
+              <a
+                href={getClientWhatsAppUri(intervention)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                title={`WhatsApp client ${intervention.clientName}`}
+              >
+                <MessageCircle className="w-3 h-3 text-emerald-400" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Form Body */}
