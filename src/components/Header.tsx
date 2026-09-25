@@ -1,5 +1,8 @@
 import React from 'react';
-import { Shield, User, PlusCircle, LogOut, Users, FolderKanban, FileSpreadsheet } from 'lucide-react';
+import { 
+  Shield, User, PlusCircle, LogOut, Users, FolderKanban, 
+  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff 
+} from 'lucide-react';
 import { UserAccount } from '../types';
 
 interface HeaderProps {
@@ -10,6 +13,7 @@ interface HeaderProps {
   onExportExcel: () => void;
   onLogout: () => void;
   isOnline: boolean;
+  onOpenInstallModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,7 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProjectsModal,
   onExportExcel,
   onLogout,
-  isOnline
+  isOnline,
+  onOpenInstallModal
 }) => {
   const isAdmin = currentUser.role === 'admin';
 
@@ -39,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
                   FIELD SERVICE
                 </h1>
                 <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0">
-                  On-Site
+                  PWA Ready
                 </span>
               </div>
               <p className="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block">
@@ -50,8 +55,23 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick sync & Logout button on mobile */}
           <div className="flex items-center gap-1.5 sm:hidden shrink-0">
-            <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            {onOpenInstallModal && (
+              <button
+                onClick={onOpenInstallModal}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-[11px] font-semibold active:scale-95"
+                title="Install app on mobile screen"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                <span>Install</span>
+              </button>
+            )}
+
+            <div className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border ${
+              isOnline 
+                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                : 'text-amber-400 bg-amber-500/20 border-amber-500/40'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
               <span>{isOnline ? 'Online' : 'Offline'}</span>
             </div>
 
@@ -110,6 +130,28 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-[11px] sm:text-xs">Projects</span>
+            </button>
+          )}
+
+          {/* Online / Offline status badge (Tablet & Desktop) */}
+          <div className={`hidden md:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border shrink-0 ${
+            isOnline 
+              ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/40' 
+              : 'bg-amber-950/50 text-amber-300 border-amber-700/60'
+          }`}>
+            {isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-400" /> : <WifiOff className="w-3.5 h-3.5 text-amber-400 animate-pulse" />}
+            <span className="text-[11px] font-semibold">{isOnline ? 'Online' : 'Offline Mode'}</span>
+          </div>
+
+          {/* PWA Install Button */}
+          {onOpenInstallModal && (
+            <button
+              onClick={onOpenInstallModal}
+              className="flex items-center gap-1.5 bg-blue-600/15 hover:bg-blue-600/25 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+              title="Install App on Screen (PWA)"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-[11px] sm:text-xs">Install App</span>
             </button>
           )}
 
