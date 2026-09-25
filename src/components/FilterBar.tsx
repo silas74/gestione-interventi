@@ -9,6 +9,7 @@ interface FilterBarProps {
   onlyUrgent: boolean;
   onToggleUrgent: () => void;
   pendingCount?: number;
+  inProgressCount?: number;
   completedCount?: number;
 }
 
@@ -20,6 +21,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onlyUrgent,
   onToggleUrgent,
   pendingCount = 0,
+  inProgressCount = 0,
   completedCount = 0
 }) => {
   return (
@@ -45,9 +47,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         )}
       </div>
 
-      {/* Filter Tabs (All / To Do in Red / Completed in Green) & Urgent Toggle */}
+      {/* Filter Tabs (All / To Do in Red / In Progress in Pink / Completed in Green) & Urgent Toggle */}
       <div className="flex items-center justify-between sm:justify-start gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 gap-0.5">
           
           {/* All */}
           <button
@@ -74,6 +76,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <span>To Do</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800/50">
               {pendingCount}
+            </span>
+          </button>
+
+          {/* 🌸 IN PROGRESS / WAITING FOR PARTS (Pink) */}
+          <button
+            onClick={() => onStatusFilterChange('in_lavorazione')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              statusFilter === 'in_lavorazione'
+                ? 'bg-pink-600 text-white shadow-md shadow-pink-900/40 ring-1 ring-pink-400'
+                : 'text-pink-400 hover:text-pink-300 hover:bg-pink-950/30'
+            }`}
+            title="Filter by tasks currently In Progress or Waiting for Parts"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse"></span>
+            <span>In Progress / Parts</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-pink-950/80 text-pink-300 border border-pink-700/50">
+              {inProgressCount}
             </span>
           </button>
 
