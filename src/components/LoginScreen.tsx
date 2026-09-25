@@ -35,7 +35,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-3 sm:p-4 selection:bg-blue-600 selection:text-white">
       
       {/* Background ambient lighting */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -43,15 +43,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
         <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-7 shadow-2xl backdrop-blur-xl">
+      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-xl">
         
         {/* Logo and title */}
-        <div className="text-center mb-6">
-          <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/30 border border-slate-700/80 mb-3">
+        <div className="text-center mb-5 sm:mb-6">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/30 border border-slate-700/80 mb-2.5 sm:mb-3">
             <img src="./logo-3d.png" alt="Logo 3D Interventi" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-white">GESTIONE INTERVENTI</h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">GESTIONE INTERVENTI</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
             Accesso Riservato — Inserisci le tue credenziali
           </p>
         </div>
