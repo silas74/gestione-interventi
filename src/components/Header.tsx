@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench, Shield, User, PlusCircle, LogOut, Users, FolderKanban } from 'lucide-react';
+import { Shield, User, PlusCircle, LogOut, Users, FolderKanban } from 'lucide-react';
 import { UserAccount } from '../types';
 
 interface HeaderProps {
@@ -22,48 +22,62 @@ export const Header: React.FC<HeaderProps> = ({
   const isAdmin = currentUser.role === 'admin';
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 lg:px-8 py-3.5 shadow-lg">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-6 lg:px-8 py-3 shadow-lg">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         
-        {/* Logo & Brand */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-3">
-            <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-lg shadow-blue-500/25 border border-slate-700/80 shrink-0">
+        {/* Top Row: Logo, Brand & Mobile Quick Actions */}
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden shadow-lg shadow-blue-500/25 border border-slate-700/80 shrink-0">
               <img src="./logo-3d.png" alt="Logo Interventi 3D" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-white">GESTIONE INTERVENTI</h1>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+                  GESTIONE INTERVENTI
+                </h1>
+                <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0">
                   On-Site
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Classificazione Progetti, Ore Lavorate & Rapporti PDF</p>
+              <p className="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block">
+                Classificazione Progetti, Ore & Rapporti PDF
+              </p>
             </div>
           </div>
 
-          {/* Sync indicator (mobile) */}
-          <div className="md:hidden flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>{isOnline ? 'Online' : 'Offline'}</span>
+          {/* Quick sync & Logout button on mobile */}
+          <div className="flex items-center gap-1.5 sm:hidden shrink-0">
+            <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>{isOnline ? 'Online' : 'Offline'}</span>
+            </div>
+
+            <button
+              onClick={onLogout}
+              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-300 border border-slate-700 active:scale-95"
+              title="Disconnetti"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* User bar & Actions */}
-        <div className="flex items-center flex-wrap gap-2.5 w-full md:w-auto justify-end">
+        {/* Second Row on Mobile / Right side on Tablet & Desktop */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 overflow-x-auto scrollbar-none pb-0.5">
           
           {/* User profile pill */}
-          <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 px-2.5 py-1.5 rounded-xl shrink-0">
             <div className={`p-1 rounded-lg ${
               isAdmin ? 'bg-amber-500/20 text-amber-300' :
               currentUser.role === 'tecnico' ? 'bg-blue-500/20 text-blue-300' : 'bg-emerald-500/20 text-emerald-300'
             }`}>
               {isAdmin ? <Shield className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
             </div>
-            <div className="text-left">
-              <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>{currentUser.name}</span>
-                <span className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-mono ${
+            <div className="text-left leading-tight">
+              <div className="text-xs font-bold text-white flex items-center gap-1">
+                <span className="truncate max-w-[90px] sm:max-w-none">{currentUser.name}</span>
+                <span className={`text-[8px] uppercase px-1 py-0.2 rounded font-mono ${
                   isAdmin ? 'bg-amber-400 text-slate-950 font-extrabold' :
                   currentUser.role === 'tecnico' ? 'bg-blue-600 text-white font-bold' : 'bg-slate-700 text-slate-200'
                 }`}>
@@ -73,43 +87,43 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* ADMIN ONLY: Gestione Utenti & Privilegi */}
+          {/* ADMIN ONLY: Utenti & Privilegi */}
           {isAdmin && (
             <button
               onClick={onOpenAdminModal}
-              className="flex items-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-semibold px-3 py-2 rounded-xl transition active:scale-95 shadow-sm"
-              title="Gestisci utenti, modifica privilegi, assegna password e progetti (Solo Costantino)"
+              className="flex items-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+              title="Gestione Utenti e Privilegi"
             >
-              <Users className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Utenti & Privilegi</span>
+              <Users className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] sm:text-xs">Utenti</span>
             </button>
           )}
 
-          {/* ADMIN ONLY: Gestione Progetti */}
+          {/* ADMIN ONLY: Progetti */}
           {isAdmin && (
             <button
               onClick={onOpenProjectsModal}
-              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition active:scale-95 shadow-sm"
-              title="Aggiungi o modifica progetti"
+              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+              title="Gestione Progetti"
             >
-              <FolderKanban className="w-4 h-4 text-blue-400" />
-              <span className="hidden sm:inline">Progetti</span>
+              <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-[11px] sm:text-xs">Progetti</span>
             </button>
           )}
 
           {/* Nuova Richiesta Ticket */}
           <button
             onClick={onOpenNewModal}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-md transition active:scale-95 whitespace-nowrap"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold px-3 py-1.5 sm:py-2 rounded-xl shadow-md transition active:scale-95 whitespace-nowrap shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Nuovo Ticket</span>
+            <span className="text-[11px] sm:text-xs">Nuovo Ticket</span>
           </button>
 
-          {/* Logout button */}
+          {/* Logout button (tablet & desktop) */}
           <button
             onClick={onLogout}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 border border-slate-700 transition"
+            className="hidden sm:flex p-2 rounded-xl bg-slate-800/80 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 border border-slate-700 transition active:scale-95 shrink-0"
             title="Disconnetti account"
           >
             <LogOut className="w-4 h-4" />
