@@ -24,7 +24,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
     if (found) {
       onLogin(found);
     } else {
-      setError('Credenziali non valide. Verifica username e password o chiedi a Costantino.');
+      setError('Invalid credentials. Please verify your username and password or contact Costantino.');
     }
   };
 
@@ -50,9 +50,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
           <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/30 border border-slate-700/80 mb-2.5 sm:mb-3">
             <img src="./logo-3d.png" alt="Logo 3D Interventi" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">GESTIONE INTERVENTI</h2>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">FIELD SERVICE</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Accesso Riservato — Inserisci le tue credenziali
+            Restricted Access — Enter your credentials
           </p>
         </div>
 
@@ -77,7 +77,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="es. costantino"
+              placeholder="e.g. costantino"
               className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
           </div>
@@ -110,7 +110,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
             type="submit"
             className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition active:scale-98 mt-2"
           >
-            <span>Accedi al Sistema</span>
+            <span>Log In to System</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
@@ -119,7 +119,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
         {/* Quick Demo Access Helpers */}
         <div className="mt-6 pt-5 border-t border-slate-800">
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
-            Accesso Rapido Account Demo
+            Quick Demo Account Login
           </p>
           <div className="grid grid-cols-1 gap-2">
             {users.map(u => (
