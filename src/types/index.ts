@@ -1,11 +1,14 @@
 export type InterventionStatus = 
-  | 'in_attesa'      // Da fare / Appena inserita
-  | 'programmato'    // Fissata data/ora
-  | 'in_corso'       // In corso on-site
-  | 'completato'     // Già fatto / completato con verbale
-  | 'annullato';
+  | 'pending'        // In attesa / Da fare
+  | 'in_attesa'       // Backward compatibility
+  | 'scheduled'      // Programmato
+  | 'in_progress'    // In corso on-site
+  | 'in_corso'       // Backward compatibility
+  | 'completed'      // Completato / Già fatto
+  | 'completato'     // Backward compatibility
+  | 'cancelled';
 
-export type InterventionPriority = 'bassa' | 'media' | 'alta' | 'urgente';
+export type InterventionPriority = 'low' | 'medium' | 'high' | 'urgent' | 'bassa' | 'media' | 'alta' | 'urgente';
 
 export interface DefectPhoto {
   id: string;
@@ -23,7 +26,8 @@ export interface TechnicianReport {
   workDone: string;
   materialsUsed?: string;
   technicalNotes?: string;
-  statusOutcome: 'risolto' | 'parziale' | 'in_attesa_ricambi';
+  statusOutcome: 'resolved' | 'partial' | 'waiting_for_parts' | 'risolto' | 'parziale' | 'in_attesa_ricambi';
+  technicianSignature?: string; // Base64 digital signature PNG
   pdfDataUri?: string;
   completedAt: string;
 }
@@ -31,24 +35,25 @@ export interface TechnicianReport {
 export interface ClientFeedback {
   submittedAt: string;
   clientName: string;
-  rating?: number; // 1 to 5
-  feedbackStatus: 'approvato' | 'richiesta_revisione' | 'contestato';
+  rating?: number; // 1 to 5 stars
+  feedbackStatus: 'approved' | 'revision_requested' | 'disputed' | 'approvato' | 'richiesta_revisione' | 'contestato';
   notes: string;
+  clientSignature?: string; // Base64 digital signature PNG
 }
 
 export interface InterventionRequest {
   id: string;
-  code: string; // es. INT-2026-001
-  projectId?: string; // ID Progetto di appartenenza
-  projectName?: string; // Nome Progetto (es. "Workbank")
+  code: string; // e.g. INT-2026-WB1
+  projectId?: string;
+  projectName?: string; // e.g. "Workbank"
   title: string;
   siteName: string;
   siteAddress: string;
   clientName: string;
-  clientContact: string; // Telefono o email
-  description: string; // Spiegazione di cosa serve / guasto riscontrato
-  desiredAccessDate: string; // Data di accesso desiderata
-  desiredAccessTime: string; // Ora di accesso desiderata
+  clientContact: string; // Phone or email
+  description: string; // Explanation of issue or scope of work
+  desiredAccessDate: string; // Desired access date
+  desiredAccessTime: string; // Desired access time
   priority: InterventionPriority;
   defectPhotos: DefectPhoto[];
   notes?: string;
@@ -60,22 +65,22 @@ export interface InterventionRequest {
   clientFeedback?: ClientFeedback;
 }
 
-export type AppRole = 'admin' | 'tecnico' | 'utente';
+export type AppRole = 'admin' | 'technician' | 'user' | 'tecnico' | 'utente';
 
 export interface UserAccount {
   id: string;
   username: string;
-  password: string; // Gestito e assegnato manualmente da Costantino
+  password: string; // Manually assigned and managed by Costantino
   name: string;
-  role: AppRole; // Solo Costantino è 'admin', gli altri 'tecnico' o 'utente'
-  assignedProjectIds: string[]; // ID dei progetti a cui l'utente ha accesso
+  role: AppRole; // Only Costantino is 'admin'
+  assignedProjectIds: string[]; // List of project IDs or ['*'] for all
   createdAt: string;
 }
 
 export interface Project {
   id: string;
-  code: string; // es. WRKB
-  name: string; // es. "Workbank"
+  code: string; // e.g. WRKB
+  name: string; // e.g. "Workbank"
   description: string;
   clientName?: string;
   siteAddress?: string;
