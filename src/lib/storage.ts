@@ -36,6 +36,7 @@ const INITIAL_USERS: UserAccount[] = [
     password: 'password123',
     name: 'Costantino',
     role: 'admin', // SuperAdmin: can edit everything, create users, assign passwords & projects
+    phone: '+39 348 1122334',
     assignedProjectIds: ['*'], // Full access to all projects
     createdAt: '2026-09-01T08:00:00Z'
   },
@@ -45,6 +46,7 @@ const INITIAL_USERS: UserAccount[] = [
     password: 'user123',
     name: 'Franco (Technician)',
     role: 'technician',
+    phone: '+39 335 9988776',
     assignedProjectIds: ['proj-workbank', 'proj-logistica'],
     createdAt: '2026-09-02T08:00:00Z'
   },
@@ -54,6 +56,7 @@ const INITIAL_USERS: UserAccount[] = [
     password: 'user123',
     name: 'Mario Rossi',
     role: 'user',
+    phone: '+39 340 5566778',
     assignedProjectIds: ['proj-workbank'],
     createdAt: '2026-09-05T08:00:00Z'
   }
