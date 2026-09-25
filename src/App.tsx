@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  InterventionRequest, AppRole, TechnicianReport, ClientFeedback, DefectPhoto 
+  InterventionRequest, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
 } from './types';
 import { 
-  fetchInterventions, saveIntervention, deleteIntervention 
+  fetchInterventions, saveIntervention, deleteIntervention,
+  fetchProjects, saveProject, deleteProject,
+  fetchUsers, saveUser, deleteUser,
+  getCurrentSession, setCurrentSession, clearCurrentSession
 } from './lib/storage';
+import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
 import { StatsCards } from './components/StatsCards';
 import { FilterBar } from './components/FilterBar';
@@ -13,13 +17,19 @@ import { NewRequestModal } from './components/NewRequestModal';
 import { TechnicianReportModal } from './components/TechnicianReportModal';
 import { ClientFeedbackModal } from './components/ClientFeedbackModal';
 import { ImagePreviewModal } from './components/ImagePreviewModal';
-import { Wrench, PlusCircle, Inbox, Sparkles, CheckCircle2 } from 'lucide-react';
+import { AdminUsersModal } from './components/AdminUsersModal';
+import { ProjectManagementModal } from './components/ProjectManagementModal';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, Shield, Layers } from 'lucide-react';
 
 export function App() {
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [interventions, setInterventions] = useState<InterventionRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentRole, setCurrentRole] = useState<AppRole>('tecnico');
-  const [currentUserName, setCurrentUserName] = useState<string>('Costantino');
+
+  // Active Project Filter: 'all' or project.id
+  const [activeProjectId, setActiveProjectId] = useState<string>('proj-workbank');
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,11 +38,13 @@ export function App() {
 
   // Modals
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
   const [reportModalIntervention, setReportModalIntervention] = useState<InterventionRequest | null>(null);
   const [feedbackModalIntervention, setFeedbackModalIntervention] = useState<InterventionRequest | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<DefectPhoto | null>(null);
 
-  // Toast / notification message
+  // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -41,34 +53,85 @@ export function App() {
   };
 
   useEffect(() => {
-    loadData();
+    loadAllData();
   }, []);
 
-  const loadData = async () => {
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      const data = await fetchInterventions();
-      setInterventions(data);
+      const loadedUsers = fetchUsers();
+      const loadedProjects = fetchProjects();
+      const loadedInterventions = await fetchInterventions();
+
+      setUsers(loadedUsers);
+      setProjects(loadedProjects);
+      setInterventions(loadedInterventions);
+
+      // Sincronizza sessione utente se presente
+      const session = getCurrentSession();
+      if (session) {
+        const found = loadedUsers.find(u => u.id === session.id);
+        if (found) setCurrentUser(found);
+      }
     } catch (err) {
-      console.error('Error fetching interventions', err);
+      console.error('Error loading data', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRoleChange = (role: AppRole, name: string) => {
-    setCurrentRole(role);
-    setCurrentUserName(name);
+  // Auth Handlers
+  const handleLogin = (user: UserAccount) => {
+    setCurrentUser(user);
+    setCurrentSession(user);
+    showToast(`Benvenuto ${user.name}!`);
   };
 
-  // 1. Create New Intervention
+  const handleLogout = () => {
+    clearCurrentSession();
+    setCurrentUser(null);
+    showToast('Disconnesso con successo.');
+  };
+
+  // User Management (Solo Costantino)
+  const handleSaveUser = (user: UserAccount) => {
+    saveUser(user);
+    const updated = fetchUsers();
+    setUsers(updated);
+    if (currentUser && currentUser.id === user.id) {
+      setCurrentUser(user);
+      setCurrentSession(user);
+    }
+    showToast(`Utente ${user.name} salvato con successo.`);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    deleteUser(userId);
+    setUsers(fetchUsers());
+    showToast('Utente eliminato.');
+  };
+
+  // Project Management
+  const handleSaveProject = (project: Project) => {
+    saveProject(project);
+    setProjects(fetchProjects());
+    showToast(`Progetto ${project.name} salvato.`);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    deleteProject(projectId);
+    setProjects(fetchProjects());
+    if (activeProjectId === projectId) setActiveProjectId('all');
+    showToast('Progetto eliminato.');
+  };
+
+  // Intervention Handlers
   const handleCreateIntervention = async (newReq: InterventionRequest) => {
     await saveIntervention(newReq);
     setInterventions(prev => [newReq, ...prev]);
-    showToast(`Richiesta ${newReq.code} creata con successo!`);
+    showToast(`Richiesta ${newReq.code} creata per ${newReq.projectName || 'il progetto'}!`);
   };
 
-  // 2. Technician takes charge
   const handleTakeCharge = async (id: string, technicianName: string) => {
     const item = interventions.find(i => i.id === id);
     if (!item) return;
@@ -85,7 +148,6 @@ export function App() {
     showToast(`Intervento ${item.code} preso in carico da ${technicianName}`);
   };
 
-  // 3. Save Technician Report (Completes Intervention & Attaches PDF)
   const handleSaveReport = async (interventionId: string, report: TechnicianReport) => {
     const item = interventions.find(i => i.id === interventionId);
     if (!item) return;
@@ -100,10 +162,9 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Rapporto tecnico salvato e PDF generato per ${item.code}!`);
+    showToast(`Rapporto salvato e verbale PDF generato per ${item.code}!`);
   };
 
-  // 4. Save Client Feedback
   const handleSaveFeedback = async (interventionId: string, feedback: ClientFeedback) => {
     const item = interventions.find(i => i.id === interventionId);
     if (!item) return;
@@ -116,10 +177,9 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Riscontro del cliente registrato per ${item.code}!`);
+    showToast(`Riscontro registrato per ${item.code}!`);
   };
 
-  // 5. Delete Intervention
   const handleDelete = async (id: string) => {
     const item = interventions.find(i => i.id === id);
     if (!item) return;
@@ -127,12 +187,38 @@ export function App() {
 
     await deleteIntervention(id);
     setInterventions(prev => prev.filter(i => i.id !== id));
-    showToast(`Intervento eliminato con successo.`);
+    showToast(`Intervento eliminato.`);
   };
 
-  // Filtered List Computation
+  // Se l'utente non è autenticato, mostra schermata di Login
+  if (!currentUser) {
+    return <LoginScreen users={users} onLogin={handleLogin} />;
+  }
+
+  const isAdmin = currentUser.role === 'admin';
+
+  // Progetti visibili per questo utente
+  const visibleProjects = projects.filter(p => {
+    if (isAdmin || currentUser.assignedProjectIds.includes('*')) return true;
+    return currentUser.assignedProjectIds.includes(p.id);
+  });
+
+  // Filtro interventi per permessi progetto + filtro attivo + ricerca
   const filteredInterventions = interventions.filter(item => {
-    // Search match
+    // 1. Permesso utente sul progetto
+    if (!isAdmin && !currentUser.assignedProjectIds.includes('*')) {
+      if (item.projectId && !currentUser.assignedProjectIds.includes(item.projectId)) {
+        return false;
+      }
+    }
+
+    // 2. Filtro Progetto selezionato
+    if (activeProjectId !== 'all') {
+      if (item.projectId && item.projectId !== activeProjectId) return false;
+      if (!item.projectId && activeProjectId !== 'proj-workbank') return false;
+    }
+
+    // 3. Ricerca
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       const match = 
@@ -141,11 +227,12 @@ export function App() {
         item.siteName.toLowerCase().includes(q) ||
         item.clientName.toLowerCase().includes(q) ||
         item.description.toLowerCase().includes(q) ||
+        (item.projectName && item.projectName.toLowerCase().includes(q)) ||
         (item.assignedTechnician && item.assignedTechnician.toLowerCase().includes(q));
       if (!match) return false;
     }
 
-    // Status filter
+    // 4. Stato
     if (statusFilter !== 'all') {
       if (statusFilter === 'in_corso') {
         if (item.status !== 'in_corso' && item.status !== 'programmato') return false;
@@ -154,7 +241,7 @@ export function App() {
       }
     }
 
-    // Urgent filter
+    // 5. Solo urgenti
     if (onlyUrgent && item.priority !== 'urgente') {
       return false;
     }
@@ -162,62 +249,107 @@ export function App() {
     return true;
   });
 
+  const activeProjectObj = projects.find(p => p.id === activeProjectId);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-blue-600 text-white px-4 py-2.5 rounded-xl shadow-xl border border-blue-400/30 flex items-center gap-2 animate-bounce">
+        <div className="fixed bottom-5 right-5 z-50 bg-blue-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-blue-400/30 flex items-center gap-2 animate-bounce">
           <CheckCircle2 className="w-4 h-4" />
           <span className="text-xs font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* Main App Header */}
+      {/* Main Header */}
       <Header
-        currentRole={currentRole}
-        currentUserName={currentUserName}
-        onRoleChange={handleRoleChange}
+        currentUser={currentUser}
         onOpenNewModal={() => setIsNewModalOpen(true)}
+        onOpenAdminModal={() => setIsAdminModalOpen(true)}
+        onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
+        onLogout={handleLogout}
         isOnline={true}
       />
 
-      {/* Main Container */}
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
         
-        {/* Banner with Active View Context */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950/40 p-4 rounded-2xl border border-slate-800">
-          <div>
+        {/* Project Selector Bar */}
+        <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-300">
-                Accesso attuale: <strong className="text-white">{currentUserName}</strong>
-              </span>
-              <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md ${
-                currentRole === 'tecnico' 
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' 
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-              }`}>
-                {currentRole === 'tecnico' ? 'Vista Tecnico Manutentore' : 'Vista Cliente Richiedente'}
-              </span>
+              <FolderKanban className="w-5 h-5 text-blue-400" />
+              <div>
+                <h2 className="text-sm font-bold text-white">Classificazione Difetti & Interventi per Progetto</h2>
+                <p className="text-[11px] text-slate-400">Seleziona il progetto per visualizzare solo i suoi difetti specifici</p>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              {currentRole === 'tecnico'
-                ? 'Prendi in carico le richieste di guasto, inserisci ore lavorate e compila il rapporto tecnico in PDF con firma.'
-                : 'Invia segnalazioni guasto con foto del difetto, monitora l\'avanzamento e rispondi con il tuo riscontro a lavoro ultimato.'}
-            </p>
+
+            {isAdmin && (
+              <button
+                onClick={() => setIsProjectsModalOpen(true)}
+                className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 self-start sm:self-center"
+              >
+                <span>Gestisci o Aggiungi Progetti &rarr;</span>
+              </button>
+            )}
           </div>
 
-          <button
-            onClick={() => setIsNewModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-600/25 transition active:scale-95 shrink-0"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Nuovo Ticket Intervento</span>
-          </button>
+          {/* Project Pills Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setActiveProjectId('all')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
+                activeProjectId === 'all'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Tutti i Progetti</span>
+            </button>
+
+            {visibleProjects.map((p) => {
+              const count = interventions.filter(i => i.projectId === p.id).length;
+              const isSelected = activeProjectId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setActiveProjectId(p.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                      : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/50'
+                  }`}
+                >
+                  <span>{p.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    isSelected ? 'bg-blue-800 text-white' : 'bg-slate-900 text-slate-400'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Project Focus Header info (es. Workbank) */}
+          {activeProjectObj && (
+            <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-300 gap-2">
+              <div>
+                <span className="font-bold text-white text-sm">{activeProjectObj.name}</span>
+                <span className="text-slate-400 ml-2">({activeProjectObj.code}) — {activeProjectObj.description}</span>
+              </div>
+              <div className="text-[11px] text-slate-400">
+                {activeProjectObj.siteAddress && <span>Sede: {activeProjectObj.siteAddress}</span>}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Quick KPI Stats Cards */}
-        <StatsCards interventions={interventions} />
+        {/* Stats Summary */}
+        <StatsCards interventions={filteredInterventions} />
 
         {/* Filter and Search Bar */}
         <FilterBar
@@ -229,7 +361,7 @@ export function App() {
           onToggleUrgent={() => setOnlyUrgent(prev => !prev)}
         />
 
-        {/* List of Interventions */}
+        {/* Interventions List */}
         {loading ? (
           <div className="py-20 text-center text-slate-400 text-sm">
             Caricamento interventi in corso...
@@ -237,16 +369,16 @@ export function App() {
         ) : filteredInterventions.length === 0 ? (
           <div className="py-16 text-center border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30 p-8">
             <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-slate-300">Nessun intervento trovato</h3>
+            <h3 className="text-base font-semibold text-slate-300">Nessun intervento trovato per questo filtro</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-              Non ci sono richieste con i filtri selezionati. Crea un nuovo ticket o modifica la ricerca.
+              Non ci sono richieste con i filtri selezionati. Crea una nuova richiesta o seleziona un altro progetto.
             </p>
             <button
               onClick={() => setIsNewModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Crea Nuova Richiesta</span>
+              <span>Inserisci Nuovo Guasto / Intervento</span>
             </button>
           </div>
         ) : (
@@ -255,8 +387,8 @@ export function App() {
               <InterventionCard
                 key={intervention.id}
                 intervention={intervention}
-                currentRole={currentRole}
-                currentUserName={currentUserName}
+                currentRole={currentUser.role}
+                currentUserName={currentUser.name}
                 onTakeCharge={handleTakeCharge}
                 onOpenReportModal={(item) => setReportModalIntervention(item)}
                 onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
@@ -271,7 +403,7 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500">
-        Gestione Interventi On-Site &copy; {new Date().getFullYear()} — Tracciamento Ore, Lavori Eseguiti & Rapporti PDF
+        Gestione Interventi &copy; {new Date().getFullYear()} — Amministrato da Costantino
       </footer>
 
       {/* Modals */}
@@ -279,8 +411,10 @@ export function App() {
         isOpen={isNewModalOpen}
         onClose={() => setIsNewModalOpen(false)}
         onSubmit={handleCreateIntervention}
-        currentUserName={currentUserName}
+        currentUserName={currentUser.name}
         existingInterventions={interventions}
+        projects={visibleProjects}
+        defaultProjectId={activeProjectId !== 'all' ? activeProjectId : undefined}
       />
 
       <TechnicianReportModal
@@ -288,7 +422,7 @@ export function App() {
         onClose={() => setReportModalIntervention(null)}
         intervention={reportModalIntervention}
         onSaveReport={handleSaveReport}
-        currentTechnicianName={currentUserName}
+        currentTechnicianName={currentUser.name}
       />
 
       <ClientFeedbackModal
@@ -296,13 +430,34 @@ export function App() {
         onClose={() => setFeedbackModalIntervention(null)}
         intervention={feedbackModalIntervention}
         onSaveFeedback={handleSaveFeedback}
-        currentClientName={currentUserName}
+        currentClientName={currentUser.name}
       />
 
       <ImagePreviewModal
         photo={previewPhoto}
         onClose={() => setPreviewPhoto(null)}
       />
+
+      {isAdmin && (
+        <AdminUsersModal
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+          users={users}
+          projects={projects}
+          onSaveUser={handleSaveUser}
+          onDeleteUser={handleDeleteUser}
+        />
+      )}
+
+      {isAdmin && (
+        <ProjectManagementModal
+          isOpen={isProjectsModalOpen}
+          onClose={() => setIsProjectsModalOpen(false)}
+          projects={projects}
+          onSaveProject={handleSaveProject}
+          onDeleteProject={handleDeleteProject}
+        />
+      )}
 
     </div>
   );
