@@ -267,6 +267,70 @@ export function App() {
     showToast(`Exported ${result.count} tickets (${result.totalHours.toFixed(1)} hrs total) to Excel!`);
   };
 
+  // Status colors for Project Pills:
+  // 1. Rosa se non c'è nulla (0 ticket)
+  // 2. Giallo se in lavorazione
+  // 3. Verde se tutto risolto
+  // 4. Rosso se ci sono difetti/interventi aperti non risolti
+  const getProjectStatusStyle = (projectId: string, isSelected: boolean) => {
+    const projTickets = interventions.filter(i => i.projectId === projectId);
+    const count = projTickets.length;
+
+    // 1. Rosa se non c'è nulla (0 ticket)
+    if (count === 0) {
+      return {
+        label: 'Empty (No tickets)',
+        dotColor: 'bg-pink-400',
+        dotPulse: false,
+        btnClass: isSelected
+          ? 'bg-pink-600 text-white border-pink-400 shadow-md shadow-pink-600/30 ring-2 ring-pink-400/40'
+          : 'bg-pink-950/25 border-pink-500/40 text-pink-300 hover:bg-pink-900/40 hover:border-pink-400',
+        badgeClass: isSelected ? 'bg-pink-900 text-white' : 'bg-pink-950/80 text-pink-300 border border-pink-700/50'
+      };
+    }
+
+    const hasPending = projTickets.some(i => i.status === 'pending' || i.status === 'in_attesa' || i.status === 'scheduled');
+    const hasInProgress = projTickets.some(i => i.status === 'in_progress' || i.status === 'in_corso');
+    const allResolved = projTickets.every(i => i.status === 'completed' || i.status === 'completato');
+
+    // 2. Verde se è tutto risolto
+    if (allResolved) {
+      return {
+        label: 'All Resolved',
+        dotColor: 'bg-emerald-400',
+        dotPulse: false,
+        btnClass: isSelected
+          ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/40'
+          : 'bg-emerald-950/25 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40 hover:border-emerald-400',
+        badgeClass: isSelected ? 'bg-emerald-800 text-white' : 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/50'
+      };
+    }
+
+    // 3. Giallo se è in lavorazione
+    if (hasInProgress) {
+      return {
+        label: 'In Progress (Active Work)',
+        dotColor: 'bg-amber-400',
+        dotPulse: true,
+        btnClass: isSelected
+          ? 'bg-amber-500 text-slate-950 font-bold border-amber-300 shadow-md shadow-amber-500/30 ring-2 ring-amber-300/40'
+          : 'bg-amber-950/25 border-amber-500/40 text-amber-300 hover:bg-amber-900/40 hover:border-amber-400',
+        badgeClass: isSelected ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-950/80 text-amber-300 border border-amber-700/50'
+      };
+    }
+
+    // 4. Rosso se ci sono difetti/interventi non ancora risolti
+    return {
+      label: 'Open / Unresolved',
+      dotColor: 'bg-rose-500',
+      dotPulse: true,
+      btnClass: isSelected
+        ? 'bg-rose-600 text-white border-rose-400 shadow-md shadow-rose-600/30 ring-2 ring-rose-400/40'
+        : 'bg-rose-950/25 border-rose-500/40 text-rose-300 hover:bg-rose-900/40 hover:border-rose-400',
+      badgeClass: isSelected ? 'bg-rose-800 text-white' : 'bg-rose-950/80 text-rose-300 border border-rose-700/50'
+    };
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
       
@@ -347,20 +411,18 @@ export function App() {
             {visibleProjects.map((p) => {
               const count = interventions.filter(i => i.projectId === p.id).length;
               const isSelected = activeProjectId === p.id;
+              const style = getProjectStatusStyle(p.id, isSelected);
+
               return (
                 <button
                   key={p.id}
                   onClick={() => setActiveProjectId(p.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
-                    isSelected
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/50'
-                  }`}
+                  title={`${p.name} — Status: ${style.label} (${count} tickets)`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 border ${style.btnClass}`}
                 >
+                  <span className={`w-2 h-2 rounded-full ${style.dotColor} ${style.dotPulse ? 'animate-pulse' : ''}`}></span>
                   <span>{p.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isSelected ? 'bg-blue-800 text-white' : 'bg-slate-900 text-slate-400'
-                  }`}>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${style.badgeClass}`}>
                     {count}
                   </span>
                 </button>
@@ -380,6 +442,27 @@ export function App() {
                 <span>+ New Project</span>
               </button>
             )}
+          </div>
+
+          {/* Status Color Legend */}
+          <div className="flex items-center gap-3.5 text-[11px] text-slate-400 flex-wrap pt-2.5 mt-2.5 border-t border-slate-800/60">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Project Status:</span>
+            <span className="flex items-center gap-1.5 bg-rose-950/30 px-2 py-0.5 rounded-md border border-rose-900/40">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              <span className="text-rose-300">Open / Not Resolved</span>
+            </span>
+            <span className="flex items-center gap-1.5 bg-amber-950/30 px-2 py-0.5 rounded-md border border-amber-900/40">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <span className="text-amber-300">In Progress</span>
+            </span>
+            <span className="flex items-center gap-1.5 bg-emerald-950/30 px-2 py-0.5 rounded-md border border-emerald-900/40">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="text-emerald-300">All Resolved</span>
+            </span>
+            <span className="flex items-center gap-1.5 bg-pink-950/30 px-2 py-0.5 rounded-md border border-pink-900/40">
+              <span className="w-2 h-2 rounded-full bg-pink-400"></span>
+              <span className="text-pink-300">Empty (No Tasks)</span>
+            </span>
           </div>
 
           {/* Project Focus Header info */}
