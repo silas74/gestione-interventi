@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, User, PlusCircle, LogOut, Users, FolderKanban } from 'lucide-react';
+import { Shield, User, PlusCircle, LogOut, Users, FolderKanban, FileSpreadsheet } from 'lucide-react';
 import { UserAccount } from '../types';
 
 interface HeaderProps {
@@ -7,6 +7,7 @@ interface HeaderProps {
   onOpenNewModal: () => void;
   onOpenAdminModal: () => void;
   onOpenProjectsModal: () => void;
+  onExportExcel: () => void;
   onLogout: () => void;
   isOnline: boolean;
 }
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewModal,
   onOpenAdminModal,
   onOpenProjectsModal,
+  onExportExcel,
   onLogout,
   isOnline
 }) => {
@@ -110,6 +112,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[11px] sm:text-xs">Projects</span>
             </button>
           )}
+
+          {/* Export Hours & Reports to Excel */}
+          <button
+            onClick={onExportExcel}
+            className="flex items-center gap-1.5 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+            title="Export Service Hours & Reports to Excel"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[11px] sm:text-xs">Export Hours</span>
+          </button>
 
           {/* New Request Ticket */}
           <button
