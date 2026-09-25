@@ -11,6 +11,7 @@ interface NewRequestModalProps {
   existingInterventions: InterventionRequest[];
   projects: Project[];
   defaultProjectId?: string;
+  onAddNewProject?: () => void;
 }
 
 export const NewRequestModal: React.FC<NewRequestModalProps> = ({
@@ -21,6 +22,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   existingInterventions,
   projects,
   defaultProjectId,
+  onAddNewProject,
 }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(
     defaultProjectId || (projects[0]?.id ?? 'proj-workbank')
@@ -164,10 +166,22 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
           
           {/* Reference Project Selection */}
           <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
-            <label className="block text-xs font-semibold text-blue-400 mb-1 flex items-center gap-1.5">
-              <FolderKanban className="w-4 h-4" />
-              Reference Project <span className="text-rose-400">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-blue-400 flex items-center gap-1.5">
+                <FolderKanban className="w-4 h-4" />
+                <span>Reference Project</span>
+                <span className="text-rose-400">*</span>
+              </label>
+              {onAddNewProject && (
+                <button
+                  type="button"
+                  onClick={onAddNewProject}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 underline"
+                >
+                  <span>+ Create New Project</span>
+                </button>
+              )}
+            </div>
             <select
               value={selectedProjectId}
               onChange={(e) => handleProjectSelect(e.target.value)}
