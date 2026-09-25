@@ -168,10 +168,11 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
           <span>{intervention.description}</span>
         </div>
 
-        {/* Notes */}
+        {/* Notes (Multiline) */}
         {intervention.notes && (
-          <div className="text-xs text-slate-400 italic bg-slate-950/50 p-2 rounded-lg border border-slate-800 mb-3">
-            Note: {intervention.notes}
+          <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 mb-3 whitespace-pre-wrap leading-relaxed">
+            <strong className="text-slate-400 block mb-0.5 text-[11px]">Note varie per il tecnico:</strong>
+            {intervention.notes}
           </div>
         )}
 
