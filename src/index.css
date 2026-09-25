@@ -40,3 +40,54 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Urgent flashing Red <-> Yellow animations */
+@keyframes flash-red-yellow {
+  0%, 100% {
+    background-color: #dc2626; /* red-600 */
+    border-color: #ef4444; /* red-500 */
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    background-color: #eab308; /* yellow-500 */
+    border-color: #facc15; /* yellow-400 */
+    color: #0f172a; /* high contrast dark text */
+    box-shadow: 0 0 16px rgba(234, 179, 8, 0.75);
+  }
+}
+
+@keyframes flash-card-border {
+  0%, 100% {
+    border-color: #ef4444;
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.45);
+  }
+  50% {
+    border-color: #eab308;
+    box-shadow: 0 0 24px rgba(234, 179, 8, 0.45);
+  }
+}
+
+@keyframes flash-siren-icon {
+  0%, 100% {
+    transform: rotate(-10deg) scale(1.05);
+    color: #ffffff;
+  }
+  50% {
+    transform: rotate(10deg) scale(1.2);
+    color: #0f172a;
+  }
+}
+
+.animate-flash-urgent {
+  animation: flash-red-yellow 0.9s infinite ease-in-out;
+}
+
+.animate-flash-card-urgent {
+  animation: flash-card-border 0.9s infinite ease-in-out;
+}
+
+.animate-flash-siren {
+  animation: flash-siren-icon 0.9s infinite ease-in-out;
+}
+
