@@ -19,7 +19,8 @@ import { ClientFeedbackModal } from './components/ClientFeedbackModal';
 import { ImagePreviewModal } from './components/ImagePreviewModal';
 import { AdminUsersModal } from './components/AdminUsersModal';
 import { ProjectManagementModal } from './components/ProjectManagementModal';
-import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers } from 'lucide-react';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet } from 'lucide-react';
+import { exportInterventionsToExcel } from './lib/excelExport';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
@@ -252,6 +253,17 @@ export function App() {
   const showPendingSection = statusFilter === 'all' || statusFilter === 'da_fare';
   const showCompletedSection = statusFilter === 'all' || statusFilter === 'fatti';
 
+  const handleExportExcel = () => {
+    const targetList = completedInterventions.length > 0 ? completedInterventions : filteredInterventions;
+    if (targetList.length === 0) {
+      alert('No service tickets available to export.');
+      return;
+    }
+    const projectLabel = activeProjectObj ? activeProjectObj.code : 'All_Projects';
+    const result = exportInterventionsToExcel(targetList, `Work_Hours_${projectLabel}`);
+    showToast(`Exported ${result.count} tickets (${result.totalHours.toFixed(1)} hrs total) to Excel!`);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
       
@@ -269,6 +281,7 @@ export function App() {
         onOpenNewModal={() => setIsNewModalOpen(true)}
         onOpenAdminModal={() => setIsAdminModalOpen(true)}
         onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
+        onExportExcel={handleExportExcel}
         onLogout={handleLogout}
         isOnline={true}
       />
@@ -447,9 +460,9 @@ export function App() {
         {!loading && showCompletedSection && (
           <section className="mb-10">
             {/* Green Section Header */}
-            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-800/50 shadow-lg shadow-emerald-950/20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-800/50 shadow-lg shadow-emerald-950/20 gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div>
@@ -462,6 +475,15 @@ export function App() {
                   <p className="text-[11px] text-emerald-300/80">Finished tasks with logged hours, signed PDF report and client feedback</p>
                 </div>
               </div>
+
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 text-xs font-semibold shadow transition active:scale-95 self-start sm:self-center"
+                title="Export logged hours and completed reports to Excel / CSV"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Export Hours (Excel)</span>
+              </button>
             </div>
 
             {/* Green Cards Grid */}
