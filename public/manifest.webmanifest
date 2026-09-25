@@ -1,0 +1,31 @@
+{
+  "name": "Gestione Interventi & Field Service",
+  "short_name": "Interventi",
+  "description": "On-site technical service, digital signatures, hours tracking and PDF reports",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./logo-3d.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./logo-3d.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./favicon.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    }
+  ]
+}
