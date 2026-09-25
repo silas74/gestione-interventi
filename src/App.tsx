@@ -19,7 +19,7 @@ import { ClientFeedbackModal } from './components/ClientFeedbackModal';
 import { ImagePreviewModal } from './components/ImagePreviewModal';
 import { AdminUsersModal } from './components/AdminUsersModal';
 import { ProjectManagementModal } from './components/ProjectManagementModal';
-import { FolderKanban, PlusCircle, Inbox, CheckCircle2, Shield, Layers } from 'lucide-react';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers } from 'lucide-react';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
@@ -33,7 +33,7 @@ export function App() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'da_fare' | 'fatti'
   const [onlyUrgent, setOnlyUrgent] = useState(false);
 
   // Modals
@@ -67,7 +67,6 @@ export function App() {
       setProjects(loadedProjects);
       setInterventions(loadedInterventions);
 
-      // Sincronizza sessione utente se presente
       const session = getCurrentSession();
       if (session) {
         const found = loadedUsers.find(u => u.id === session.id);
@@ -232,16 +231,7 @@ export function App() {
       if (!match) return false;
     }
 
-    // 4. Stato
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'in_corso') {
-        if (item.status !== 'in_corso' && item.status !== 'programmato') return false;
-      } else if (item.status !== statusFilter) {
-        return false;
-      }
-    }
-
-    // 5. Solo urgenti
+    // 4. Solo urgenti
     if (onlyUrgent && item.priority !== 'urgente') {
       return false;
     }
@@ -249,7 +239,14 @@ export function App() {
     return true;
   });
 
+  // ================= DIVISIONE ROSSO (DA FARE) / VERDE (FATTI) =================
+  const pendingInterventions = filteredInterventions.filter(i => i.status !== 'completato');
+  const completedInterventions = filteredInterventions.filter(i => i.status === 'completato');
+
   const activeProjectObj = projects.find(p => p.id === activeProjectId);
+
+  const showPendingSection = statusFilter === 'all' || statusFilter === 'da_fare';
+  const showCompletedSection = statusFilter === 'all' || statusFilter === 'fatti';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
@@ -334,7 +331,7 @@ export function App() {
             })}
           </div>
 
-          {/* Project Focus Header info (es. Workbank) */}
+          {/* Project Focus Header info */}
           {activeProjectObj && (
             <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-300 gap-2">
               <div>
@@ -351,7 +348,7 @@ export function App() {
         {/* Stats Summary */}
         <StatsCards interventions={filteredInterventions} />
 
-        {/* Filter and Search Bar */}
+        {/* Filter and Search Bar with Red / Green quick switch */}
         <FilterBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -359,19 +356,24 @@ export function App() {
           onStatusFilterChange={setStatusFilter}
           onlyUrgent={onlyUrgent}
           onToggleUrgent={() => setOnlyUrgent(prev => !prev)}
+          pendingCount={pendingInterventions.length}
+          completedCount={completedInterventions.length}
         />
 
-        {/* Interventions List */}
-        {loading ? (
+        {/* Loading state */}
+        {loading && (
           <div className="py-20 text-center text-slate-400 text-sm">
             Caricamento interventi in corso...
           </div>
-        ) : filteredInterventions.length === 0 ? (
+        )}
+
+        {/* Empty state */}
+        {!loading && filteredInterventions.length === 0 && (
           <div className="py-16 text-center border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30 p-8">
             <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-3" />
             <h3 className="text-base font-semibold text-slate-300">Nessun intervento trovato per questo filtro</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-              Non ci sono richieste con i filtri selezionati. Crea una nuova richiesta o seleziona un altro progetto.
+              Non ci sono richieste con i parametri selezionati.
             </p>
             <button
               onClick={() => setIsNewModalOpen(true)}
@@ -381,22 +383,106 @@ export function App() {
               <span>Inserisci Nuovo Guasto / Intervento</span>
             </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredInterventions.map((intervention) => (
-              <InterventionCard
-                key={intervention.id}
-                intervention={intervention}
-                currentRole={currentUser.role}
-                currentUserName={currentUser.name}
-                onTakeCharge={handleTakeCharge}
-                onOpenReportModal={(item) => setReportModalIntervention(item)}
-                onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
-                onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
+        )}
+
+        {/* ================= SEZIONE 1: 🔴 INTERVENTI DA FARE (TONALITÀ ROSSO) ================= */}
+        {!loading && showPendingSection && (
+          <section className="mb-10">
+            {/* Header Sezione Rosso */}
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-slate-900 border border-rose-800/50 shadow-lg shadow-rose-950/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+                  <AlertCircle className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>INTERVENTI DA FARE & APERTI</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-sm">
+                      {pendingInterventions.length}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-rose-300/80">Lavori pianificati, in attesa di intervento tecnico o in corso on-site</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsNewModalOpen(true)}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow transition active:scale-95"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Aggiungi Guasto</span>
+              </button>
+            </div>
+
+            {/* Griglia Card Da Fare */}
+            {pendingInterventions.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl border border-dashed border-rose-900/30 bg-rose-950/10 text-xs text-rose-300/60">
+                Nessun intervento da fare al momento in questa vista. Tutti i lavori sono completati!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingInterventions.map((intervention) => (
+                  <InterventionCard
+                    key={intervention.id}
+                    intervention={intervention}
+                    currentRole={currentUser.role}
+                    currentUserName={currentUser.name}
+                    onTakeCharge={handleTakeCharge}
+                    onOpenReportModal={(item) => setReportModalIntervention(item)}
+                    onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
+                    onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ================= SEZIONE 2: 🟢 INTERVENTI GIÀ FATTI (TONALITÀ VERDE) ================= */}
+        {!loading && showCompletedSection && (
+          <section className="mb-10">
+            {/* Header Sezione Verde */}
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-800/50 shadow-lg shadow-emerald-950/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>INTERVENTI GIÀ FATTI & COMPLETATI</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-extrabold shadow-sm">
+                      {completedInterventions.length}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-emerald-300/80">Lavori terminati con ore consuntivate, verbale tecnico PDF e riscontro cliente</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Griglia Card Fatti */}
+            {completedInterventions.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl border border-dashed border-emerald-900/30 bg-emerald-950/10 text-xs text-emerald-300/60">
+                Nessun intervento completato ancora per i filtri selezionati.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {completedInterventions.map((intervention) => (
+                  <InterventionCard
+                    key={intervention.id}
+                    intervention={intervention}
+                    currentRole={currentUser.role}
+                    currentUserName={currentUser.name}
+                    onTakeCharge={handleTakeCharge}
+                    onOpenReportModal={(item) => setReportModalIntervention(item)}
+                    onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
+                    onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
       </main>
