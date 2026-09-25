@@ -19,6 +19,8 @@ import { ClientFeedbackModal } from './components/ClientFeedbackModal';
 import { ImagePreviewModal } from './components/ImagePreviewModal';
 import { AdminUsersModal } from './components/AdminUsersModal';
 import { ProjectManagementModal } from './components/ProjectManagementModal';
+import { PwaInstallModal } from './components/PwaInstallModal';
+import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
 import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
 import { verifySessionToken } from './lib/authSecurity';
@@ -46,6 +48,11 @@ export function App() {
   const [reportModalIntervention, setReportModalIntervention] = useState<InterventionRequest | null>(null);
   const [feedbackModalIntervention, setFeedbackModalIntervention] = useState<InterventionRequest | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<DefectPhoto | null>(null);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -57,6 +64,30 @@ export function App() {
 
   useEffect(() => {
     loadAllData();
+
+    // Online / Offline tracking
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast('🟢 Online: Connection active');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      showToast('📡 Offline Mode: All actions saved locally');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Track PWA install eligibility
+    const unsub = subscribePwaInstall(() => {
+      setCanInstall(canInstallPwa());
+    });
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      unsub();
+    };
   }, []);
 
   const loadAllData = async () => {
@@ -378,7 +409,8 @@ export function App() {
         onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
         onExportExcel={handleExportExcel}
         onLogout={handleLogout}
-        isOnline={true}
+        isOnline={isOnline}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -724,6 +756,13 @@ export function App() {
           initialCreate={openProjectCreateDirectly}
         />
       )}
+
+      {/* PWA Home Screen Installation Modal */}
+      <PwaInstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        onInstalledSuccess={() => showToast('🎉 App successfully installed to your Home Screen!')}
+      />
 
     </div>
   );
