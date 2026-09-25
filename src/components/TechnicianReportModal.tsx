@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, PhoneCall, MessageCircle, Share2, Tag } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, 
+  PhoneCall, MessageCircle, Share2, Tag, Mic, MicOff 
+} from 'lucide-react';
 import { InterventionRequest, InterventionStatus, TechnicianReport } from '../types';
 import { downloadInterventionPDF, getInterventionPDFDataUri, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
@@ -52,6 +55,100 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
   const [technicianSignature, setTechnicianSignature] = useState<string>(
     existingReport?.technicianSignature || ''
   );
+
+  // Speech-to-Text Voice Dictation State
+  const [isRecordingWorkDone, setIsRecordingWorkDone] = useState(false);
+  const [isRecordingNotes, setIsRecordingNotes] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
+
+  const toggleVoiceDictation = (field: 'workDone' | 'notes') => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Google Chrome, Edge, or Safari.');
+      return;
+    }
+
+    if (field === 'workDone' && isRecordingWorkDone) {
+      try { recognitionRef.current?.stop(); } catch {}
+      setIsRecordingWorkDone(false);
+      return;
+    }
+    if (field === 'notes' && isRecordingNotes) {
+      try { recognitionRef.current?.stop(); } catch {}
+      setIsRecordingNotes(false);
+      return;
+    }
+
+    // Stop active instance
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'it-IT';
+      recognition.continuous = true;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        if (field === 'workDone') {
+          setIsRecordingWorkDone(true);
+          setIsRecordingNotes(false);
+        } else {
+          setIsRecordingNotes(true);
+          setIsRecordingWorkDone(false);
+        }
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            transcript += event.results[i][0].transcript;
+          }
+        }
+
+        const trimmed = transcript.trim();
+        if (trimmed) {
+          if (field === 'workDone') {
+            setWorkDone(prev => prev.trim() ? `${prev.trim()} ${trimmed}.` : `${trimmed}.`);
+          } else {
+            setTechnicalNotes(prev => prev.trim() ? `${prev.trim()} ${trimmed}.` : `${trimmed}.`);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        setIsRecordingWorkDone(false);
+        setIsRecordingNotes(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecordingWorkDone(false);
+        setIsRecordingNotes(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err: any) {
+      console.warn('Could not start speech recognition:', err);
+      setIsRecordingWorkDone(false);
+      setIsRecordingNotes(false);
+    }
+  };
 
   const handlePreviewPDF = () => {
     const tempReport: TechnicianReport = {
@@ -262,15 +359,30 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
 
           {/* Work Done Description */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Detailed Description of Work Performed <span className="text-rose-400">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Detailed Description of Work Performed <span className="text-rose-400">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => toggleVoiceDictation('workDone')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-95 ${
+                  isRecordingWorkDone
+                    ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-900/40'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                }`}
+                title="Dictate work performed with voice (Speech to Text)"
+              >
+                {isRecordingWorkDone ? <MicOff className="w-3.5 h-3.5 text-white" /> : <Mic className="w-3.5 h-3.5 text-blue-400" />}
+                <span>{isRecordingWorkDone ? 'Listening (Tap to stop)...' : 'Dictate with Voice'}</span>
+              </button>
+            </div>
             <textarea
               required
               rows={4}
               value={workDone}
               onChange={(e) => setWorkDone(e.target.value)}
-              placeholder="Specify the exact technical work carried out: inspections, component replacement, calibrations, functional tests..."
+              placeholder="Specify the exact technical work carried out: inspections, component replacement, calibrations, functional tests... (or tap Dictate with Voice to speak)"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed"
             />
           </div>
@@ -327,14 +439,29 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
 
           {/* Technical Recommendations */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Technical Recommendations for Client
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Technical Recommendations for Client
+              </label>
+              <button
+                type="button"
+                onClick={() => toggleVoiceDictation('notes')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-95 ${
+                  isRecordingNotes
+                    ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-900/40'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                }`}
+                title="Dictate recommendations with voice"
+              >
+                {isRecordingNotes ? <MicOff className="w-3.5 h-3.5 text-white" /> : <Mic className="w-3.5 h-3.5 text-blue-400" />}
+                <span>{isRecordingNotes ? 'Listening...' : 'Voice Dictate'}</span>
+              </button>
+            </div>
             <textarea
               rows={2}
               value={technicalNotes}
               onChange={(e) => setTechnicalNotes(e.target.value)}
-              placeholder="e.g. System operating within nominal limits. Recommended follow-up inspection in 6 months..."
+              placeholder="e.g. System operating within nominal limits. Recommended follow-up inspection in 6 months... (or tap Voice Dictate)"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed"
             />
           </div>
