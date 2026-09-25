@@ -278,20 +278,20 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
       </div>
 
       {/* Action Footer */}
-      <div className={`pt-3 border-t flex items-center justify-between flex-wrap gap-2 ${
+      <div className={`pt-3 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 ${
         isPending ? 'border-rose-900/40' : 'border-emerald-900/40'
       }`}>
         
         {/* Left side: assigned technician info */}
         <div className="text-xs text-slate-400 flex items-center gap-1.5">
           <Shield className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
-          <span>
+          <span className="truncate">
             {intervention.assignedTechnician ? `Assegnato a ${intervention.assignedTechnician}` : 'Nessun tecnico assegnato'}
           </span>
         </div>
 
         {/* Right side contextual buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-stretch sm:justify-end">
           
           {/* Action: Take charge (if waiting and is tech or admin) */}
           {isWaiting && isTechOrAdmin && (
