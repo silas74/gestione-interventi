@@ -56,7 +56,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !code.trim()) {
-      alert('Nome e codice progetto sono obbligatori.');
+      alert('Project name and code are required.');
       return;
     }
 
@@ -85,8 +85,8 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
               <Folder className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Gestione Progetti & Cantieri</h3>
-              <p className="text-xs text-slate-400">Classifica difetti e interventi per ciascun progetto</p>
+              <h3 className="text-base font-bold text-white">Project & Site Management</h3>
+              <p className="text-xs text-slate-400">Classify defects and service tasks by project</p>
             </div>
           </div>
           <button
@@ -103,14 +103,14 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
           {!isCreating && !editingProject && (
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-300">
-                Progetti Attivi ({projects.length})
+                Active Projects ({projects.length})
               </span>
               <button
                 onClick={startCreate}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition"
               >
                 <FolderPlus className="w-4 h-4" />
-                <span>Nuovo Progetto</span>
+                <span>New Project</span>
               </button>
             </div>
           )}
@@ -118,33 +118,33 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
           {(isCreating || editingProject) && (
             <form onSubmit={handleSubmit} className="bg-slate-950/70 border border-slate-800 rounded-2xl p-5 space-y-3.5">
               <h4 className="text-sm font-bold text-white mb-2">
-                {isCreating ? 'Nuovo Progetto' : `Modifica Progetto: ${editingProject?.name}`}
+                {isCreating ? 'New Project' : `Edit Project: ${editingProject?.name}`}
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Nome Progetto <span className="text-rose-400">*</span>
+                    Project Name <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="es. Workbank"
+                    placeholder="e.g. Workbank"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Codice Breve <span className="text-rose-400">*</span>
+                    Short Code <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="es. WRKB"
+                    placeholder="e.g. WRKB"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -152,13 +152,13 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Descrizione Impianto / Obiettivi
+                  Plant / Project Description
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descrizione dell'impianto, tipologia e tecnologia utilizzata..."
+                  placeholder="Facility description, equipment types, technologies..."
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -166,25 +166,25 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Cliente / Committente
+                    Client / Customer
                   </label>
                   <input
                     type="text"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    placeholder="es. Workbank SpA"
+                    placeholder="e.g. Workbank Corp"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Sede / Indirizzo Cantiere
+                    Site / Facility Address
                   </label>
                   <input
                     type="text"
                     value={siteAddress}
                     onChange={(e) => setSiteAddress(e.target.value)}
-                    placeholder="Via, Città"
+                    placeholder="Street, City"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -196,13 +196,13 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
                   onClick={cancelForm}
                   className="px-3.5 py-1.5 text-xs text-slate-400 hover:text-white"
                 >
-                  Annulla
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white"
                 >
-                  Salva Progetto
+                  Save Project
                 </button>
               </div>
             </form>
@@ -225,7 +225,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
                   <p className="text-xs text-slate-400 mt-1">{p.description}</p>
                   {p.clientName && (
                     <div className="text-[11px] text-slate-500 mt-0.5">
-                      Cliente: {p.clientName} {p.siteAddress ? `— Sede: ${p.siteAddress}` : ''}
+                      Client: {p.clientName} {p.siteAddress ? `— Site: ${p.siteAddress}` : ''}
                     </div>
                   )}
                 </div>
@@ -239,7 +239,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(`Eliminare il progetto ${p.name}?`)) onDeleteProject(p.id);
+                      if (confirm(`Delete project ${p.name}?`)) onDeleteProject(p.id);
                     }}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
                   >
