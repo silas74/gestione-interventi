@@ -18,19 +18,19 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ photo, onC
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950/70">
           <div>
             <h4 className="text-sm font-semibold text-white truncate max-w-xs sm:max-w-md">
-              {photo.name || 'Foto difetto riscontrato'}
+              {photo.name || 'Defect Photo'}
             </h4>
             <p className="text-[11px] text-slate-400">
-              Caricata il {new Date(photo.uploadedAt).toLocaleString('it-IT')}
+              Uploaded on {new Date(photo.uploadedAt).toLocaleString('en-US')}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <a
               href={photo.url}
-              download={photo.name || 'foto_guasto.jpg'}
+              download={photo.name || 'defect_photo.jpg'}
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-              title="Scarica foto"
+              title="Download photo"
             >
               <Download className="w-4 h-4" />
             </a>
