@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, KeyRound, Wrench, Shield, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { UserAccount } from '../types';
 
 interface LoginScreenProps {
@@ -26,12 +26,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
     } else {
       setError('Invalid credentials. Please verify your username and password or contact Costantino.');
     }
-  };
-
-  const handleQuickLogin = (u: UserAccount) => {
-    setUsername(u.username);
-    setPassword(u.password);
-    onLogin(u);
   };
 
   return (
@@ -116,42 +110,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
 
         </form>
 
-        {/* Quick Demo Access Helpers */}
-        <div className="mt-6 pt-5 border-t border-slate-800">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
-            Quick Demo Account Login
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            {users.map(u => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => handleQuickLogin(u)}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-left transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-1.5 rounded-lg ${
-                    u.role === 'admin' ? 'bg-amber-500/10 text-amber-400' :
-                    u.role === 'tecnico' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'
-                  }`}>
-                    {u.role === 'admin' ? <Shield className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-white">{u.name}</div>
-                    <div className="text-[10px] text-slate-400">User: <code className="text-slate-300 font-mono">{u.username}</code> | Pass: <code className="text-slate-300 font-mono">{u.password}</code></div>
-                  </div>
-                </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  u.role === 'admin' ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' :
-                  u.role === 'tecnico' ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                }`}>
-                  {u.role.toUpperCase()}
-                </span>
-              </button>
-            ))}
-          </div>
-          <p className="text-[11px] text-slate-500 text-center mt-3">
-            Solo <strong>Costantino (Admin)</strong> può creare nuovi utenti, cambiare password e assegnare progetti.
+        {/* Footnote */}
+        <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+          <p className="text-[11px] text-slate-500">
+            Authorized personnel only. Account credentials and project access are assigned by administrator (Costantino).
           </p>
         </div>
 
