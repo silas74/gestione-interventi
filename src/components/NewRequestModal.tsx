@@ -372,18 +372,19 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             )}
           </div>
 
-          {/* Note speciali */}
+          {/* Note speciali multiline */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Note Varie per il Tecnico
+              Note Varie per il Tecnico (Multiline)
             </label>
-            <input
-              type="text"
+            <textarea
+              rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="es. DPI richiesti, orari accesso portineria, referenti di sala..."
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="es. DPI richiesti: scarpe e casco.&#10;Premere Invio per andare a capo...&#10;Orari accesso: 08:30 - 18:00"
+              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y whitespace-pre-wrap leading-relaxed"
             />
+            <span className="text-[10px] text-slate-400">Premi Invio per andare a capo su una nuova riga</span>
           </div>
 
           {/* Footer Actions */}
