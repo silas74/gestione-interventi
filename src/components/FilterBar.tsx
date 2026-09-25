@@ -98,13 +98,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* Toggle urgent */}
         <button
           onClick={onToggleUrgent}
-          className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition shrink-0 ${
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border transition shrink-0 ${
             onlyUrgent
-              ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm shadow-rose-900/20'
+              ? 'animate-flash-urgent shadow-lg'
               : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
           }`}
         >
-          <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+          <ShieldAlert className="w-3.5 h-3.5" />
           <span className="text-[11px] sm:text-xs">Urgent Only</span>
         </button>
       </div>
