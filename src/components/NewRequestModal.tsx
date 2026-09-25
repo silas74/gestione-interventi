@@ -30,7 +30,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   const [clientContact, setClientContact] = useState('');
   const [siteName, setSiteName] = useState(() => {
     const proj = projects.find(p => p.id === (defaultProjectId || projects[0]?.id));
-    return proj ? `${proj.name} - Impianto` : '';
+    return proj ? `${proj.name} - Facility` : '';
   });
   const [siteAddress, setSiteAddress] = useState(() => {
     const proj = projects.find(p => p.id === (defaultProjectId || projects[0]?.id));
@@ -43,20 +43,20 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
     return d.toISOString().split('T')[0];
   });
   const [desiredAccessTime, setDesiredAccessTime] = useState('09:00');
-  const [priority, setPriority] = useState<InterventionPriority>('media');
+  const [priority, setPriority] = useState<InterventionPriority>('medium');
   const [notes, setNotes] = useState('');
   const [defectPhotos, setDefectPhotos] = useState<DefectPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
 
   if (!isOpen) return null;
 
-  // Quando cambia il progetto selezionato, aggiorna eventualmente sede e indirizzo di default
+  // When selected project changes, update default site name and address
   const handleProjectSelect = (projId: string) => {
     setSelectedProjectId(projId);
     const p = projects.find(item => item.id === projId);
     if (p) {
-      if (!siteName || siteName.includes('- Impianto')) {
-        setSiteName(`${p.name} - Impianto`);
+      if (!siteName || siteName.includes('- Facility') || siteName.includes('- Impianto')) {
+        setSiteName(`${p.name} - Facility`);
       }
       if (p.siteAddress) {
         setSiteAddress(p.siteAddress);
@@ -104,7 +104,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !clientName.trim() || !siteName.trim() || !description.trim()) {
-      alert('Per favore compila tutti i campi obbligatori contrassegnati con *');
+      alert('Please fill in all mandatory fields marked with *');
       return;
     }
 
@@ -115,7 +115,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
       id: 'int_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
       code: generateNextCode(existingInterventions, projCode),
       projectId: selectedProjectId,
-      projectName: proj?.name || 'Generale',
+      projectName: proj?.name || 'General',
       title: title.trim(),
       siteName: siteName.trim(),
       siteAddress: siteAddress.trim(),
@@ -127,7 +127,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
       priority,
       defectPhotos,
       notes: notes.trim(),
-      status: 'in_attesa',
+      status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -147,8 +147,8 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Nuova Richiesta di Intervento</h3>
-              <p className="text-xs text-slate-400">Classifica l'intervento per progetto e inserisci i dettagli del guasto</p>
+              <h3 className="text-base font-bold text-white">New Service Request</h3>
+              <p className="text-xs text-slate-400">Classify the service request by project and describe the defect</p>
             </div>
           </div>
           <button
@@ -162,11 +162,11 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
           
-          {/* Selezione Progetto di Riferimento */}
+          {/* Reference Project Selection */}
           <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
             <label className="block text-xs font-semibold text-blue-400 mb-1 flex items-center gap-1.5">
               <FolderKanban className="w-4 h-4" />
-              Progetto di Riferimento <span className="text-rose-400">*</span>
+              Reference Project <span className="text-rose-400">*</span>
             </label>
             <select
               value={selectedProjectId}
@@ -180,61 +180,61 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
               ))}
             </select>
             <p className="text-[11px] text-slate-400 mt-1">
-              I difetti e i lavori saranno catalogati specificamente sotto questo progetto.
+              Defects and tasks will be catalogued specifically under this project.
             </p>
           </div>
 
-          {/* Titolo Guasto / Oggetto */}
+          {/* Defect Title / Subject */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Oggetto / Titolo Guasto o Intervento <span className="text-rose-400">*</span>
+              Subject / Defect Title or Task <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="es. Spostare alimentazione KNX sotto UPS / Allarme sensore"
+              placeholder="e.g. Move KNX power supply under UPS / Sensor fault"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Sede & Indirizzo */}
+          {/* Site & Address */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                Sede / Reparto <span className="text-rose-400">*</span>
+                Facility / Department <span className="text-rose-400">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={siteName}
                 onChange={(e) => setSiteName(e.target.value)}
-                placeholder="es. Uffici Piano 1, Quadro Generale"
+                placeholder="e.g. 1st Floor Offices, Main Switchboard"
                 className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Indirizzo
+                Site Address
               </label>
               <input
                 type="text"
                 value={siteAddress}
                 onChange={(e) => setSiteAddress(e.target.value)}
-                placeholder="Via, Civico, Città"
+                placeholder="Street, City, Postal Code"
                 className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Richiedente & Contatto */}
+          {/* Requester & Contact */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-emerald-400" />
-                Nome Richiedente / Referente <span className="text-rose-400">*</span>
+                Requester / Contact Person <span className="text-rose-400">*</span>
               </label>
               <input
                 type="text"
@@ -247,39 +247,39 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
-                Recapito Telefonico / Email
+                Phone Number / Email
               </label>
               <input
                 type="text"
                 value={clientContact}
                 onChange={(e) => setClientContact(e.target.value)}
-                placeholder="es. +39 02 8877665"
+                placeholder="e.g. +39 02 8877665"
                 className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Descrizione guasto / Spiegazione */}
+          {/* Problem description / What needs to be done */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Spiegazione Dettagliata del Problema / Cosa Serve <span className="text-rose-400">*</span>
+              Detailed Problem Description / Scope of Work <span className="text-rose-400">*</span>
             </label>
             <textarea
               required
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrivi cosa serve eseguire, componenti da verificare, modifiche all'impianto o malfunzionamenti riscontrati..."
+              placeholder="Describe what needs to be carried out, components to check, system modifications or observed malfunctions..."
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 
-          {/* Data & Ora Accesso Desiderata + Priorità */}
+          {/* Desired Access Date & Time + Priority */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-slate-950/50 p-3.5 rounded-xl border border-slate-800">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                Data Accesso Desiderata <span className="text-rose-400">*</span>
+                Desired Access Date <span className="text-rose-400">*</span>
               </label>
               <input
                 type="date"
@@ -293,7 +293,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-blue-400" />
-                Ora Desiderata
+                Desired Time
               </label>
               <input
                 type="time"
@@ -306,25 +306,25 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                Priorità Intervento
+                Task Priority
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as InterventionPriority)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="bassa">Bassa (Ordinaria)</option>
-                <option value="media">Media (Standard)</option>
-                <option value="alta">Alta (Prioritaria)</option>
-                <option value="urgente">Urgente (Fermo Impianto)</option>
+                <option value="low">Low (Standard)</option>
+                <option value="medium">Medium (Regular)</option>
+                <option value="high">High (Priority)</option>
+                <option value="urgent">Urgent (System Down)</option>
               </select>
             </div>
           </div>
 
-          {/* Caricamento Foto del Difetto */}
+          {/* Photo Upload */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Immagini / Foto del Difetto (opzionale)
+              Defect Photos / Images (optional)
             </label>
             <div className="border-2 border-dashed border-slate-700 hover:border-blue-500/70 rounded-xl p-4 text-center transition bg-slate-800/40">
               <input
@@ -341,7 +341,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
               >
                 <Upload className="w-6 h-6 text-blue-400" />
                 <span className="text-xs font-medium">
-                  {uploading ? 'Caricamento immagini...' : 'Clicca per selezionare o scattare foto del guasto'}
+                  {uploading ? 'Uploading images...' : 'Click to select or take photos of the defect'}
                 </span>
                 <span className="text-[10px] text-slate-500">JPG, PNG, WEBP</span>
               </label>
@@ -372,19 +372,19 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             )}
           </div>
 
-          {/* Note speciali multiline */}
+          {/* Multiline Notes */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Note Varie per il Tecnico (Multiline)
+              Notes for Technician (Multiline)
             </label>
             <textarea
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="es. DPI richiesti: scarpe e casco.&#10;Premere Invio per andare a capo...&#10;Orari accesso: 08:30 - 18:00"
+              placeholder="e.g. PPE required: safety boots and helmet.&#10;Press Enter to insert a new line...&#10;Access window: 08:30 - 18:00"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y whitespace-pre-wrap leading-relaxed"
             />
-            <span className="text-[10px] text-slate-400">Premi Invio per andare a capo su una nuova riga</span>
+            <span className="text-[10px] text-slate-400">Press Enter to move down to a new line</span>
           </div>
 
           {/* Footer Actions */}
@@ -394,13 +394,13 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition"
             >
-              Annulla
+              Cancel
             </button>
             <button
               type="submit"
               className="px-5 py-2 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition shadow-lg shadow-blue-600/25 active:scale-95"
             >
-              Invia Richiesta Intervento
+              Submit Service Request
             </button>
           </div>
 
