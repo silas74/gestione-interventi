@@ -20,8 +20,9 @@ import { ImagePreviewModal } from './components/ImagePreviewModal';
 import { AdminUsersModal } from './components/AdminUsersModal';
 import { ProjectManagementModal } from './components/ProjectManagementModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
+import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
-import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet } from 'lucide-react';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
 import { verifySessionToken } from './lib/authSecurity';
 
@@ -49,6 +50,7 @@ export function App() {
   const [feedbackModalIntervention, setFeedbackModalIntervention] = useState<InterventionRequest | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<DefectPhoto | null>(null);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -302,17 +304,30 @@ export function App() {
     return true;
   });
 
-  // ================= RED (TO DO) / GREEN (COMPLETED) DIVISION =================
+  // ================= TASK DIVISION (TO DO / IN PROGRESS / COMPLETED) =================
   const pendingInterventions = filteredInterventions.filter(
     i => i.status !== 'completed' && i.status !== 'completato'
   );
+
+  const inProgressInterventions = filteredInterventions.filter(
+    i => (i.status === 'in_progress' || i.status === 'in_corso' || 
+         i.report?.statusOutcome === 'waiting_for_parts' || 
+         (i.report?.statusOutcome as string) === 'in_attesa_ricambi') &&
+         (i.status !== 'completed' && i.status !== 'completato')
+  );
+
+  const todoInterventions = pendingInterventions.filter(
+    i => !inProgressInterventions.some(ip => ip.id === i.id)
+  );
+
   const completedInterventions = filteredInterventions.filter(
     i => i.status === 'completed' || i.status === 'completato'
   );
 
   const activeProjectObj = projects.find(p => p.id === activeProjectId);
 
-  const showPendingSection = statusFilter === 'all' || statusFilter === 'da_fare';
+  const showTodoSection = statusFilter === 'all' || statusFilter === 'da_fare';
+  const showInProgressSection = statusFilter === 'all' || statusFilter === 'in_lavorazione';
   const showCompletedSection = statusFilter === 'all' || statusFilter === 'fatti';
 
   const handleExportExcel = () => {
@@ -411,6 +426,7 @@ export function App() {
         onLogout={handleLogout}
         isOnline={isOnline}
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
+        onOpenBackupModal={() => setIsBackupModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -542,7 +558,7 @@ export function App() {
         {/* Stats Summary */}
         <StatsCards interventions={filteredInterventions} />
 
-        {/* Filter and Search Bar with Red / Green quick switch */}
+        {/* Filter and Search Bar with Red / Pink / Green quick switch */}
         <FilterBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -550,7 +566,8 @@ export function App() {
           onStatusFilterChange={setStatusFilter}
           onlyUrgent={onlyUrgent}
           onToggleUrgent={() => setOnlyUrgent(prev => !prev)}
-          pendingCount={pendingInterventions.length}
+          pendingCount={statusFilter === 'all' ? todoInterventions.length : pendingInterventions.length}
+          inProgressCount={inProgressInterventions.length}
           completedCount={completedInterventions.length}
         />
 
@@ -580,7 +597,7 @@ export function App() {
         )}
 
         {/* ================= SECTION 1: 🔴 OPEN & TO DO SERVICE TASKS (RED TONES) ================= */}
-        {!loading && showPendingSection && (
+        {!loading && showTodoSection && (
           <section className="mb-10">
             {/* Red Section Header */}
             <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-slate-900 border border-rose-800/50 shadow-lg shadow-rose-950/20">
@@ -592,10 +609,10 @@ export function App() {
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
                     <span>TO DO & OPEN INTERVENTIONS</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-sm">
-                      {pendingInterventions.length}
+                      {statusFilter === 'all' ? todoInterventions.length : pendingInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-rose-300/80">Scheduled work, awaiting technician dispatch or in progress on-site</p>
+                  <p className="text-[11px] text-rose-300/80">Scheduled work, awaiting technician dispatch</p>
                 </div>
               </div>
 
@@ -609,13 +626,13 @@ export function App() {
             </div>
 
             {/* Red Cards Grid */}
-            {pendingInterventions.length === 0 ? (
+            {(statusFilter === 'all' ? todoInterventions : pendingInterventions).length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-rose-900/30 bg-rose-950/10 text-xs text-rose-300/60">
-                No open tasks at the moment for this view. All service tickets are completed!
+                No open tasks waiting dispatch for this view.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pendingInterventions.map((intervention) => (
+                {(statusFilter === 'all' ? todoInterventions : pendingInterventions).map((intervention) => (
                   <InterventionCard
                     key={intervention.id}
                     intervention={intervention}
@@ -633,7 +650,53 @@ export function App() {
           </section>
         )}
 
-        {/* ================= SECTION 2: 🟢 COMPLETED & CLOSED SERVICE TASKS (GREEN TONES) ================= */}
+        {/* ================= SECTION 2: 🌸 IN PROGRESS & WAITING FOR PARTS (PINK TONES) ================= */}
+        {!loading && (statusFilter === 'all' ? inProgressInterventions.length > 0 : showInProgressSection) && (
+          <section className="mb-10">
+            {/* Pink Section Header */}
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-pink-950/70 via-slate-900 to-slate-900 border border-pink-700/50 shadow-lg shadow-pink-950/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400">
+                  <Clock className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>IN PROGRESS & WAITING FOR PARTS</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-600 text-white shadow-sm">
+                      {inProgressInterventions.length}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-pink-300/80">Active on-site tasks, inspections and orders awaiting spare parts</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Pink Cards Grid */}
+            {inProgressInterventions.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl border border-dashed border-pink-900/30 bg-pink-950/10 text-xs text-pink-300/60">
+                No tasks currently in progress or waiting for parts.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {inProgressInterventions.map((intervention) => (
+                  <InterventionCard
+                    key={intervention.id}
+                    intervention={intervention}
+                    currentRole={currentUser.role}
+                    currentUserName={currentUser.name}
+                    onTakeCharge={handleTakeCharge}
+                    onOpenReportModal={(item) => setReportModalIntervention(item)}
+                    onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
+                    onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ================= SECTION 3: 🟢 COMPLETED & CLOSED SERVICE TASKS (GREEN TONES) ================= */}
         {!loading && showCompletedSection && (
           <section className="mb-10">
             {/* Green Section Header */}
@@ -762,6 +825,21 @@ export function App() {
         isOpen={isInstallModalOpen}
         onClose={() => setIsInstallModalOpen(false)}
         onInstalledSuccess={() => showToast('🎉 App successfully installed to your Home Screen!')}
+      />
+
+      {/* Full Database Backup & Restore Modal (JSON) */}
+      <BackupRestoreModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        interventions={interventions}
+        projects={projects}
+        users={users}
+        onDataRestored={(newInterventions, newProjects, newUsers) => {
+          setInterventions(newInterventions);
+          setProjects(newProjects);
+          setUsers(newUsers);
+          showToast('✅ Database restored successfully from JSON backup!');
+        }}
       />
 
     </div>
