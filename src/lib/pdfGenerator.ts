@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { InterventionRequest } from '../types';
+import { getWhatsAppPhoneDigits } from './contactUtils';
 
 export function generateInterventionReportPDF(intervention: InterventionRequest): jsPDF {
   const doc = new jsPDF({
@@ -186,7 +187,53 @@ export function downloadInterventionPDF(intervention: InterventionRequest) {
   doc.save(`Intervention_Report_${intervention.code}.pdf`);
 }
 
+export function getInterventionPDFBlob(intervention: InterventionRequest): Blob {
+  const doc = generateInterventionReportPDF(intervention);
+  return doc.output('blob');
+}
+
 export function getInterventionPDFDataUri(intervention: InterventionRequest): string {
   const doc = generateInterventionReportPDF(intervention);
   return doc.output('datauristring');
+}
+
+/**
+ * Shares the generated PDF document directly via WhatsApp / Web Share
+ * On mobile/tablet, it uses Web Share API with file attachment.
+ * On desktop/fallback, it downloads the PDF and opens WhatsApp with pre-filled ticket confirmation.
+ */
+export async function shareInterventionPDFViaWhatsApp(intervention: InterventionRequest): Promise<{ success: boolean; method: 'web-share' | 'download-whatsapp' }> {
+  const fileName = `Intervention_Report_${intervention.code}.pdf`;
+  const pdfBlob = getInterventionPDFBlob(intervention);
+
+  // 1. Try modern Web Share API with file support (iOS Safari, Android Chrome)
+  try {
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `Service Report ${intervention.code}`,
+        text: `Official Technical Service Report for ${intervention.code} (${intervention.siteName})`
+      });
+      return { success: true, method: 'web-share' };
+    }
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      return { success: true, method: 'web-share' };
+    }
+    console.warn('Web Share API error or unsupported, falling back to download + WhatsApp link', err);
+  }
+
+  // 2. Desktop fallback: Download the PDF and open WhatsApp chat
+  downloadInterventionPDF(intervention);
+
+  const digits = getWhatsAppPhoneDigits(intervention.clientContact || '');
+  const message = `Hello ${intervention.clientName || ''},\nAttached is the completed Technical Service Report PDF for ticket *${intervention.code}* - "${intervention.title}" at ${intervention.siteName}.\nHours worked: ${intervention.report?.hoursWorked || 'N/A'}.\n\nPlease find the downloaded PDF on your device. Let us know if you need any further assistance!`;
+
+  const waUrl = digits 
+    ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  return { success: true, method: 'download-whatsapp' };
 }
