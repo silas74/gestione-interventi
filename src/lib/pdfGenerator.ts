@@ -18,153 +18,172 @@ export function generateInterventionReportPDF(intervention: InterventionRequest)
   // Title
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('RAPPORTO TECNICO DI INTERVENTO ON-SITE', 14, 18);
+  doc.setFontSize(17);
+  doc.text('ON-SITE TECHNICAL INTERVENTION REPORT', 14, 18);
 
   // Subtitle / Code
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(148, 163, 184); // slate-400
-  doc.text(`Codice Intervento: ${intervention.code}  |  Data Stampa: ${new Date().toLocaleDateString('it-IT')}`, 14, 28);
+  doc.text(`Ticket ID: ${intervention.code}  |  Project: ${intervention.projectName || 'General'}  |  Date: ${new Date().toLocaleDateString('en-US')}`, 14, 28);
 
   // Accent Line
   doc.setFillColor(37, 99, 235); // blue-600
   doc.rect(0, 38, pageWidth, 2.5, 'F');
 
-  let currentY = 50;
+  let currentY = 48;
 
   // Helper for Section Header
   const drawSectionTitle = (title: string, y: number) => {
     doc.setFillColor(241, 245, 249);
-    doc.rect(14, y - 5, pageWidth - 28, 8, 'F');
+    doc.rect(14, y - 5, pageWidth - 28, 7.5, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
     doc.text(title.toUpperCase(), 16, y);
-    return y + 9;
+    return y + 8.5;
   };
 
-  // Section 1: DATI RICHIESTA & CLIENTE
-  currentY = drawSectionTitle('1. DATI CLIENTE & SEDE IMPIANTO', currentY);
+  // Section 1: CLIENT & FACILITY INFORMATION
+  currentY = drawSectionTitle('1. CLIENT & FACILITY INFORMATION', currentY);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(30, 41, 59);
 
-  doc.text(`Cliente / Richiedente: ${intervention.clientName}`, 16, currentY);
-  doc.text(`Recapito: ${intervention.clientContact || 'N/D'}`, 115, currentY);
-  currentY += 6;
+  doc.text(`Client / Requester: ${intervention.clientName}`, 16, currentY);
+  doc.text(`Contact: ${intervention.clientContact || 'N/A'}`, 115, currentY);
+  currentY += 5.5;
 
-  doc.text(`Sede Intervento: ${intervention.siteName}`, 16, currentY);
-  doc.text(`Data Accesso Desiderata: ${intervention.desiredAccessDate} ${intervention.desiredAccessTime ? 'ore ' + intervention.desiredAccessTime : ''}`, 115, currentY);
-  currentY += 6;
+  doc.text(`Facility / Site: ${intervention.siteName}`, 16, currentY);
+  doc.text(`Desired Access: ${intervention.desiredAccessDate} ${intervention.desiredAccessTime ? 'at ' + intervention.desiredAccessTime : ''}`, 115, currentY);
+  currentY += 5.5;
 
-  doc.text(`Indirizzo Impianto: ${intervention.siteAddress || 'Sede stabilimento'}`, 16, currentY);
-  doc.text(`Priorità Rilevata: ${intervention.priority.toUpperCase()}`, 115, currentY);
-  currentY += 10;
+  doc.text(`Site Address: ${intervention.siteAddress || 'Main facility address'}`, 16, currentY);
+  doc.text(`Priority Level: ${intervention.priority.toUpperCase()}`, 115, currentY);
+  currentY += 9;
 
-  // Section 2: SEGNALAZIONE PROBLEMA
-  currentY = drawSectionTitle('2. SEGNALAZIONE INIZIALE DEL CLIENTE', currentY);
+  // Section 2: SERVICE REQUEST & DEFECT DETAILS
+  currentY = drawSectionTitle('2. SERVICE REQUEST & DEFECT DETAILS', currentY);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text(`Oggetto: ${intervention.title}`, 16, currentY);
-  currentY += 6;
+  doc.setFontSize(9.5);
+  doc.text(`Subject: ${intervention.title}`, 16, currentY);
+  currentY += 5.5;
 
   doc.setFont('helvetica', 'normal');
-  const splitDescription = doc.splitTextToSize(intervention.description || 'Nessuna descrizione specificata', pageWidth - 32);
+  const splitDescription = doc.splitTextToSize(intervention.description || 'No description provided.', pageWidth - 32);
   doc.text(splitDescription, 16, currentY);
-  currentY += splitDescription.length * 5 + 4;
+  currentY += splitDescription.length * 4.8 + 3.5;
 
   if (intervention.notes) {
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(100, 116, 139);
-    const splitNotes = doc.splitTextToSize(`Note aggiuntive: ${intervention.notes}`, pageWidth - 32);
+    const splitNotes = doc.splitTextToSize(`Special Notes: ${intervention.notes}`, pageWidth - 32);
     doc.text(splitNotes, 16, currentY);
-    currentY += splitNotes.length * 5 + 4;
+    currentY += splitNotes.length * 4.8 + 3.5;
     doc.setTextColor(30, 41, 59);
   }
 
-  // Section 3: RAPPORTO ESECUZIONE TECNICA
-  currentY = drawSectionTitle('3. RAPPORTO ESECUZIONE TECNICA & ORE LAVORATE', currentY + 2);
+  // Section 3: TECHNICAL EXECUTION & HOURS WORKED
+  currentY = drawSectionTitle('3. TECHNICAL EXECUTION & HOURS WORKED', currentY + 1.5);
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(`Tecnico Incaricato: ${report?.technicianName || intervention.assignedTechnician || 'Tecnico On-Site'}`, 16, currentY);
-  doc.text(`Data Esecuzione: ${report?.interventionDate || new Date().toISOString().split('T')[0]}`, 115, currentY);
-  currentY += 6;
+  doc.setFontSize(9.5);
+  doc.text(`Technician: ${report?.technicianName || intervention.assignedTechnician || 'On-Site Specialist'}`, 16, currentY);
+  doc.text(`Execution Date: ${report?.interventionDate || new Date().toISOString().split('T')[0]}`, 115, currentY);
+  currentY += 5.5;
 
   doc.setFont('helvetica', 'bold');
-  doc.text(`Ore Lavorate Totali: ${report?.hoursWorked !== undefined ? report.hoursWorked + ' ore' : 'Da quantificare'}`, 16, currentY);
-  doc.text(`Esito Intervento: ${(report?.statusOutcome || 'Risolto').toUpperCase()}`, 115, currentY);
-  currentY += 8;
+  doc.text(`Total Worked Hours: ${report?.hoursWorked !== undefined ? report.hoursWorked + ' hrs' : 'Pending'}`, 16, currentY);
+  doc.text(`Outcome: ${(report?.statusOutcome || 'Resolved').toUpperCase()}`, 115, currentY);
+  currentY += 7.5;
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Descrizione Lavori Eseguiti:', 16, currentY);
-  currentY += 5;
+  doc.text('Work Performed Summary:', 16, currentY);
+  currentY += 4.5;
 
   doc.setFont('helvetica', 'normal');
   const splitWorkDone = doc.splitTextToSize(
-    report?.workDone || 'Intervento di ripristino e verifica effettuato a regola d\'arte sul posto.',
+    report?.workDone || 'On-site technical inspection, testing, and commissioning performed.',
     pageWidth - 32
   );
   doc.text(splitWorkDone, 16, currentY);
-  currentY += splitWorkDone.length * 5 + 5;
+  currentY += splitWorkDone.length * 4.8 + 4;
 
   if (report?.materialsUsed) {
     doc.setFont('helvetica', 'bold');
-    doc.text('Ricambi e Materiali Impiegati:', 16, currentY);
-    currentY += 5;
+    doc.text('Replaced Parts & Materials Used:', 16, currentY);
+    currentY += 4.5;
     doc.setFont('helvetica', 'normal');
     const splitMaterials = doc.splitTextToSize(report.materialsUsed, pageWidth - 32);
     doc.text(splitMaterials, 16, currentY);
-    currentY += splitMaterials.length * 5 + 5;
+    currentY += splitMaterials.length * 4.8 + 4;
   }
 
   if (report?.technicalNotes) {
     doc.setFont('helvetica', 'bold');
-    doc.text('Note Tecniche & Raccomandazioni:', 16, currentY);
-    currentY += 5;
+    doc.text('Technical Recommendations / Next Steps:', 16, currentY);
+    currentY += 4.5;
     doc.setFont('helvetica', 'normal');
     const splitTechNotes = doc.splitTextToSize(report.technicalNotes, pageWidth - 32);
     doc.text(splitTechNotes, 16, currentY);
-    currentY += splitTechNotes.length * 5 + 5;
+    currentY += splitTechNotes.length * 4.8 + 4;
   }
 
-  // Section 4: RISCONTRO CLIENTE (se presente)
+  // Section 4: CLIENT ACCEPTANCE / FEEDBACK (if present)
   if (intervention.clientFeedback) {
-    currentY = drawSectionTitle('4. RISCONTRO / ACCETTAZIONE DEL CLIENTE', currentY + 2);
+    currentY = drawSectionTitle('4. CLIENT ACCEPTANCE & FEEDBACK', currentY + 1.5);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Riscontro rilasciato da: ${intervention.clientFeedback.clientName} in data ${new Date(intervention.clientFeedback.submittedAt).toLocaleDateString('it-IT')}`, 16, currentY);
-    currentY += 6;
+    doc.text(`Reviewed by: ${intervention.clientFeedback.clientName} on ${new Date(intervention.clientFeedback.submittedAt).toLocaleDateString('en-US')}`, 16, currentY);
+    currentY += 5.5;
     doc.setFont('helvetica', 'bold');
-    doc.text(`Stato Accettazione: ${intervention.clientFeedback.feedbackStatus.toUpperCase()}`, 16, currentY);
-    currentY += 6;
+    doc.text(`Status: ${intervention.clientFeedback.feedbackStatus.toUpperCase()}`, 16, currentY);
+    currentY += 5.5;
     doc.setFont('helvetica', 'normal');
-    const splitFeedback = doc.splitTextToSize(`Commenti: ${intervention.clientFeedback.notes}`, pageWidth - 32);
+    const splitFeedback = doc.splitTextToSize(`Comments: ${intervention.clientFeedback.notes}`, pageWidth - 32);
     doc.text(splitFeedback, 16, currentY);
-    currentY += splitFeedback.length * 5 + 6;
+    currentY += splitFeedback.length * 4.8 + 5;
   }
 
-  // Sezione Firme a fondo pagina
-  const footerY = 245;
+  // ================= SIGNATURES SECTION AT BOTTOM =================
+  const signatureLineY = 250;
+  
+  // 1. Technician Signature (render digital drawn signature if available)
+  if (report?.technicianSignature) {
+    try {
+      doc.addImage(report.technicianSignature, 'PNG', 16, signatureLineY - 20, 60, 18);
+    } catch (err) {
+      console.warn('Could not render technician signature', err);
+    }
+  }
+
+  // 2. Client Signature (render digital drawn signature if available)
+  if (intervention.clientFeedback?.clientSignature) {
+    try {
+      doc.addImage(intervention.clientFeedback.clientSignature, 'PNG', 120, signatureLineY - 20, 60, 18);
+    } catch (err) {
+      console.warn('Could not render client signature', err);
+    }
+  }
+
   doc.setDrawColor(203, 213, 225);
-  doc.line(16, footerY, 90, footerY);
-  doc.line(120, footerY, pageWidth - 16, footerY);
+  doc.line(16, signatureLineY, 90, signatureLineY);
+  doc.line(120, signatureLineY, pageWidth - 16, signatureLineY);
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(100, 116, 139);
-  doc.text('Firma del Tecnico Esecutore', 16, footerY + 5);
-  doc.text('Firma per Ricevuta e Accettazione Cliente', 120, footerY + 5);
+  doc.text(`Technician Digital Signature (${report?.technicianName || 'Specialist'})`, 16, signatureLineY + 4.5);
+  doc.text(`Client Acceptance Signature (${intervention.clientFeedback?.clientName || intervention.clientName})`, 120, signatureLineY + 4.5);
 
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
-  doc.text('Rapporto generato automaticamente con sistema di gestione interventi tecnici.', 14, 285);
+  doc.text('This document serves as an official technical execution and acceptance report. Generated automatically.', 14, 285);
 
   return doc;
 }
 
 export function downloadInterventionPDF(intervention: InterventionRequest) {
   const doc = generateInterventionReportPDF(intervention);
-  doc.save(`Rapporto_Intervento_${intervention.code}.pdf`);
+  doc.save(`Intervention_Report_${intervention.code}.pdf`);
 }
 
 export function getInterventionPDFDataUri(intervention: InterventionRequest): string {
