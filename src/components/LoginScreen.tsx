@@ -47,8 +47,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
         
         {/* Logo and title */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/30 mb-3">
-            <Wrench className="w-7 h-7 text-white" />
+          <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/30 border border-slate-700/80 mb-3">
+            <img src="./logo-3d.png" alt="Logo 3D Interventi" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-xl font-bold tracking-tight text-white">GESTIONE INTERVENTI</h2>
           <p className="text-xs text-slate-400 mt-1">
