@@ -17,68 +17,68 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ interventions }) => {
   }, 0);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3.5 mb-6">
       
       {/* Total */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 sm:p-3.5 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-400">Totale Interventi</span>
-          <div className="p-2 rounded-lg bg-slate-800 text-slate-300">
-            <FileText className="w-4 h-4" />
+          <span className="text-[11px] sm:text-xs font-medium text-slate-400">Totale Ticket</span>
+          <div className="p-1.5 sm:p-2 rounded-lg bg-slate-800 text-slate-300">
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-bold text-white">{total}</div>
-        <p className="text-[11px] text-slate-500 mt-0.5">Tutti i ticket a sistema</p>
+        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-white">{total}</div>
+        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">Tutti a sistema</p>
       </div>
 
-      {/* In Attesa */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-sm">
+      {/* Da Fare / In Attesa */}
+      <div className="bg-slate-900 border border-rose-900/30 rounded-xl p-3 sm:p-3.5 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-amber-400">Da Pianificare</span>
-          <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
-            <AlertCircle className="w-4 h-4" />
+          <span className="text-[11px] sm:text-xs font-semibold text-rose-400">Da Fare</span>
+          <div className="p-1.5 sm:p-2 rounded-lg bg-rose-500/10 text-rose-400">
+            <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-bold text-amber-400">{inAttesa}</div>
-        <p className="text-[11px] text-slate-500 mt-0.5">Richieste in attesa</p>
+        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-rose-400">{inAttesa}</div>
+        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">Da pianificare</p>
       </div>
 
       {/* In Corso */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-sm">
+      <div className="bg-slate-900 border border-blue-900/30 rounded-xl p-3 sm:p-3.5 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-blue-400">In Corso / Schedulati</span>
-          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-            <Wrench className="w-4 h-4" />
+          <span className="text-[11px] sm:text-xs font-semibold text-blue-400">In Corso</span>
+          <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 text-blue-400">
+            <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-bold text-blue-400">{inCorso}</div>
-        <p className="text-[11px] text-slate-500 mt-0.5">Lavori attivi sul posto</p>
+        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-blue-400">{inCorso}</div>
+        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">Lavori sul posto</p>
       </div>
 
       {/* Completati */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-sm">
+      <div className="bg-slate-900 border border-emerald-900/30 rounded-xl p-3 sm:p-3.5 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-emerald-400">Completati con PDF</span>
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-            <CheckCircle2 className="w-4 h-4" />
+          <span className="text-[11px] sm:text-xs font-semibold text-emerald-400">Già Fatti</span>
+          <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-bold text-emerald-400">{completati}</div>
-        <p className="text-[11px] text-slate-500 mt-0.5">Rapporti tecnici chiusi</p>
+        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-emerald-400">{completati}</div>
+        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">Chiusi con PDF</p>
       </div>
 
       {/* Ore Lavorate */}
-      <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-slate-900 to-blue-950/40 border border-blue-900/50 rounded-xl p-3.5 shadow-sm">
+      <div className="col-span-2 sm:col-span-2 lg:col-span-1 bg-gradient-to-br from-slate-900 to-blue-950/40 border border-blue-900/50 rounded-xl p-3 sm:p-3.5 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-blue-300">Ore Lavorate Totali</span>
-          <div className="p-2 rounded-lg bg-blue-600/20 text-blue-300">
-            <Clock className="w-4 h-4" />
+          <span className="text-[11px] sm:text-xs font-semibold text-blue-300">Ore Lavorate</span>
+          <div className="p-1.5 sm:p-2 rounded-lg bg-blue-600/20 text-blue-300">
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-bold text-blue-200">
-          {totalHours.toFixed(1)} <span className="text-sm font-normal text-blue-400">ore</span>
+        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-blue-200">
+          {totalHours.toFixed(1)} <span className="text-xs sm:text-sm font-normal text-blue-400">ore</span>
         </div>
-        <p className="text-[11px] text-blue-400/80 mt-0.5">Tracciate da tecnici on-site</p>
+        <p className="text-[10px] sm:text-[11px] text-blue-400/80 mt-0.5">Consuntivate on-site</p>
       </div>
 
     </div>
