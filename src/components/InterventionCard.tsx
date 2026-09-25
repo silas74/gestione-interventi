@@ -33,14 +33,19 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
   const isCompleted = intervention.status === 'completed' || intervention.status === 'completato';
   const isPending = !isCompleted; // All open tasks (pending, scheduled, in_progress)
   const isWaiting = intervention.status === 'pending' || intervention.status === 'in_attesa';
+  const isUrgent = intervention.priority === 'urgent' || intervention.priority === 'urgente';
 
   const isAdmin = currentRole === 'admin';
   const isTechOrAdmin = currentRole === 'admin' || currentRole === 'technician' || currentRole === 'tecnico';
 
   // Priority Styles
   const priorityBadge = {
-    urgent: 'bg-red-500/25 text-red-300 border-red-500/50 animate-pulse font-bold',
-    urgente: 'bg-red-500/25 text-red-300 border-red-500/50 animate-pulse font-bold',
+    urgent: isPending
+      ? 'animate-flash-urgent font-black tracking-wider shadow-md'
+      : 'bg-red-500/25 text-red-300 border-red-500/50 font-bold',
+    urgente: isPending
+      ? 'animate-flash-urgent font-black tracking-wider shadow-md'
+      : 'bg-red-500/25 text-red-300 border-red-500/50 font-bold',
     high: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold',
     alta: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold',
     medium: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
@@ -52,11 +57,26 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
   return (
     <div className={`rounded-2xl p-5 shadow-xl transition-all duration-200 flex flex-col justify-between border ${
       isPending
-        ? 'bg-gradient-to-b from-rose-950/25 via-slate-900 to-slate-900 border-rose-800/45 hover:border-rose-600/70 shadow-rose-950/20'
+        ? isUrgent
+          ? 'bg-gradient-to-b from-rose-950/35 via-slate-900 to-slate-900 animate-flash-card-urgent ring-1 ring-red-500/40'
+          : 'bg-gradient-to-b from-rose-950/25 via-slate-900 to-slate-900 border-rose-800/45 hover:border-rose-600/70 shadow-rose-950/20'
         : 'bg-gradient-to-b from-emerald-950/25 via-slate-900 to-slate-900 border-emerald-800/45 hover:border-emerald-600/70 shadow-emerald-950/20'
     }`}>
       
       <div>
+        {/* Urgent Alert Siren Banner (flashing Red <-> Yellow) */}
+        {isUrgent && isPending && (
+          <div className="mb-3 px-3 py-1.5 rounded-xl animate-flash-urgent flex items-center justify-between text-xs font-black tracking-wider shadow-md">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 animate-flash-siren shrink-0" />
+              <span>URGENT PRIORITY ALERT</span>
+            </span>
+            <span className="text-[10px] font-mono uppercase bg-black/30 px-2 py-0.5 rounded-md border border-white/20">
+              ACTION REQUIRED
+            </span>
+          </div>
+        )}
+
         {/* Top bar: Code, Project, State Badge (RED = TO DO / GREEN = COMPLETED), Priority & Delete */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
@@ -92,8 +112,9 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             )}
 
             {/* Priority */}
-            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityBadge}`}>
-              {intervention.priority}
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${priorityBadge}`}>
+              {isUrgent && isPending && <AlertTriangle className="w-3 h-3 animate-flash-siren" />}
+              <span>{intervention.priority}</span>
             </span>
           </div>
 
