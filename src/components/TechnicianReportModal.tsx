@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, PhoneCall, MessageCircle, Share2, Tag } from 'lucide-react';
-import { InterventionRequest, TechnicianReport } from '../types';
+import { InterventionRequest, InterventionStatus, TechnicianReport } from '../types';
 import { downloadInterventionPDF, getInterventionPDFDataUri, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
 import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
@@ -66,9 +66,12 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       completedAt: new Date().toISOString(),
     };
 
+    const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
+    const effectiveStatus: InterventionStatus = isFinished ? 'completed' : 'in_progress';
+
     const tempIntervention: InterventionRequest = {
       ...intervention,
-      status: 'completed',
+      status: effectiveStatus,
       assignedTechnician: technicianName,
       report: tempReport
     };
@@ -89,9 +92,12 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       completedAt: new Date().toISOString(),
     };
 
+    const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
+    const effectiveStatus: InterventionStatus = isFinished ? 'completed' : 'in_progress';
+
     const tempIntervention: InterventionRequest = {
       ...intervention,
-      status: 'completed',
+      status: effectiveStatus,
       assignedTechnician: technicianName,
       report: tempReport
     };
@@ -119,11 +125,14 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       completedAt: new Date().toISOString(),
     };
 
+    const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
+    const effectiveStatus: InterventionStatus = isFinished ? 'completed' : 'in_progress';
+
     // Attach PDF Data URI
     try {
       const tempIntervention: InterventionRequest = {
         ...intervention,
-        status: 'completed',
+        status: effectiveStatus,
         assignedTechnician: technicianName,
         report
       };
@@ -363,11 +372,11 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
                 onClick={() => setStatusOutcome('waiting_for_parts')}
                 className={`p-2 rounded-lg text-xs font-semibold border transition text-center ${
                   statusOutcome === 'waiting_for_parts'
-                    ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                    ? 'bg-pink-600/25 border-pink-500 text-pink-300 shadow-sm shadow-pink-900/30 ring-1 ring-pink-500/40'
                     : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
                 }`}
               >
-                Waiting for Parts
+                Waiting for Parts 🌸
               </button>
             </div>
           </div>
@@ -415,10 +424,22 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="flex-[2] sm:flex-none flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/25 active:scale-95 text-center"
+                className={`flex-[2] sm:flex-none flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white transition shadow-lg active:scale-95 text-center ${
+                  statusOutcome === 'waiting_for_parts'
+                    ? 'bg-pink-600 hover:bg-pink-500 shadow-pink-600/30'
+                    : statusOutcome === 'partial'
+                      ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
+                      : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Save & Complete Ticket</span>
+                <span>
+                  {statusOutcome === 'waiting_for_parts'
+                    ? 'Save as Working in Progress (Waiting for Parts)'
+                    : statusOutcome === 'partial'
+                      ? 'Save as Working in Progress (Partial)'
+                      : 'Save & Complete Ticket'}
+                </span>
               </button>
             </div>
           </div>
