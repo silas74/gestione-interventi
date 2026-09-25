@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Shield, User, PlusCircle, LogOut, Users, FolderKanban, 
-  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff 
+  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff, Database 
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -14,6 +14,7 @@ interface HeaderProps {
   onLogout: () => void;
   isOnline: boolean;
   onOpenInstallModal?: () => void;
+  onOpenBackupModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,7 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   onExportExcel,
   onLogout,
   isOnline,
-  onOpenInstallModal
+  onOpenInstallModal,
+  onOpenBackupModal
 }) => {
   const isAdmin = currentUser.role === 'admin';
 
@@ -63,6 +65,16 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Smartphone className="w-3.5 h-3.5 text-blue-400" />
                 <span>Install</span>
+              </button>
+            )}
+
+            {onOpenBackupModal && (
+              <button
+                onClick={onOpenBackupModal}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95"
+                title="Backup & Restore System Data (JSON)"
+              >
+                <Database className="w-3.5 h-3.5 text-blue-400" />
               </button>
             )}
 
@@ -152,6 +164,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Download className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-[11px] sm:text-xs">Install App</span>
+            </button>
+          )}
+
+          {/* Backup & Restore (JSON) */}
+          {onOpenBackupModal && (
+            <button
+              onClick={onOpenBackupModal}
+              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+              title="Backup & Restore System Data (JSON)"
+            >
+              <Database className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-[11px] sm:text-xs">Backup JSON</span>
             </button>
           )}
 
