@@ -6,7 +6,7 @@ import {
   PhoneCall, MessageCircle, Share2
 } from 'lucide-react';
 import { InterventionRequest, AppRole, DefectPhoto } from '../types';
-import { downloadInterventionPDF } from '../lib/pdfGenerator';
+import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
 
 interface InterventionCardProps {
@@ -279,15 +279,25 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               </div>
             )}
 
-            {/* Download PDF button inside report */}
-            <div className="pt-2 flex items-center justify-between">
-              <button
-                onClick={() => downloadInterventionPDF(intervention)}
-                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition active:scale-95"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                <span>Download PDF Report</span>
-              </button>
+            {/* Download PDF & Share PDF via WhatsApp buttons inside report */}
+            <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => downloadInterventionPDF(intervention)}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition active:scale-95"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => shareInterventionPDFViaWhatsApp(intervention)}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow transition active:scale-95"
+                  title="Share official PDF Report directly via WhatsApp"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Send PDF on WhatsApp</span>
+                </button>
+              </div>
 
               <span className="text-[11px] text-emerald-300/80">
                 Date: {intervention.report.interventionDate}
