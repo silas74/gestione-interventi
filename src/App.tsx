@@ -21,6 +21,7 @@ import { AdminUsersModal } from './components/AdminUsersModal';
 import { ProjectManagementModal } from './components/ProjectManagementModal';
 import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
+import { verifySessionToken } from './lib/authSecurity';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
@@ -71,8 +72,21 @@ export function App() {
 
       const session = getCurrentSession();
       if (session) {
-        const found = loadedUsers.find(u => u.id === session.id);
-        if (found) setCurrentUser(found);
+        const token = sessionStorage.getItem('auth_session_token');
+        if (token) {
+          const check = await verifySessionToken(token);
+          if (check.valid && check.payload) {
+            const found = loadedUsers.find(u => u.id === session.id);
+            if (found) setCurrentUser(found);
+          } else {
+            clearCurrentSession();
+            sessionStorage.removeItem('auth_session_token');
+            setCurrentUser(null);
+          }
+        } else {
+          const found = loadedUsers.find(u => u.id === session.id);
+          if (found) setCurrentUser(found);
+        }
       }
     } catch (err) {
       console.error('Error loading data', err);
@@ -82,14 +96,18 @@ export function App() {
   };
 
   // Auth Handlers
-  const handleLogin = (user: UserAccount) => {
+  const handleLogin = (user: UserAccount, token?: string) => {
     setCurrentUser(user);
     setCurrentSession(user);
+    if (token) {
+      sessionStorage.setItem('auth_session_token', token);
+    }
     showToast(`Welcome ${user.name}!`);
   };
 
   const handleLogout = () => {
     clearCurrentSession();
+    sessionStorage.removeItem('auth_session_token');
     setCurrentUser(null);
     showToast('Logged out successfully.');
   };
