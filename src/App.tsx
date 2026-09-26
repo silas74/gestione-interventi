@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  InterventionRequest, InterventionStatus, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
+  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
 } from './types';
 import { 
   fetchInterventions, saveIntervention, deleteIntervention,
@@ -21,6 +21,7 @@ import { AdminUsersModal } from './components/AdminUsersModal';
 import { ProjectManagementModal } from './components/ProjectManagementModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { BackupRestoreModal } from './components/BackupRestoreModal';
+import { SmartEmailModal } from './components/SmartEmailModal';
 import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
 import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
@@ -51,6 +52,7 @@ export function App() {
   const [previewPhoto, setPreviewPhoto] = useState<DefectPhoto | null>(null);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isSmartEmailModalOpen, setIsSmartEmailModalOpen] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -254,6 +256,157 @@ export function App() {
     showToast(`Intervention deleted.`);
   };
 
+  // Smart Email Action Handler (Antigravity Inbound Email AI)
+  const handleExecuteEmailAction = async (payload: {
+    action: 'create' | 'follow_up' | 'close';
+    sender: string;
+    receivedAt: string;
+    subject: string;
+    message: string;
+    targetInterventionId?: string;
+    newTicket?: {
+      title: string;
+      description: string;
+      projectId?: string;
+      priority: InterventionPriority;
+    };
+  }) => {
+    const { action, sender, receivedAt, subject, message, targetInterventionId, newTicket } = payload;
+
+    if (action === 'create' && newTicket) {
+      const proj = projects.find(p => p.id === newTicket.projectId) || projects[0];
+      const now = new Date();
+      const codeYear = now.getFullYear();
+      const projSuffix = proj ? proj.code.slice(0, 3).toUpperCase() : 'DEF';
+      const seq = interventions.length + 1;
+      const code = `INT-${codeYear}-${projSuffix}${seq}`;
+
+      const newIntervention: InterventionRequest = {
+        id: `int-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        code,
+        projectId: proj?.id,
+        projectName: proj?.name,
+        title: newTicket.title,
+        siteName: proj?.name || 'Sede Cliente',
+        siteAddress: proj?.siteAddress || '',
+        clientName: sender.split('<')[0].trim() || sender,
+        clientContact: sender,
+        description: newTicket.description || 'Intervento generato automaticamente da ricezione email.',
+        desiredAccessDate: receivedAt.split(' ')[0] || new Date().toISOString().split('T')[0],
+        desiredAccessTime: receivedAt.split(' ')[1] || '09:00',
+        priority: newTicket.priority || 'medium',
+        defectPhotos: [],
+        notes: `Creato via Smart Inbound Email da ${sender} in data ${receivedAt}.`,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        emailSource: {
+          sender,
+          receivedAt,
+          subject,
+          rawSnippet: message.slice(0, 180)
+        },
+        emailHistory: [
+          {
+            id: `msg-${Date.now()}-1`,
+            sender,
+            receivedAt,
+            subject,
+            message: message || newTicket.title,
+            action: 'created'
+          }
+        ]
+      };
+
+      await saveIntervention(newIntervention);
+      setInterventions(prev => [newIntervention, ...prev]);
+      if (proj && activeProjectId !== 'all' && activeProjectId !== proj.id) {
+        setActiveProjectId(proj.id);
+      }
+      showToast(`✉️ Creato nuovo intervento [${code}] da email di ${sender}!`);
+    } else if (action === 'follow_up' && targetInterventionId) {
+      const item = interventions.find(i => i.id === targetInterventionId);
+      if (!item) return;
+
+      const historyEntry = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        sender,
+        receivedAt,
+        subject,
+        message,
+        action: 'follow_up' as const
+      };
+
+      const updatedHistory = [...(item.emailHistory || []), historyEntry];
+      const appendedNotes = item.notes
+        ? `${item.notes}\n\n[Follow-up Email da ${sender} il ${receivedAt}]:\n${message}`
+        : `[Follow-up Email da ${sender} il ${receivedAt}]:\n${message}`;
+
+      const nextStatus = item.status === 'pending' || item.status === 'in_attesa' ? 'in_progress' : item.status;
+
+      const updated: InterventionRequest = {
+        ...item,
+        status: nextStatus,
+        notes: appendedNotes,
+        updatedAt: new Date().toISOString(),
+        emailSource: item.emailSource || { sender, receivedAt, subject },
+        emailHistory: updatedHistory
+      };
+
+      await saveIntervention(updated);
+      setInterventions(prev => prev.map(i => i.id === targetInterventionId ? updated : i));
+      showToast(`🌸 Follow-up registrato su [${item.code}] via Email!`);
+    } else if (action === 'close' && targetInterventionId) {
+      const item = interventions.find(i => i.id === targetInterventionId);
+      if (!item) return;
+
+      const historyEntry = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        sender,
+        receivedAt,
+        subject,
+        message,
+        action: 'closed' as const
+      };
+
+      const updatedHistory = [...(item.emailHistory || []), historyEntry];
+      const closeNote = `[Chiuso via Email da ${sender} il ${receivedAt}]: ${message}`;
+      const appendedNotes = item.notes ? `${item.notes}\n\n${closeNote}` : closeNote;
+
+      const existingReport: TechnicianReport = item.report || {
+        technicianName: currentUser?.name || 'Antigravity AI Assistant',
+        interventionDate: receivedAt.split(' ')[0] || new Date().toISOString().split('T')[0],
+        hoursWorked: 1,
+        workDone: `Risoluzione confermata da email di ${sender}.`,
+        statusOutcome: 'resolved',
+        completedAt: new Date().toISOString()
+      };
+
+      const updatedReport: TechnicianReport = {
+        ...existingReport,
+        statusOutcome: 'resolved',
+        completedAt: new Date().toISOString(),
+        technicalNotes: existingReport.technicalNotes 
+          ? `${existingReport.technicalNotes}\n${closeNote}`
+          : closeNote
+      };
+
+      const updated: InterventionRequest = {
+        ...item,
+        status: 'completed',
+        report: updatedReport,
+        notes: appendedNotes,
+        updatedAt: new Date().toISOString(),
+        emailSource: item.emailSource || { sender, receivedAt, subject },
+        emailHistory: updatedHistory
+      };
+
+      await saveIntervention(updated);
+      setInterventions(prev => prev.map(i => i.id === targetInterventionId ? updated : i));
+      showToast(`🟢 Intervento [${item.code}] chiuso e completato da email!`);
+    }
+  };
+
   // If user is not authenticated, show Login screen
   if (!currentUser) {
     return <LoginScreen users={users} onLogin={handleLogin} />;
@@ -427,6 +580,7 @@ export function App() {
         isOnline={isOnline}
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
+        onOpenSmartEmailModal={() => setIsSmartEmailModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -840,6 +994,15 @@ export function App() {
           setUsers(newUsers);
           showToast('✅ Database restored successfully from JSON backup!');
         }}
+      />
+
+      {/* Smart Inbound Email Assistant Modal */}
+      <SmartEmailModal
+        isOpen={isSmartEmailModalOpen}
+        onClose={() => setIsSmartEmailModalOpen(false)}
+        interventions={interventions}
+        projects={projects}
+        onExecuteEmailAction={handleExecuteEmailAction}
       />
 
     </div>
