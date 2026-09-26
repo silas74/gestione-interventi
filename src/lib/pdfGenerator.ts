@@ -179,6 +179,52 @@ export function generateInterventionReportPDF(intervention: InterventionRequest)
   doc.setTextColor(148, 163, 184);
   doc.text('This document serves as an official technical execution and acceptance report. Generated automatically.', 14, 285);
 
+  // ================= PHOTOGRAPHIC DOCUMENTATION APPENDIX PAGE =================
+  const reportPhotos = report?.reportPhotos || [];
+  const defectPhotos = intervention.defectPhotos || [];
+  const allPhotos = [...reportPhotos, ...defectPhotos];
+
+  if (allPhotos.length > 0) {
+    doc.addPage();
+    
+    // Header banner for photos page
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('ATTACHED PHOTOGRAPHIC DOCUMENTATION & EVIDENCE', 14, 18);
+
+    doc.setFillColor(37, 99, 235);
+    doc.rect(0, 28, pageWidth, 2, 'F');
+
+    let currentPhotoY = 38;
+    const photoWidth = 85;
+    const photoHeight = 58;
+
+    allPhotos.slice(0, 6).forEach((photo, idx) => {
+      const col = idx % 2;
+      const x = col === 0 ? 14 : 110;
+      if (idx > 0 && col === 0) {
+        currentPhotoY += 72;
+      }
+
+      try {
+        doc.addImage(photo.url, 'JPEG', x, currentPhotoY, photoWidth, photoHeight);
+        doc.setFontSize(8);
+        doc.setTextColor(51, 65, 85);
+        const label = idx < reportPhotos.length ? `Work Report Photo #${idx + 1}` : `Defect Photo #${idx - reportPhotos.length + 1}`;
+        doc.text(`${label}: ${photo.name || 'Photo attachment'}`, x, currentPhotoY + photoHeight + 4);
+      } catch (err) {
+        console.warn('Could not add photo to PDF', err);
+      }
+    });
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Ticket ID: ${intervention.code} | Photographic Evidence Appendix | Page 2`, 14, 285);
+  }
+
   return doc;
 }
 
