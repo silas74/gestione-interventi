@@ -3,7 +3,7 @@ import {
   Calendar, Clock, MapPin, User, Phone, AlertTriangle, 
   CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
   Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
-  PhoneCall, MessageCircle, Share2, Mail
+  PhoneCall, MessageCircle, Share2, Mail, Camera
 } from 'lucide-react';
 import { InterventionRequest, AppRole, DefectPhoto } from '../types';
 import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
@@ -374,6 +374,34 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                   className={`relative group cursor-pointer w-16 h-16 rounded-lg overflow-hidden border shrink-0 transition ${
                     isPending ? 'border-rose-800 hover:border-rose-400' : 'border-emerald-800 hover:border-emerald-400'
                   }`}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <span className="text-[10px] text-white font-semibold">View</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Report Execution Photos Thumbnails */}
+        {intervention.report?.reportPhotos && intervention.report.reportPhotos.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-300 mb-2">
+              <Camera className="w-3.5 h-3.5 text-blue-400" />
+              <span>Foto Lavoro Eseguito / Report ({intervention.report.reportPhotos.length}):</span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {intervention.report.reportPhotos.map((photo) => (
+                <div
+                  key={photo.id}
+                  onClick={() => onPreviewPhoto(photo)}
+                  className="relative group cursor-pointer w-16 h-16 rounded-lg overflow-hidden border border-blue-600/60 hover:border-blue-400 shrink-0 transition shadow-sm"
                 >
                   <img
                     src={photo.url}
