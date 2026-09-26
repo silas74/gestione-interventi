@@ -268,6 +268,7 @@ export function App() {
       title: string;
       description: string;
       projectId?: string;
+      projectName?: string;
       priority: InterventionPriority;
     };
   }) => {
@@ -296,7 +297,7 @@ export function App() {
         desiredAccessTime: receivedAt.split(' ')[1] || '09:00',
         priority: newTicket.priority || 'medium',
         defectPhotos: [],
-        notes: `Creato via Smart Inbound Email da ${sender} in data ${receivedAt}.`,
+        notes: `Creato via Smart Inbound Email da ${sender} in data ${receivedAt} per il progetto ${proj?.name || 'Generale'}.`,
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -304,7 +305,9 @@ export function App() {
           sender,
           receivedAt,
           subject,
-          rawSnippet: message.slice(0, 180)
+          rawSnippet: message.slice(0, 180),
+          projectId: proj?.id,
+          projectName: proj?.name
         },
         emailHistory: [
           {
@@ -313,7 +316,9 @@ export function App() {
             receivedAt,
             subject,
             message: message || newTicket.title,
-            action: 'created'
+            action: 'created',
+            projectId: proj?.id,
+            projectName: proj?.name
           }
         ]
       };
@@ -323,7 +328,7 @@ export function App() {
       if (proj && activeProjectId !== 'all' && activeProjectId !== proj.id) {
         setActiveProjectId(proj.id);
       }
-      showToast(`✉️ Creato nuovo intervento [${code}] da email di ${sender}!`);
+      showToast(`✉️ Creato nuovo intervento [${code}] registrato sul progetto "${proj?.name || 'Generale'}"!`);
     } else if (action === 'follow_up' && targetInterventionId) {
       const item = interventions.find(i => i.id === targetInterventionId);
       if (!item) return;
@@ -334,13 +339,15 @@ export function App() {
         receivedAt,
         subject,
         message,
-        action: 'follow_up' as const
+        action: 'follow_up' as const,
+        projectId: item.projectId,
+        projectName: item.projectName
       };
 
       const updatedHistory = [...(item.emailHistory || []), historyEntry];
       const appendedNotes = item.notes
-        ? `${item.notes}\n\n[Follow-up Email da ${sender} il ${receivedAt}]:\n${message}`
-        : `[Follow-up Email da ${sender} il ${receivedAt}]:\n${message}`;
+        ? `${item.notes}\n\n[Follow-up Email da ${sender} il ${receivedAt} - Progetto: ${item.projectName || 'Generale'}]:\n${message}`
+        : `[Follow-up Email da ${sender} il ${receivedAt} - Progetto: ${item.projectName || 'Generale'}]:\n${message}`;
 
       const nextStatus = item.status === 'pending' || item.status === 'in_attesa' ? 'in_progress' : item.status;
 
@@ -349,13 +356,13 @@ export function App() {
         status: nextStatus,
         notes: appendedNotes,
         updatedAt: new Date().toISOString(),
-        emailSource: item.emailSource || { sender, receivedAt, subject },
+        emailSource: item.emailSource || { sender, receivedAt, subject, projectId: item.projectId, projectName: item.projectName },
         emailHistory: updatedHistory
       };
 
       await saveIntervention(updated);
       setInterventions(prev => prev.map(i => i.id === targetInterventionId ? updated : i));
-      showToast(`🌸 Follow-up registrato su [${item.code}] via Email!`);
+      showToast(`🌸 Follow-up registrato su [${item.code}] (Progetto: ${item.projectName || 'Generale'})!`);
     } else if (action === 'close' && targetInterventionId) {
       const item = interventions.find(i => i.id === targetInterventionId);
       if (!item) return;
@@ -366,18 +373,20 @@ export function App() {
         receivedAt,
         subject,
         message,
-        action: 'closed' as const
+        action: 'closed' as const,
+        projectId: item.projectId,
+        projectName: item.projectName
       };
 
       const updatedHistory = [...(item.emailHistory || []), historyEntry];
-      const closeNote = `[Chiuso via Email da ${sender} il ${receivedAt}]: ${message}`;
+      const closeNote = `[Chiuso via Email da ${sender} il ${receivedAt} - Progetto: ${item.projectName || 'Generale'}]: ${message}`;
       const appendedNotes = item.notes ? `${item.notes}\n\n${closeNote}` : closeNote;
 
       const existingReport: TechnicianReport = item.report || {
         technicianName: currentUser?.name || 'Antigravity AI Assistant',
         interventionDate: receivedAt.split(' ')[0] || new Date().toISOString().split('T')[0],
         hoursWorked: 1,
-        workDone: `Risoluzione confermata da email di ${sender}.`,
+        workDone: `Risoluzione confermata da email di ${sender} per ${item.projectName || 'il progetto'}.`,
         statusOutcome: 'resolved',
         completedAt: new Date().toISOString()
       };
@@ -397,13 +406,13 @@ export function App() {
         report: updatedReport,
         notes: appendedNotes,
         updatedAt: new Date().toISOString(),
-        emailSource: item.emailSource || { sender, receivedAt, subject },
+        emailSource: item.emailSource || { sender, receivedAt, subject, projectId: item.projectId, projectName: item.projectName },
         emailHistory: updatedHistory
       };
 
       await saveIntervention(updated);
       setInterventions(prev => prev.map(i => i.id === targetInterventionId ? updated : i));
-      showToast(`🟢 Intervento [${item.code}] chiuso e completato da email!`);
+      showToast(`🟢 Intervento [${item.code}] chiuso da email (Progetto: ${item.projectName || 'Generale'})!`);
     }
   };
 
