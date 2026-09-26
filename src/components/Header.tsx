@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Shield, User, PlusCircle, LogOut, Users, FolderKanban, 
-  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff, Database 
+  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff, Database, Mail 
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -15,6 +15,7 @@ interface HeaderProps {
   isOnline: boolean;
   onOpenInstallModal?: () => void;
   onOpenBackupModal?: () => void;
+  onOpenSmartEmailModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,7 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   isOnline,
   onOpenInstallModal,
-  onOpenBackupModal
+  onOpenBackupModal,
+  onOpenSmartEmailModal
 }) => {
   const isAdmin = currentUser.role === 'admin';
 
@@ -75,6 +77,16 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Backup & Restore System Data (JSON)"
               >
                 <Database className="w-3.5 h-3.5 text-blue-400" />
+              </button>
+            )}
+
+            {onOpenSmartEmailModal && (
+              <button
+                onClick={onOpenSmartEmailModal}
+                className="p-1.5 rounded-lg bg-blue-600/25 text-blue-300 hover:text-white border border-blue-500/40 active:scale-95"
+                title="Smart Inbound Email Assistant"
+              >
+                <Mail className="w-3.5 h-3.5 text-blue-400" />
               </button>
             )}
 
@@ -176,6 +188,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Database className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-[11px] sm:text-xs">Backup JSON</span>
+            </button>
+          )}
+
+          {/* Smart Inbound Email Assistant */}
+          {onOpenSmartEmailModal && (
+            <button
+              onClick={onOpenSmartEmailModal}
+              className="flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+              title="Smart Inbound Email: crea ticket, follow-up o chiusura automatica"
+            >
+              <Mail className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-[11px] sm:text-xs">Smart Email</span>
             </button>
           )}
 
