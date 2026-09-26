@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.63.5",
     "@supabase/supabase-js": "^2.48.1",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.475.0",
