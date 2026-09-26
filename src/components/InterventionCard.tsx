@@ -3,7 +3,7 @@ import {
   Calendar, Clock, MapPin, User, Phone, AlertTriangle, 
   CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
   Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
-  PhoneCall, MessageCircle, Share2
+  PhoneCall, MessageCircle, Share2, Mail
 } from 'lucide-react';
 import { InterventionRequest, AppRole, DefectPhoto } from '../types';
 import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
@@ -137,6 +137,17 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               {isUrgent && isPending && <AlertTriangle className="w-3 h-3 animate-flash-siren" />}
               <span>{intervention.priority}</span>
             </span>
+
+            {/* Inbound Email Source Badge */}
+            {intervention.emailSource && (
+              <span 
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center gap-1 shadow-sm"
+                title={`Ricevuto via Email da ${intervention.emailSource.sender} il ${intervention.emailSource.receivedAt}`}
+              >
+                <Mail className="w-3 h-3 text-blue-400" />
+                <span>Email</span>
+              </span>
+            )}
           </div>
 
           {/* Top Quick Actions: WhatsApp Share + Delete */}
@@ -276,6 +287,55 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
           <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 mb-3 whitespace-pre-wrap leading-relaxed">
             <strong className="text-slate-400 block mb-0.5 text-[11px]">Notes for technician:</strong>
             {intervention.notes}
+          </div>
+        )}
+
+        {/* Inbound Email Source & Follow-up History (Antigravity Smart Email) */}
+        {(intervention.emailSource || (intervention.emailHistory && intervention.emailHistory.length > 0)) && (
+          <div className="bg-blue-950/25 border border-blue-700/50 rounded-xl p-3 mb-3 text-xs space-y-2">
+            <div className="flex items-center justify-between text-blue-300 font-bold flex-wrap gap-1">
+              <div className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-blue-400" />
+                <span>Inbound Email Integration</span>
+              </div>
+              {intervention.emailSource && (
+                <span className="text-[10px] text-blue-300 font-mono bg-blue-900/50 px-2 py-0.5 rounded border border-blue-700/40">
+                  Data: {intervention.emailSource.receivedAt}
+                </span>
+              )}
+            </div>
+
+            {intervention.emailSource && (
+              <div className="text-[11px] text-slate-300">
+                <span className="text-slate-400 font-medium">Mittente: </span>
+                <strong className="text-white">{intervention.emailSource.sender}</strong>
+                {intervention.emailSource.subject && (
+                  <div className="text-slate-400 italic truncate mt-0.5">
+                    "{intervention.emailSource.subject}"
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Follow-up email history */}
+            {intervention.emailHistory && intervention.emailHistory.length > 0 && (
+              <div className="pt-2 border-t border-blue-900/40 space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                  Storico Email & Follow-up ({intervention.emailHistory.length})
+                </div>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {intervention.emailHistory.map((item) => (
+                    <div key={item.id} className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-[11px]">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+                        <span className="font-semibold text-blue-300">{item.sender}</span>
+                        <span className="font-mono text-slate-400">{item.receivedAt}</span>
+                      </div>
+                      <div className="text-slate-200">{item.message}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
