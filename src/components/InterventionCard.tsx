@@ -305,9 +305,25 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
               )}
             </div>
 
+            {/* Progetto su cui è registrato l'intervento da email */}
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-blue-900/30 border border-blue-700/50 text-[11px] flex-wrap">
+              <div className="flex items-center gap-1.5 text-blue-200">
+                <FolderKanban className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="text-blue-300 font-medium">Registrato su Progetto:</span>
+                <strong className="text-white font-bold bg-blue-950 px-2 py-0.5 rounded border border-blue-700/60 shadow-sm">
+                  {intervention.projectName || intervention.emailSource?.projectName || 'Workbank'}
+                </strong>
+              </div>
+              {intervention.siteName && (
+                <span className="text-[10px] text-slate-400 truncate">
+                  Impianto: {intervention.siteName}
+                </span>
+              )}
+            </div>
+
             {intervention.emailSource && (
               <div className="text-[11px] text-slate-300">
-                <span className="text-slate-400 font-medium">Mittente: </span>
+                <span className="text-slate-400 font-medium">Ricevuto Da (Mittente): </span>
                 <strong className="text-white">{intervention.emailSource.sender}</strong>
                 {intervention.emailSource.subject && (
                   <div className="text-slate-400 italic truncate mt-0.5">
@@ -325,12 +341,16 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                 </div>
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {intervention.emailHistory.map((item) => (
-                    <div key={item.id} className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-[11px]">
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+                    <div key={item.id} className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-[11px] space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5 flex-wrap gap-1">
                         <span className="font-semibold text-blue-300">{item.sender}</span>
                         <span className="font-mono text-slate-400">{item.receivedAt}</span>
                       </div>
                       <div className="text-slate-200">{item.message}</div>
+                      <div className="pt-1 border-t border-slate-800/80 flex items-center gap-1 text-[10px] text-blue-300/80 font-medium">
+                        <FolderKanban className="w-3 h-3 text-blue-400 shrink-0" />
+                        <span>Progetto registrato: <strong className="text-white">{item.projectName || intervention.projectName || 'Generale'}</strong></span>
+                      </div>
                     </div>
                   ))}
                 </div>
