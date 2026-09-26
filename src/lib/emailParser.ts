@@ -13,6 +13,7 @@ export interface ParsedEmailResult {
   priority: 'urgent' | 'medium' | 'low';
   matchedInterventionId?: string;
   matchedProjectId?: string;
+  matchedProjectName?: string;
   suggestedTitle: string;
   rawSnippet: string;
 }
@@ -199,6 +200,9 @@ export function parseInboundEmail(
   const cleanSubject = subject.replace(/^(re|r|fwd|i):\s*/i, '').trim();
   const suggestedTitle = cleanSubject || (cleanBody.split('\n')[0]?.slice(0, 60) || 'Intervento da Email');
 
+  const matchedProject = existingProjects.find(p => p.id === matchedProjectId);
+  const matchedProjectName = matchedProject ? matchedProject.name : undefined;
+
   return {
     action,
     actionReason,
@@ -210,6 +214,7 @@ export function parseInboundEmail(
     priority,
     matchedInterventionId: matchedIntervention?.id,
     matchedProjectId,
+    matchedProjectName,
     suggestedTitle,
     rawSnippet: text.slice(0, 180)
   };
