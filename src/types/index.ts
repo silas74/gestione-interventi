@@ -72,6 +72,8 @@ export interface EmailSourceInfo {
   receivedAt: string;   // e.g. "2026-09-26 14:35"
   subject?: string;
   rawSnippet?: string;
+  projectId?: string;
+  projectName?: string;
 }
 
 export interface EmailMessageLog {
@@ -81,6 +83,8 @@ export interface EmailMessageLog {
   subject?: string;
   message: string;
   action: 'created' | 'follow_up' | 'closed';
+  projectId?: string;
+  projectName?: string;
 }
 
 export type AppRole = 'admin' | 'technician' | 'user' | 'tecnico' | 'utente';
