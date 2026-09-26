@@ -30,6 +30,7 @@ export interface TechnicianReport {
   technicianSignature?: string; // Base64 digital signature PNG
   pdfDataUri?: string;
   completedAt: string;
+  reportPhotos?: DefectPhoto[]; // Photos attached directly to report (uploaded or pasted)
 }
 
 export interface ClientFeedback {
