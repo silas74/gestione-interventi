@@ -63,6 +63,24 @@ export interface InterventionRequest {
   assignedTechnician?: string;
   report?: TechnicianReport;
   clientFeedback?: ClientFeedback;
+  emailSource?: EmailSourceInfo;
+  emailHistory?: EmailMessageLog[];
+}
+
+export interface EmailSourceInfo {
+  sender: string;       // e.g. "Mario Rossi <mario@example.com>"
+  receivedAt: string;   // e.g. "2026-09-26 14:35"
+  subject?: string;
+  rawSnippet?: string;
+}
+
+export interface EmailMessageLog {
+  id: string;
+  sender: string;
+  receivedAt: string;
+  subject?: string;
+  message: string;
+  action: 'created' | 'follow_up' | 'closed';
 }
 
 export type AppRole = 'admin' | 'technician' | 'user' | 'tecnico' | 'utente';
