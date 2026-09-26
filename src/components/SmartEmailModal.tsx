@@ -22,6 +22,7 @@ interface SmartEmailModalProps {
       title: string;
       description: string;
       projectId?: string;
+      projectName?: string;
       priority: InterventionPriority;
     };
   }) => void;
@@ -90,6 +91,7 @@ export const SmartEmailModal: React.FC<SmartEmailModalProps> = ({
         alert('Specificare un titolo per il nuovo intervento.');
         return;
       }
+      const chosenProj = projects.find(p => p.id === newProjectId) || projects[0];
       onExecuteEmailAction({
         action: 'create',
         sender,
@@ -100,6 +102,7 @@ export const SmartEmailModal: React.FC<SmartEmailModalProps> = ({
           title: newTitle,
           description: bodyMessage,
           projectId: newProjectId,
+          projectName: chosenProj?.name,
           priority: newPriority
         }
       });
@@ -272,6 +275,15 @@ export const SmartEmailModal: React.FC<SmartEmailModalProps> = ({
                   <p className="text-xs opacity-90 leading-relaxed">
                     {parsed.actionReason}
                   </p>
+                  {parsed.matchedProjectName && (
+                    <div className="mt-2 pt-2 border-t border-slate-700/50 flex items-center gap-1.5 text-xs text-blue-200">
+                      <FolderKanban className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span>Progetto Rilevato: </span>
+                      <strong className="text-white bg-blue-900/60 px-2 py-0.5 rounded border border-blue-600/50">
+                        {parsed.matchedProjectName}
+                      </strong>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -370,20 +382,26 @@ export const SmartEmailModal: React.FC<SmartEmailModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-300 block mb-1">
-                        Progetto / Impianto:
+                      <label className="text-[11px] font-bold text-blue-300 block mb-1 flex items-center gap-1.5">
+                        <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Progetto di Registrazione:</span>
                       </label>
                       <select
                         value={newProjectId}
                         onChange={(e) => setNewProjectId(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-slate-900 border border-blue-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
                       >
                         {projects.map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.code})
+                            📁 {p.name} ({p.code})
                           </option>
                         ))}
                       </select>
+                      {projects.find(p => p.id === newProjectId) && (
+                        <div className="mt-1 text-[10px] text-blue-300/90 font-medium">
+                          Verrà registrato sotto il progetto: <strong className="text-white">{projects.find(p => p.id === newProjectId)?.name}</strong>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -429,18 +447,23 @@ export const SmartEmailModal: React.FC<SmartEmailModalProps> = ({
                   >
                     {interventions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        [{item.code}] {item.title} — {item.projectName || item.siteName} ({item.status})
+                        [{item.code}] {item.title} — Progetto: {item.projectName || item.siteName} ({item.status})
                       </option>
                     ))}
                   </select>
 
                   {matchedIntervention && (
-                    <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-xs text-slate-300">
-                      <div className="font-semibold text-white mb-0.5">{matchedIntervention.title}</div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                        <span>Cliente: {matchedIntervention.clientName}</span>
+                    <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
+                      <div className="font-semibold text-white">{matchedIntervention.title}</div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                        <span className="flex items-center gap-1 text-blue-300 font-bold bg-blue-950/80 px-2 py-0.5 rounded border border-blue-700/50">
+                          <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Progetto: {matchedIntervention.projectName || 'Generale'}</span>
+                        </span>
                         <span>•</span>
-                        <span>Stato attuale: <strong className="text-slate-200">{matchedIntervention.status}</strong></span>
+                        <span>Cliente: <strong className="text-slate-200">{matchedIntervention.clientName}</strong></span>
+                        <span>•</span>
+                        <span>Stato: <strong className="text-slate-200">{matchedIntervention.status}</strong></span>
                       </div>
                     </div>
                   )}
