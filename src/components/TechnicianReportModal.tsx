@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, 
-  PhoneCall, MessageCircle, Share2, Tag, Mic, MicOff 
+  PhoneCall, MessageCircle, Share2, Tag, Mic, MicOff,
+  Camera, Upload, Clipboard, Trash2, Image as ImageIcon
 } from 'lucide-react';
-import { InterventionRequest, InterventionStatus, TechnicianReport } from '../types';
+import { InterventionRequest, InterventionStatus, TechnicianReport, DefectPhoto } from '../types';
 import { downloadInterventionPDF, getInterventionPDFDataUri, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
 import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
 import { COMMON_MATERIALS } from '../lib/materialsData';
+import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
 
 interface TechnicianReportModalProps {
   isOpen: boolean;
@@ -55,6 +57,87 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
   const [technicianSignature, setTechnicianSignature] = useState<string>(
     existingReport?.technicianSignature || ''
   );
+
+  // Report Photos State (Upload, Camera & Paste Ctrl+V)
+  const [reportPhotos, setReportPhotos] = useState<DefectPhoto[]>(
+    existingReport?.reportPhotos || []
+  );
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddPhotos = async (files: (File | Blob)[], sourceLabel?: string) => {
+    if (!files || files.length === 0) return;
+    setIsProcessingPhotos(true);
+    try {
+      const processedList: DefectPhoto[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const defaultName = sourceLabel ? `${sourceLabel}_${i + 1}.jpg` : undefined;
+        const photo = await compressAndProcessImage(file, defaultName);
+        processedList.push(photo);
+      }
+      setReportPhotos(prev => [...prev, ...processedList]);
+    } catch (err) {
+      console.error('Error processing photos', err);
+      alert('Si è verificato un errore durante l\'elaborazione delle foto.');
+    } finally {
+      setIsProcessingPhotos(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      handleAddPhotos(filesArray);
+      e.target.value = '';
+    }
+  };
+
+  const handlePasteFromClipboardBtn = async () => {
+    try {
+      const images = await readClipboardImagesAsync();
+      if (images.length > 0) {
+        await handleAddPhotos(images, 'foto_incollata');
+      } else {
+        alert('Nessuna immagine trovata negli appunti. Copia prima una foto o screenshot e poi premi qui o fai Ctrl+V!');
+      }
+    } catch {
+      alert('Per incollare una foto, premi semplicemente Ctrl+V sulla tastiera in qualsiasi punto di questa finestra!');
+    }
+  };
+
+  const handleRemoveReportPhoto = (id: string) => {
+    setReportPhotos(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Global Paste listener for the modal window
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      // If typing in textarea/input, check if clipboard contains an image before letting default text paste
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        const images = extractImagesFromClipboard(e.clipboardData);
+        if (images.length > 0) {
+          e.preventDefault();
+          handleAddPhotos(images, 'foto_incollata');
+        }
+        return;
+      }
+
+      const images = extractImagesFromClipboard(e.clipboardData);
+      if (images.length > 0) {
+        e.preventDefault();
+        handleAddPhotos(images, 'foto_incollata');
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => {
+      window.removeEventListener('paste', handleGlobalPaste);
+    };
+  }, []);
 
   // Speech-to-Text Voice Dictation State
   const [isRecordingWorkDone, setIsRecordingWorkDone] = useState(false);
@@ -161,6 +244,7 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       statusOutcome,
       technicianSignature,
       completedAt: new Date().toISOString(),
+      reportPhotos,
     };
 
     const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
@@ -187,6 +271,7 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       statusOutcome,
       technicianSignature,
       completedAt: new Date().toISOString(),
+      reportPhotos,
     };
 
     const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
@@ -220,6 +305,7 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       statusOutcome,
       technicianSignature,
       completedAt: new Date().toISOString(),
+      reportPhotos,
     };
 
     const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
@@ -506,6 +592,155 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
                 Waiting for Parts 🌸
               </button>
             </div>
+          </div>
+
+          {/* 📸 REPORT PHOTOS (UPLOAD, CAMERA & PASTE CTRL+V) */}
+          <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>Foto del Lavoro Eseguito (Report Photos)</span>
+                    <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {reportPhotos.length} allegate
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Carica file, scatta dalla fotocamera o incolla direttamente con Ctrl+V
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {/* File picker */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/40 text-xs font-semibold transition active:scale-95 shadow-sm"
+                  title="Carica foto da file"
+                >
+                  <Upload className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Sfoglia Foto</span>
+                </button>
+
+                {/* Mobile Camera Direct Snapshot */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition active:scale-95 shadow-sm"
+                  title="Scatta foto con la fotocamera del telefono"
+                >
+                  <Camera className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Fotocamera</span>
+                </button>
+
+                {/* Paste from clipboard */}
+                <button
+                  type="button"
+                  onClick={handlePasteFromClipboardBtn}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95 shadow-sm"
+                  title="Incolla foto dagli appunti o premi Ctrl+V"
+                >
+                  <Clipboard className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Incolla (Ctrl+V)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Drop / Paste Zone Box */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(true);
+              }}
+              onDragLeave={() => setIsDraggingOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleAddPhotos(Array.from(e.dataTransfer.files));
+                }
+              }}
+              className={`p-3 rounded-xl border-2 border-dashed transition text-center flex flex-col items-center justify-center gap-1 ${
+                isDraggingOver
+                  ? 'border-blue-400 bg-blue-950/40 text-blue-200'
+                  : 'border-slate-700/80 bg-slate-900/50 text-slate-400 hover:border-slate-600'
+              }`}
+            >
+              <div className="text-xs font-medium">
+                📋 Trascina qui le immagini o premi <strong className="text-blue-300 font-bold">Ctrl+V</strong> per incollare uno screenshot/foto dagli appunti
+              </div>
+              <div className="text-[10px] text-slate-500">
+                Supporta JPG, PNG, WEBP — Compressione e ottimizzazione automatica
+              </div>
+            </div>
+
+            {/* Loading Indicator */}
+            {isProcessingPhotos && (
+              <div className="text-center py-2 text-xs text-blue-400 flex items-center justify-center gap-2 animate-pulse">
+                <Upload className="w-4 h-4 animate-bounce" />
+                <span>Compressione e caricamento foto in corso...</span>
+              </div>
+            )}
+
+            {/* Photos Preview Grid */}
+            {reportPhotos.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {reportPhotos.map((photo, index) => (
+                  <div
+                    key={photo.id}
+                    className="relative group rounded-xl overflow-hidden border border-slate-700 bg-slate-900 aspect-video shadow-md"
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition"
+                    />
+                    
+                    {/* Index badge */}
+                    <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-xs text-[9px] font-mono text-white px-1.5 py-0.2 rounded border border-white/20">
+                      #{index + 1}
+                    </div>
+
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveReportPhoto(photo.id)}
+                      className="absolute top-1 right-1 p-1 rounded-lg bg-rose-600/90 text-white hover:bg-rose-500 opacity-90 group-hover:opacity-100 transition shadow"
+                      title="Rimuovi foto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1">
+                      <p className="text-[10px] text-slate-300 truncate font-mono">
+                        {photo.name}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ✍️ DIGITAL SIGNATURE ON SCREEN (Touch / Penna) */}
