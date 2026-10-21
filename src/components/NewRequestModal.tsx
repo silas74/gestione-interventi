@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, FileText, FolderKanban, Wrench, ClipboardList, Plus, CheckSquare } from 'lucide-react';
-import { InterventionRequest, InterventionPriority, DefectPhoto, Project, RecordCategory, ActionStep } from '../types';
+import { X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, FileText, FolderKanban, Wrench, ClipboardList, Plus, CheckSquare, Mail, MessageCircle, Hourglass, ArrowRight } from 'lucide-react';
+import { InterventionRequest, InterventionPriority, DefectPhoto, Project, RecordCategory, ActionStep, FollowUpChannel, ProjectTrackingEntry } from '../types';
 import { generateNextCode } from '../lib/storage';
 import { compressAndProcessImage } from '../lib/photoUtils';
 
@@ -57,6 +57,15 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   // Action steps checklist state
   const [actionSteps, setActionSteps] = useState<ActionStep[]>([]);
   const [newStepText, setNewStepText] = useState('');
+
+  // Project Work Tracking State (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta, Prossimo step)
+  const [whatIDid, setWhatIDid] = useState('');
+  const [followUpChannel, setFollowUpChannel] = useState<FollowUpChannel>('email');
+  const [actionDate, setActionDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [waitingReplyFrom, setWaitingReplyFrom] = useState('');
+  const [followUpDueDate, setFollowUpDueDate] = useState('');
+  const [nextActionToDo, setNextActionToDo] = useState('');
+  const [referenceDoc, setReferenceDoc] = useState('');
 
   if (!isOpen) return null;
 
@@ -139,11 +148,34 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         ]
       : actionSteps;
 
+    const initialTrackingLogs: ProjectTrackingEntry[] = [];
+    if (whatIDid.trim() || waitingReplyFrom.trim() || nextActionToDo.trim()) {
+      initialTrackingLogs.push({
+        id: 'trk_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+        date: actionDate || new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5),
+        whatIDid: whatIDid.trim() || title.trim(),
+        channel: followUpChannel,
+        awaitingReply: Boolean(waitingReplyFrom.trim()),
+        waitingReplyFrom: waitingReplyFrom.trim() || undefined,
+        followUpDueDate: followUpDueDate || undefined,
+        nextStep: nextActionToDo.trim() || undefined,
+        referenceDoc: referenceDoc.trim() || undefined,
+      });
+    }
+
     const newIntervention: InterventionRequest = {
       id: (isProjectWork ? 'lav_' : 'int_') + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
       code: generateNextCode(existingInterventions, projCode),
       recordType,
       actionSteps: finalSteps,
+      trackingLogs: initialTrackingLogs,
+      whatIDidSummary: whatIDid.trim() || undefined,
+      followUpChannel: initialTrackingLogs.length > 0 ? followUpChannel : undefined,
+      lastActionDate: actionDate || undefined,
+      waitingReplyFrom: waitingReplyFrom.trim() || undefined,
+      followUpDueDate: followUpDueDate || undefined,
+      nextActionToDo: nextActionToDo.trim() || undefined,
       projectId: selectedProjectId,
       projectName: proj?.name || 'General',
       title: title.trim(),
@@ -157,7 +189,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
       priority,
       defectPhotos,
       notes: notes.trim(),
-      status: 'pending',
+      status: whatIDid.trim() ? 'in_progress' : 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -417,6 +449,179 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* 📡 TRACKING LAVORO & COMUNICAZIONI (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta) */}
+          <div className="bg-gradient-to-br from-indigo-950/35 via-slate-900 to-slate-950 p-4 rounded-xl border border-indigo-700/60 space-y-3.5 shadow-inner">
+            <div className="flex items-center justify-between flex-wrap gap-1">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  <Hourglass className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">
+                    Tracking Operativo & Follow-up (Cosa ho fatto / Email / WhatsApp / Risposte)
+                  </h4>
+                  <p className="text-[10px] text-indigo-300/80">
+                    Registra cosa hai già fatto, con quale mezzo (Email/WhatsApp), la data e da chi aspetti risposta
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 1. Cosa ho fatto */}
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-1">
+                🛠️ Cosa ho fatto / Azione Eseguita
+              </label>
+              <textarea
+                rows={2}
+                value={whatIDid}
+                onChange={(e) => setWhatIDid(e.target.value)}
+                placeholder="Es. Inviato schema aggiornato quadro KNX, richiesto orario accesso, verificata linea DALI in cantiere..."
+                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              />
+            </div>
+
+            {/* 2. Canale (Email / WhatsApp / Telefono / Cantiere / Riunione) + Data */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-1">
+                  📡 Esecuzione / Seguito per (Canale)
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFollowUpChannel('email')}
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                      followUpChannel === 'email'
+                        ? 'bg-blue-600/30 border-blue-400 text-blue-200 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Mail className="w-3 h-3 text-blue-400" />
+                    <span>Email</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFollowUpChannel('whatsapp')}
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                      followUpChannel === 'whatsapp'
+                        ? 'bg-emerald-600/30 border-emerald-400 text-emerald-200 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <MessageCircle className="w-3 h-3 text-emerald-400" />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFollowUpChannel('phone')}
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                      followUpChannel === 'phone'
+                        ? 'bg-amber-600/30 border-amber-400 text-amber-200 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Phone className="w-3 h-3 text-amber-400" />
+                    <span>Telefono</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFollowUpChannel('on_site')}
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                      followUpChannel === 'on_site'
+                        ? 'bg-indigo-600/30 border-indigo-400 text-indigo-200 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Wrench className="w-3 h-3 text-indigo-400" />
+                    <span>Cantiere</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFollowUpChannel('meeting')}
+                    className={`col-span-2 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                      followUpChannel === 'meeting'
+                        ? 'bg-violet-600/30 border-violet-400 text-violet-200 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <User className="w-3 h-3 text-violet-400" />
+                    <span>Riunione / Call</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-1">
+                  📅 Data Azione / Invio Comunicazione
+                </label>
+                <input
+                  type="date"
+                  value={actionDate}
+                  onChange={(e) => setActionDate(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="mt-2">
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    📎 Rif. Documento / Preventivo / File (opz.)
+                  </label>
+                  <input
+                    type="text"
+                    value={referenceDoc}
+                    onChange={(e) => setReferenceDoc(e.target.value)}
+                    placeholder="Es. Schema_QG02.pdf, Prev. #104, File .knxproj"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Da chi aspetto risposta + Scadenza Sollecito */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800/80">
+              <div>
+                <label className="block text-xs font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
+                  <Hourglass className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Da chi aspetto risposta? (se in attesa)</span>
+                </label>
+                <input
+                  type="text"
+                  value={waitingReplyFrom}
+                  onChange={(e) => setWaitingReplyFrom(e.target.value)}
+                  placeholder="Es. Mario Rossi, Ing. Bianchi, Direzione Lavori, Fornitore..."
+                  className="w-full bg-slate-800 border border-amber-500/40 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Data entro cui sollecitare / Scadenza risposta</span>
+                </label>
+                <input
+                  type="date"
+                  value={followUpDueDate}
+                  onChange={(e) => setFollowUpDueDate(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+
+            {/* 4. Prossima azione prevista */}
+            <div>
+              <label className="block text-xs font-semibold text-emerald-300 mb-1 flex items-center gap-1.5">
+                <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Prossima Azione da Fare (Next Step)</span>
+              </label>
+              <input
+                type="text"
+                value={nextActionToDo}
+                onChange={(e) => setNextActionToDo(e.target.value)}
+                placeholder="Es. Procedere con programmazione ETS6 appena arriva conferma..."
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
           </div>
 
           {/* Desired Access Date & Time + Priority */}
