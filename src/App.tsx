@@ -40,7 +40,7 @@ export function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<RecordCategory>('project_work');
 
   // Active Project Filter: 'all' or project.id
-  const [activeProjectId, setActiveProjectId] = useState<string>('proj-panvac');
+  const [activeProjectId, setActiveProjectId] = useState<string>('proj-hilton');
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,14 +110,14 @@ export function App() {
       setProjects(loadedProjects);
       setInterventions(loadedInterventions);
 
-      const panvacProj = loadedProjects.find(
+      const hiltonProj = loadedProjects.find(
         p =>
-          p.id === 'proj-panvac' ||
-          p.name.toLowerCase().includes('panva') ||
-          p.code.toLowerCase().includes('panva')
+          p.id === 'proj-hilton' ||
+          p.name.toLowerCase().includes('hilton') ||
+          p.code.toLowerCase().includes('hilton')
       );
-      if (panvacProj) {
-        setActiveProjectId(panvacProj.id);
+      if (hiltonProj) {
+        setActiveProjectId(hiltonProj.id);
       }
 
       const session = getCurrentSession();
