@@ -84,6 +84,21 @@ export function generateInterventionReportPDF(intervention: InterventionRequest)
     doc.setTextColor(30, 41, 59);
   }
 
+  if (intervention.actionSteps && intervention.actionSteps.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('Project Actions Checklist:', 16, currentY);
+    currentY += 4.8;
+    doc.setFont('helvetica', 'normal');
+    for (const step of intervention.actionSteps) {
+      const prefix = step.completed ? '[COMPLETED] ' : '[TO DO] ';
+      const splitStep = doc.splitTextToSize(`${prefix}${step.text}`, pageWidth - 36);
+      doc.text(splitStep, 18, currentY);
+      currentY += splitStep.length * 4.5 + 1;
+    }
+    currentY += 2.5;
+  }
+
   // Section 3: TECHNICAL EXECUTION & HOURS WORKED
   currentY = drawSectionTitle('3. TECHNICAL EXECUTION & HOURS WORKED', currentY + 1.5);
   
