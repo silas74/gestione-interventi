@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ShieldAlert } from 'lucide-react';
+import { Search, ShieldAlert, Hourglass } from 'lucide-react';
 
 interface FilterBarProps {
   searchTerm: string;
@@ -11,6 +11,7 @@ interface FilterBarProps {
   pendingCount?: number;
   inProgressCount?: number;
   completedCount?: number;
+  waitingReplyCount?: number;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = React.memo(({
@@ -22,7 +23,8 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(({
   onToggleUrgent,
   pendingCount = 0,
   inProgressCount = 0,
-  completedCount = 0
+  completedCount = 0,
+  waitingReplyCount = 0
 }) => {
   return (
     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 mb-6 bg-slate-900/60 p-2.5 sm:p-3 rounded-2xl border border-slate-800">
@@ -109,6 +111,27 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(({
             <span>Completed</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/50">
               {completedCount}
+            </span>
+          </button>
+
+          {/* ⏳ WAITING REPLY (Amber) */}
+          <button
+            onClick={() => onStatusFilterChange('attesa_risposta')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              statusFilter === 'attesa_risposta'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-900/40 ring-1 ring-amber-300'
+                : 'text-amber-400 hover:text-amber-300 hover:bg-amber-950/30'
+            }`}
+            title="Filtra i lavori/interventi in cui stai aspettando una risposta da qualcuno"
+          >
+            <Hourglass className="w-3 h-3" />
+            <span>Attesa Risposta</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full border ${
+              statusFilter === 'attesa_risposta'
+                ? 'bg-amber-950 text-amber-200 border-amber-700'
+                : 'bg-amber-950/80 text-amber-300 border-amber-800/50'
+            }`}>
+              {waitingReplyCount}
             </span>
           </button>
 
