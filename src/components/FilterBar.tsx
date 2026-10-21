@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, ShieldAlert, Hourglass } from 'lucide-react';
+import { RecordCategory } from '../types';
 
 interface FilterBarProps {
   searchTerm: string;
@@ -12,6 +13,7 @@ interface FilterBarProps {
   inProgressCount?: number;
   completedCount?: number;
   waitingReplyCount?: number;
+  activeCategoryTab?: RecordCategory;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = React.memo(({
@@ -24,7 +26,8 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(({
   pendingCount = 0,
   inProgressCount = 0,
   completedCount = 0,
-  waitingReplyCount = 0
+  waitingReplyCount = 0,
+  activeCategoryTab = 'project_work'
 }) => {
   return (
     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 mb-6 bg-slate-900/60 p-2.5 sm:p-3 rounded-2xl border border-slate-800">
@@ -89,10 +92,10 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(({
                 ? 'bg-pink-600 text-white shadow-md shadow-pink-900/40 ring-1 ring-pink-400'
                 : 'text-pink-400 hover:text-pink-300 hover:bg-pink-950/30'
             }`}
-            title="Filter by tasks currently In Progress or Waiting for Parts"
+            title={activeCategoryTab === 'project_work' ? 'Filtra lavori in corso' : 'Filter by tasks currently In Progress or Waiting for Parts'}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse"></span>
-            <span>In Progress / Parts</span>
+            <span>{activeCategoryTab === 'project_work' ? 'In Corso' : 'In Progress / Parts'}</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-pink-950/80 text-pink-300 border border-pink-700/50">
               {inProgressCount}
             </span>
