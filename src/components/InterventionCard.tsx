@@ -3,9 +3,10 @@ import {
   Calendar, Clock, MapPin, User, Phone, AlertTriangle, 
   CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
   Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
-  PhoneCall, MessageCircle, Share2, Mail, Camera, ClipboardList, CheckSquare, Square, Plus
+  PhoneCall, MessageCircle, Share2, Mail, Camera, ClipboardList, CheckSquare, Square, Plus,
+  Hourglass, ArrowRight, FileText
 } from 'lucide-react';
-import { InterventionRequest, AppRole, DefectPhoto } from '../types';
+import { InterventionRequest, AppRole, DefectPhoto, FollowUpChannel, ProjectTrackingEntry } from '../types';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
 
 const handleDownloadPDF = async (intervention: InterventionRequest) => {
@@ -30,7 +31,25 @@ interface InterventionCardProps {
   onToggleActionStep?: (interventionId: string, stepId: string) => void;
   onAddActionStep?: (interventionId: string, text: string) => void;
   onDeleteActionStep?: (interventionId: string, stepId: string) => void;
+  onAddTrackingEntry?: (interventionId: string, entry: Omit<ProjectTrackingEntry, 'id'>) => void;
+  onMarkReplyReceived?: (interventionId: string, trackingId?: string) => void;
+  onDeleteTrackingEntry?: (interventionId: string, trackingId: string) => void;
 }
+
+const getChannelBadgeInfo = (channel?: FollowUpChannel) => {
+  switch (channel) {
+    case 'email':
+      return { label: 'Seguito per Email', short: 'Email', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/40', icon: 'email' };
+    case 'whatsapp':
+      return { label: 'Seguito per WhatsApp', short: 'WhatsApp', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', icon: 'whatsapp' };
+    case 'phone':
+      return { label: 'Seguito per Telefono', short: 'Telefono', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/40', icon: 'phone' };
+    case 'meeting':
+      return { label: 'Riunione / Call', short: 'Riunione', cls: 'bg-violet-500/20 text-violet-300 border-violet-500/40', icon: 'meeting' };
+    default:
+      return { label: 'Eseguito in Cantiere', short: 'Cantiere', cls: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40', icon: 'on_site' };
+  }
+};
 
 export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   intervention,
@@ -44,12 +63,29 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   onToggleActionStep,
   onAddActionStep,
   onDeleteActionStep,
+  onAddTrackingEntry,
+  onMarkReplyReceived,
+  onDeleteTrackingEntry,
 }) => {
   const [quickStepText, setQuickStepText] = useState('');
   const [showAddStepInput, setShowAddStepInput] = useState(false);
 
+  // Tracking form state
+  const [showAddTrackingForm, setShowAddTrackingForm] = useState(false);
+  const [trkWhatIDid, setTrkWhatIDid] = useState('');
+  const [trkChannel, setTrkChannel] = useState<FollowUpChannel>('email');
+  const [trkDate, setTrkDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [trkWaitingFrom, setTrkWaitingFrom] = useState('');
+  const [trkDueDate, setTrkDueDate] = useState('');
+  const [trkNextStep, setTrkNextStep] = useState('');
+  const [trkRefDoc, setTrkRefDoc] = useState('');
+
   const isProjectWork = intervention.recordType === 'project_work';
   const actionSteps = intervention.actionSteps || [];
+  const trackingLogs = intervention.trackingLogs || [];
+  const activeWaitingFrom =
+    intervention.waitingReplyFrom ||
+    trackingLogs.find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom;
   const completedStepsCount = actionSteps.filter(s => s.completed).length;
   const stepsProgressPct = actionSteps.length > 0 ? Math.round((completedStepsCount / actionSteps.length) * 100) : 0;
   const isCompleted = intervention.status === 'completed' || intervention.status === 'completato';
@@ -136,6 +172,18 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-1 shadow-sm">
                 <ClipboardList className="w-3 h-3 text-indigo-400" />
                 <span>LAVORO / AZIONE</span>
+              </span>
+            )}
+
+            {/* Badge Canale Ultimo Follow-up (Email / WhatsApp / ecc.) */}
+            {intervention.followUpChannel && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${getChannelBadgeInfo(intervention.followUpChannel).cls}`}>
+                {intervention.followUpChannel === 'email' && <Mail className="w-3 h-3" />}
+                {intervention.followUpChannel === 'whatsapp' && <MessageCircle className="w-3 h-3" />}
+                {intervention.followUpChannel === 'phone' && <Phone className="w-3 h-3" />}
+                {intervention.followUpChannel === 'on_site' && <Wrench className="w-3 h-3" />}
+                {intervention.followUpChannel === 'meeting' && <User className="w-3 h-3" />}
+                <span>{getChannelBadgeInfo(intervention.followUpChannel).label}</span>
               </span>
             )}
 
@@ -317,6 +365,318 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 mb-3 whitespace-pre-wrap leading-relaxed">
             <strong className="text-slate-400 block mb-0.5 text-[11px]">Notes for technician:</strong>
             {intervention.notes}
+          </div>
+        )}
+
+        {/* ⏳ BANNER EVIDENZIATO: DA CHI ASPETTO RISPOSTA */}
+        {activeWaitingFrom && !isCompleted && (
+          <div className="mb-3 p-3 rounded-xl bg-amber-950/35 border border-amber-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+                <span>Da chi aspetto risposta: <strong className="text-white underline decoration-amber-400/60">{activeWaitingFrom}</strong></span>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-amber-200/80 flex-wrap">
+                {intervention.lastActionDate && (
+                  <span>📅 Richiesto il: <strong>{intervention.lastActionDate}</strong></span>
+                )}
+                {intervention.followUpChannel && (
+                  <span>📡 Tramite: <strong>{getChannelBadgeInfo(intervention.followUpChannel).short}</strong></span>
+                )}
+                {intervention.followUpDueDate && (
+                  <span className="text-amber-300 font-semibold">⏰ Scadenza / Sollecito: {intervention.followUpDueDate}</span>
+                )}
+              </div>
+            </div>
+            {onMarkReplyReceived && (
+              <button
+                type="button"
+                onClick={() => onMarkReplyReceived(intervention.id)}
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow transition active:scale-95 shrink-0"
+                title="Segna che la risposta attesa è arrivata"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Risposta Ricevuta</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 📡 DIARIO TRACKING PROGETTO: COSA HO FATTO, SEGUITO PER EMAIL/WHATSAPP, DATA, DA CHI ASPETTO RISPOSTA */}
+        {(isProjectWork || trackingLogs.length > 0 || intervention.whatIDidSummary) && (
+          <div className="bg-slate-950/80 border border-indigo-700/50 rounded-xl p-3 mb-3 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Tracking Lavoro: Cosa ho fatto, Email/WhatsApp & Risposte ({trackingLogs.length})</span>
+              </div>
+              {onAddTrackingEntry && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddTrackingForm(prev => !prev)}
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-1 transition active:scale-95"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{showAddTrackingForm ? 'Chiudi Form' : '+ Registra Cosa Ho Fatto / Follow-up'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Sintesi rapida ultimo stato e Prossima Azione */}
+            {(intervention.whatIDidSummary || intervention.nextActionToDo) && (
+              <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-800/50 text-xs space-y-1">
+                {intervention.whatIDidSummary && (
+                  <div className="text-slate-200">
+                    <span className="font-bold text-indigo-300">🛠️ Ultima azione fatta: </span>
+                    <span>{intervention.whatIDidSummary}</span>
+                  </div>
+                )}
+                {intervention.nextActionToDo && (
+                  <div className="text-emerald-300 flex items-start gap-1">
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-400" />
+                    <span><strong>Prossima azione da fare:</strong> {intervention.nextActionToDo}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Form rapido inline per aggiungere una voce di Tracking */}
+            {showAddTrackingForm && onAddTrackingEntry && (
+              <div className="p-3 rounded-xl bg-slate-900 border border-indigo-500/50 space-y-2.5 animate-fadeIn">
+                <div className="text-xs font-bold text-indigo-300">
+                  Nuova Voce di Tracking (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta)
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Cosa ho fatto *
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={trkWhatIDid}
+                    onChange={(e) => setTrkWhatIDid(e.target.value)}
+                    placeholder="Descrivi cosa hai fatto (es. Inviato schema, scritto su WhatsApp per accesso, eseguita modifica ETS...)"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Seguito per (Email / WhatsApp / ecc.)
+                    </label>
+                    <select
+                      value={trkChannel}
+                      onChange={(e) => setTrkChannel(e.target.value as FollowUpChannel)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    >
+                      <option value="email">✉️ Seguito per Email</option>
+                      <option value="whatsapp">💬 Seguito per WhatsApp</option>
+                      <option value="phone">📞 Seguito per Telefono</option>
+                      <option value="on_site">🏗️ Eseguito in Cantiere</option>
+                      <option value="meeting">👥 Riunione / Call Tecnica</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Data
+                    </label>
+                    <input
+                      type="date"
+                      value={trkDate}
+                      onChange={(e) => setTrkDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                      ⏳ Da chi aspetto risposta? (opz.)
+                    </label>
+                    <input
+                      type="text"
+                      value={trkWaitingFrom}
+                      onChange={(e) => setTrkWaitingFrom(e.target.value)}
+                      placeholder="Es. Mario Rossi, Ing. Bianchi, Fornitore..."
+                      className="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                      ⏰ Data entro cui sollecitare (opz.)
+                    </label>
+                    <input
+                      type="date"
+                      value={trkDueDate}
+                      onChange={(e) => setTrkDueDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-emerald-300 mb-1">
+                      ➡️ Prossima azione da fare (opz.)
+                    </label>
+                    <input
+                      type="text"
+                      value={trkNextStep}
+                      onChange={(e) => setTrkNextStep(e.target.value)}
+                      placeholder="Es. Collaudo in campo dopo conferma..."
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      📎 Rif. Documento / Schema / Prev. (opz.)
+                    </label>
+                    <input
+                      type="text"
+                      value={trkRefDoc}
+                      onChange={(e) => setTrkRefDoc(e.target.value)}
+                      placeholder="Es. Schema_QG.pdf, Prev. #12..."
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddTrackingForm(false)}
+                    className="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-white bg-slate-800"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!trkWhatIDid.trim()) {
+                        alert('Inserisci cosa hai fatto prima di salvare il tracking.');
+                        return;
+                      }
+                      onAddTrackingEntry(intervention.id, {
+                        date: trkDate || new Date().toISOString().split('T')[0],
+                        time: new Date().toTimeString().slice(0, 5),
+                        whatIDid: trkWhatIDid.trim(),
+                        channel: trkChannel,
+                        awaitingReply: Boolean(trkWaitingFrom.trim()),
+                        waitingReplyFrom: trkWaitingFrom.trim() || undefined,
+                        followUpDueDate: trkDueDate || undefined,
+                        nextStep: trkNextStep.trim() || undefined,
+                        referenceDoc: trkRefDoc.trim() || undefined,
+                      });
+                      setTrkWhatIDid('');
+                      setTrkWaitingFrom('');
+                      setTrkDueDate('');
+                      setTrkNextStep('');
+                      setTrkRefDoc('');
+                      setShowAddTrackingForm(false);
+                    }}
+                    className="px-3.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition"
+                  >
+                    Salva nel Tracking
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista Cronologica del Tracking */}
+            {trackingLogs.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic">
+                Nessun movimento registrato. Premi "+ Registra Cosa Ho Fatto / Follow-up" per tracciare attività, email, WhatsApp e risposte attese.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {trackingLogs.map((log) => {
+                  const chInfo = getChannelBadgeInfo(log.channel);
+                  return (
+                    <div
+                      key={log.id}
+                      className="p-2.5 rounded-xl bg-slate-900/95 border border-slate-800 text-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700">
+                            📅 {log.date}{log.time ? ` ${log.time}` : ''}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${chInfo.cls}`}>
+                            {log.channel === 'email' && <Mail className="w-3 h-3" />}
+                            {log.channel === 'whatsapp' && <MessageCircle className="w-3 h-3" />}
+                            {log.channel === 'phone' && <Phone className="w-3 h-3" />}
+                            {log.channel === 'on_site' && <Wrench className="w-3 h-3" />}
+                            {log.channel === 'meeting' && <User className="w-3 h-3" />}
+                            <span>{chInfo.label}</span>
+                          </span>
+                          {log.referenceDoc && (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
+                              <FileText className="w-2.5 h-2.5 text-indigo-400" />
+                              <span>{log.referenceDoc}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {onDeleteTrackingEntry && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteTrackingEntry(intervention.id, log.id)}
+                            className="text-slate-500 hover:text-rose-400 p-0.5 transition"
+                            title="Elimina voce di tracking"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="text-slate-100 leading-relaxed">
+                        <strong className="text-indigo-300">Cosa ho fatto: </strong>
+                        <span>{log.whatIDid}</span>
+                      </div>
+
+                      {log.waitingReplyFrom && (
+                        <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                            log.replyReceived
+                              ? 'bg-emerald-950/40 text-emerald-300 border-emerald-700/50'
+                              : 'bg-amber-950/40 text-amber-300 border-amber-600/50'
+                          }`}>
+                            <Hourglass className="w-3 h-3 shrink-0" />
+                            <span>
+                              {log.replyReceived
+                                ? `✅ Risposta ricevuta da: ${log.waitingReplyFrom}${log.replyReceivedAt ? ` (${log.replyReceivedAt})` : ''}`
+                                : `⏳ Aspetto risposta da: ${log.waitingReplyFrom}${log.followUpDueDate ? ` (entro ${log.followUpDueDate})` : ''}`}
+                            </span>
+                          </div>
+
+                          {!log.replyReceived && onMarkReplyReceived && (
+                            <button
+                              type="button"
+                              onClick={() => onMarkReplyReceived(intervention.id, log.id)}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 transition"
+                            >
+                              ✓ Segna Risposta Ricevuta
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {log.nextStep && (
+                        <div className="text-[11px] text-emerald-300/90 flex items-center gap-1 pt-0.5">
+                          <ArrowRight className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span><strong>Prossimo step:</strong> {log.nextStep}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
