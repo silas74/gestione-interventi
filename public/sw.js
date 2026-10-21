@@ -1,5 +1,5 @@
-// Field Service PWA - Service Worker v1.0.0
-const CACHE_NAME = 'field-service-pwa-v1.0.0';
+// Field Service PWA - Service Worker v2.1.0 (Network-First for fresh updates)
+const CACHE_NAME = 'field-service-pwa-v2.1.0';
 
 const PRECACHE_ASSETS = [
   './',
@@ -75,26 +75,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Static Assets (JS, CSS, Images, Fonts): Stale-While-Revalidate
+  // 2. Static Assets (JS, CSS, Images, Fonts): Network-First with Offline Cache Fallback
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // If offline and asset is not in cache, fallback to empty or handled by caller
-          return cachedResponse;
-        });
-
-      // Return cached version immediately if available, otherwise wait for network
-      return cachedResponse || fetchPromise;
-    })
+    fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(request);
+        return cachedResponse;
+      })
   );
 });
