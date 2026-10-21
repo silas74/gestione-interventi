@@ -2,7 +2,7 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v1';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v2';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
@@ -218,6 +218,36 @@ const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
     createdAt: '2026-10-18T09:00:00Z',
     updatedAt: '2026-10-20T14:30:00Z',
     assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Completata scansione Linea 1.1/1.2 e inviato riepilogo indirizzi DALI per approvazione.',
+    followUpChannel: 'email',
+    lastActionDate: '2026-10-20',
+    waitingReplyFrom: 'Mario Rossi / Direzione Tecnica Workbank',
+    followUpDueDate: '2026-10-23',
+    nextActionToDo: 'Configurare scenario spegnimento generale appena confermata lista orari.',
+    trackingLogs: [
+      {
+        id: 'trk-wb-101',
+        date: '2026-10-19',
+        time: '11:30',
+        whatIDid: 'Eseguita scansione bus KNX Linea 1.1 e 1.2 in cantiere e verificata tensione alimentatori.',
+        channel: 'on_site',
+        awaitingReply: false,
+        nextStep: 'Controllare gateway DALI Piano 1',
+        referenceDoc: 'Report_Topologia_ETS6.pdf'
+      },
+      {
+        id: 'trk-wb-102',
+        date: '2026-10-20',
+        time: '16:45',
+        whatIDid: 'Inviata tabella gruppi DALI e proposta orari scenario spegnimento automatico serale.',
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: 'Mario Rossi / Direzione Tecnica Workbank',
+        followUpDueDate: '2026-10-23',
+        nextStep: 'Programmare timer spegnimento su supervisore dopo conferma',
+        referenceDoc: 'Tabella_Gruppi_DALI_rev2.xlsx'
+      }
+    ],
     actionSteps: [
       { id: 'act-1', text: 'Scansione dispositivi su bus KNX Linea 1.1 e 1.2', completed: true, completedAt: '2026-10-19T11:00:00Z' },
       { id: 'act-2', text: 'Verifica indirizzamento gateway DALI e gruppi corpi illuminanti', completed: true, completedAt: '2026-10-20T14:00:00Z' },
@@ -244,8 +274,27 @@ const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
     notes: 'Portare luxmetro digitale certificato per calibrazione sensori.',
     status: 'pending',
     createdAt: '2026-10-19T10:30:00Z',
-    updatedAt: '2026-10-19T10:30:00Z',
+    updatedAt: '2026-10-20T18:00:00Z',
     assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Richiesta disponibilità sale riunioni Board A e B via WhatsApp per test fotometrico.',
+    followUpChannel: 'whatsapp',
+    lastActionDate: '2026-10-20',
+    waitingReplyFrom: 'Segreteria Direzione / Facility Manager',
+    followUpDueDate: '2026-10-22',
+    nextActionToDo: 'Eseguire taratura 500 lux con luxmetro appena confermata fascia oraria sale libere.',
+    trackingLogs: [
+      {
+        id: 'trk-wb-201',
+        date: '2026-10-20',
+        time: '17:50',
+        whatIDid: 'Scritto messaggio WhatsApp con proposta intervento giovedì mattina ore 08:30 prima delle riunioni.',
+        channel: 'whatsapp',
+        awaitingReply: true,
+        waitingReplyFrom: 'Segreteria Direzione / Facility Manager',
+        followUpDueDate: '2026-10-22',
+        nextStep: 'Accesso sale riunioni per calibrazione sensori EyeZen'
+      }
+    ],
     actionSteps: [
       { id: 'act-201', text: 'Misura lux con luce naturale e artificiale in Sala Board A & B', completed: false },
       { id: 'act-202', text: 'Impostazione setpoint 500 lux e soglia minima dimming 15%', completed: false },
@@ -273,6 +322,26 @@ const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
     createdAt: '2026-10-20T08:15:00Z',
     updatedAt: '2026-10-20T08:15:00Z',
     assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Inviato schema aggiornato quadro QG-02 e richiesto permesso di lavoro fuori turno.',
+    followUpChannel: 'email',
+    lastActionDate: '2026-10-20',
+    waitingReplyFrom: 'Resp. Manutenzione ACX Logistics (Ing. Galli)',
+    followUpDueDate: '2026-10-24',
+    nextActionToDo: 'Verifica termografica e taratura protezioni motori linea B2.',
+    trackingLogs: [
+      {
+        id: 'trk-log-301',
+        date: '2026-10-20',
+        time: '09:30',
+        whatIDid: 'Inviata email con piano operativo, DUVRI aggiornato e schema selettività quadro QG-02.',
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: 'Resp. Manutenzione ACX Logistics (Ing. Galli)',
+        followUpDueDate: '2026-10-24',
+        nextStep: 'Conferma fermo impianto sabato mattina 07:30',
+        referenceDoc: 'Schema_QG02_Selettivita.pdf'
+      }
+    ],
     actionSteps: [
       { id: 'act-301', text: 'Controllo termografico interruttori quadro generale QG-02', completed: false },
       { id: 'act-302', text: 'Verifica taratura protezioni motori nastri linea B2', completed: false },
@@ -389,14 +458,20 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
     }
     const parsed: InterventionRequest[] = JSON.parse(raw);
     if (!localStorage.getItem(STORAGE_PROJECT_WORKS_SEEDED)) {
-      const hasProjectWorks = parsed.some(i => i.recordType === 'project_work');
-      if (!hasProjectWorks) {
-        const merged = [...parsed, ...INITIAL_PROJECT_WORKS];
-        localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(merged));
-        localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
-        return merged;
-      }
+      const sampleMap = new Map(INITIAL_PROJECT_WORKS.map(w => [w.id, w]));
+      const existingIds = new Set(parsed.map(i => i.id));
+      const upgraded = parsed.map(item => {
+        const sample = sampleMap.get(item.id);
+        if (sample && (!item.trackingLogs || item.trackingLogs.length === 0)) {
+          return { ...sample, ...item, trackingLogs: sample.trackingLogs, waitingReplyFrom: sample.waitingReplyFrom, followUpChannel: sample.followUpChannel, lastActionDate: sample.lastActionDate, whatIDidSummary: sample.whatIDidSummary, nextActionToDo: sample.nextActionToDo, followUpDueDate: sample.followUpDueDate };
+        }
+        return item;
+      });
+      const missingSamples = INITIAL_PROJECT_WORKS.filter(w => !existingIds.has(w.id));
+      const merged = [...upgraded, ...missingSamples];
+      localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(merged));
       localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
+      return merged;
     }
     return parsed;
   } catch {
