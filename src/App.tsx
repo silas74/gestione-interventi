@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { 
   InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
 } from './types';
@@ -13,19 +13,21 @@ import { Header } from './components/Header';
 import { StatsCards } from './components/StatsCards';
 import { FilterBar } from './components/FilterBar';
 import { InterventionCard } from './components/InterventionCard';
-import { NewRequestModal } from './components/NewRequestModal';
-import { TechnicianReportModal } from './components/TechnicianReportModal';
-import { ClientFeedbackModal } from './components/ClientFeedbackModal';
-import { ImagePreviewModal } from './components/ImagePreviewModal';
-import { AdminUsersModal } from './components/AdminUsersModal';
-import { ProjectManagementModal } from './components/ProjectManagementModal';
-import { PwaInstallModal } from './components/PwaInstallModal';
-import { BackupRestoreModal } from './components/BackupRestoreModal';
-import { SmartEmailModal } from './components/SmartEmailModal';
 import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
 import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
 import { verifySessionToken } from './lib/authSecurity';
+
+// Lazy-loaded Modals for faster initial page load & smaller main bundle
+const NewRequestModal = lazy(() => import('./components/NewRequestModal').then(m => ({ default: m.NewRequestModal })));
+const TechnicianReportModal = lazy(() => import('./components/TechnicianReportModal').then(m => ({ default: m.TechnicianReportModal })));
+const ClientFeedbackModal = lazy(() => import('./components/ClientFeedbackModal').then(m => ({ default: m.ClientFeedbackModal })));
+const ImagePreviewModal = lazy(() => import('./components/ImagePreviewModal').then(m => ({ default: m.ImagePreviewModal })));
+const AdminUsersModal = lazy(() => import('./components/AdminUsersModal').then(m => ({ default: m.AdminUsersModal })));
+const ProjectManagementModal = lazy(() => import('./components/ProjectManagementModal').then(m => ({ default: m.ProjectManagementModal })));
+const PwaInstallModal = lazy(() => import('./components/PwaInstallModal').then(m => ({ default: m.PwaInstallModal })));
+const BackupRestoreModal = lazy(() => import('./components/BackupRestoreModal').then(m => ({ default: m.BackupRestoreModal })));
+const SmartEmailModal = lazy(() => import('./components/SmartEmailModal').then(m => ({ default: m.SmartEmailModal })));
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
@@ -188,7 +190,7 @@ export function App() {
     showToast(`Request ${newReq.code} created for ${newReq.projectName || 'the project'}!`);
   };
 
-  const handleTakeCharge = async (id: string, technicianName: string) => {
+  const handleTakeCharge = useCallback(async (id: string, technicianName: string) => {
     const item = interventions.find(i => i.id === id);
     if (!item) return;
 
@@ -202,7 +204,7 @@ export function App() {
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === id ? updated : i));
     showToast(`Task ${item.code} taken in charge by ${technicianName}`);
-  };
+  }, [interventions]);
 
   const handleSaveReport = async (interventionId: string, report: TechnicianReport) => {
     const item = interventions.find(i => i.id === interventionId);
@@ -246,7 +248,7 @@ export function App() {
     showToast(`Client feedback recorded for ${item.code}!`);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const item = interventions.find(i => i.id === id);
     if (!item) return;
     if (!window.confirm(`Are you sure you want to delete request ${item.code}?`)) return;
@@ -254,7 +256,23 @@ export function App() {
     await deleteIntervention(id);
     setInterventions(prev => prev.filter(i => i.id !== id));
     showToast(`Intervention deleted.`);
-  };
+  }, [interventions]);
+
+  const handleOpenReportModal = useCallback((item: InterventionRequest) => {
+    setReportModalIntervention(item);
+  }, []);
+
+  const handleOpenFeedbackModal = useCallback((item: InterventionRequest) => {
+    setFeedbackModalIntervention(item);
+  }, []);
+
+  const handlePreviewPhoto = useCallback((photo: DefectPhoto) => {
+    setPreviewPhoto(photo);
+  }, []);
+
+  const handleToggleUrgent = useCallback(() => {
+    setOnlyUrgent(prev => !prev);
+  }, []);
 
   // Smart Email Action Handler (Antigravity Inbound Email AI)
   const handleExecuteEmailAction = async (payload: {
@@ -416,75 +434,124 @@ export function App() {
     }
   };
 
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Visible projects for this user (Memoized)
+  const visibleProjects = useMemo(() => {
+    if (!currentUser) return [];
+    return projects.filter(p => {
+      if (isAdmin || currentUser.assignedProjectIds.includes('*')) return true;
+      return currentUser.assignedProjectIds.includes(p.id);
+    });
+  }, [projects, currentUser, isAdmin]);
+
+  // Filter interventions by permissions + active project + search term (Memoized)
+  const filteredInterventions = useMemo(() => {
+    if (!currentUser) return [];
+    const q = searchTerm.trim().toLowerCase();
+    const hasWildcard = isAdmin || currentUser.assignedProjectIds.includes('*');
+
+    return interventions.filter(item => {
+      // 1. User permission for project
+      if (!hasWildcard) {
+        if (item.projectId && !currentUser.assignedProjectIds.includes(item.projectId)) {
+          return false;
+        }
+      }
+
+      // 2. Selected project filter
+      if (activeProjectId !== 'all') {
+        if (item.projectId && item.projectId !== activeProjectId) return false;
+        if (!item.projectId && activeProjectId !== 'proj-workbank') return false;
+      }
+
+      // 3. Only urgent
+      if (onlyUrgent && item.priority !== 'urgent' && item.priority !== 'urgente') {
+        return false;
+      }
+
+      // 4. Search query
+      if (q) {
+        const match = 
+          item.code.toLowerCase().includes(q) ||
+          item.title.toLowerCase().includes(q) ||
+          item.siteName.toLowerCase().includes(q) ||
+          item.clientName.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          (item.projectName && item.projectName.toLowerCase().includes(q)) ||
+          (item.assignedTechnician && item.assignedTechnician.toLowerCase().includes(q));
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [interventions, currentUser, isAdmin, activeProjectId, searchTerm, onlyUrgent]);
+
+  // ================= SINGLE-PASS TASK DIVISION (TO DO / IN PROGRESS / COMPLETED) =================
+  const { pendingInterventions, inProgressInterventions, todoInterventions, completedInterventions } = useMemo(() => {
+    const pending: InterventionRequest[] = [];
+    const inProgress: InterventionRequest[] = [];
+    const todo: InterventionRequest[] = [];
+    const completed: InterventionRequest[] = [];
+
+    for (let idx = 0; idx < filteredInterventions.length; idx++) {
+      const i = filteredInterventions[idx];
+      const isDone = i.status === 'completed' || i.status === 'completato';
+      if (isDone) {
+        completed.push(i);
+      } else {
+        pending.push(i);
+        const isInProg =
+          i.status === 'in_progress' ||
+          i.status === 'in_corso' ||
+          i.report?.statusOutcome === 'waiting_for_parts' ||
+          (i.report?.statusOutcome as string) === 'in_attesa_ricambi';
+        if (isInProg) {
+          inProgress.push(i);
+        } else {
+          todo.push(i);
+        }
+      }
+    }
+
+    return {
+      pendingInterventions: pending,
+      inProgressInterventions: inProgress,
+      todoInterventions: todo,
+      completedInterventions: completed,
+    };
+  }, [filteredInterventions]);
+
+  // Precompute project ticket counts and statuses in a single O(N) pass
+  const projectStatsMap = useMemo(() => {
+    const map = new Map<string, { count: number; hasPending: boolean; hasInProgress: boolean; allResolved: boolean }>();
+    for (let idx = 0; idx < interventions.length; idx++) {
+      const item = interventions[idx];
+      const pid = item.projectId;
+      if (!pid) continue;
+      let entry = map.get(pid);
+      if (!entry) {
+        entry = { count: 0, hasPending: false, hasInProgress: false, allResolved: true };
+        map.set(pid, entry);
+      }
+      entry.count++;
+      const isDone = item.status === 'completed' || item.status === 'completato';
+      if (!isDone) {
+        entry.allResolved = false;
+      }
+      if (item.status === 'in_progress' || item.status === 'in_corso' || item.report?.statusOutcome === 'waiting_for_parts' || (item.report?.statusOutcome as string) === 'in_attesa_ricambi') {
+        if (!isDone) entry.hasInProgress = true;
+      } else if (!isDone) {
+        entry.hasPending = true;
+      }
+    }
+    return map;
+  }, [interventions]);
+
   // If user is not authenticated, show Login screen
   if (!currentUser) {
     return <LoginScreen users={users} onLogin={handleLogin} />;
   }
-
-  const isAdmin = currentUser.role === 'admin';
-
-  // Visible projects for this user
-  const visibleProjects = projects.filter(p => {
-    if (isAdmin || currentUser.assignedProjectIds.includes('*')) return true;
-    return currentUser.assignedProjectIds.includes(p.id);
-  });
-
-  // Filter interventions by permissions + active project + search term
-  const filteredInterventions = interventions.filter(item => {
-    // 1. User permission for project
-    if (!isAdmin && !currentUser.assignedProjectIds.includes('*')) {
-      if (item.projectId && !currentUser.assignedProjectIds.includes(item.projectId)) {
-        return false;
-      }
-    }
-
-    // 2. Selected project filter
-    if (activeProjectId !== 'all') {
-      if (item.projectId && item.projectId !== activeProjectId) return false;
-      if (!item.projectId && activeProjectId !== 'proj-workbank') return false;
-    }
-
-    // 3. Search query
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
-      const match = 
-        item.code.toLowerCase().includes(q) ||
-        item.title.toLowerCase().includes(q) ||
-        item.siteName.toLowerCase().includes(q) ||
-        item.clientName.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        (item.projectName && item.projectName.toLowerCase().includes(q)) ||
-        (item.assignedTechnician && item.assignedTechnician.toLowerCase().includes(q));
-      if (!match) return false;
-    }
-
-    // 4. Only urgent
-    if (onlyUrgent && item.priority !== 'urgent' && item.priority !== 'urgente') {
-      return false;
-    }
-
-    return true;
-  });
-
-  // ================= TASK DIVISION (TO DO / IN PROGRESS / COMPLETED) =================
-  const pendingInterventions = filteredInterventions.filter(
-    i => i.status !== 'completed' && i.status !== 'completato'
-  );
-
-  const inProgressInterventions = filteredInterventions.filter(
-    i => (i.status === 'in_progress' || i.status === 'in_corso' || 
-         i.report?.statusOutcome === 'waiting_for_parts' || 
-         (i.report?.statusOutcome as string) === 'in_attesa_ricambi') &&
-         (i.status !== 'completed' && i.status !== 'completato')
-  );
-
-  const todoInterventions = pendingInterventions.filter(
-    i => !inProgressInterventions.some(ip => ip.id === i.id)
-  );
-
-  const completedInterventions = filteredInterventions.filter(
-    i => i.status === 'completed' || i.status === 'completato'
-  );
 
   const activeProjectObj = projects.find(p => p.id === activeProjectId);
 
@@ -503,18 +570,15 @@ export function App() {
     showToast(`Exported ${result.count} tickets (${result.totalHours.toFixed(1)} hrs total) to Excel!`);
   };
 
-  // Status colors for Project Pills:
-  // 1. Rosa se non c'è nulla (0 ticket)
-  // 2. Giallo se in lavorazione
-  // 3. Verde se tutto risolto
-  // 4. Rosso se ci sono difetti/interventi aperti non risolti
+  // Status colors for Project Pills (using O(1) lookup from projectStatsMap):
   const getProjectStatusStyle = (projectId: string, isSelected: boolean) => {
-    const projTickets = interventions.filter(i => i.projectId === projectId);
-    const count = projTickets.length;
+    const stats = projectStatsMap.get(projectId);
+    const count = stats?.count || 0;
 
     // 1. Rosa se non c'è nulla (0 ticket)
     if (count === 0) {
       return {
+        count: 0,
         label: 'Empty (No tickets)',
         dotColor: 'bg-pink-400',
         dotPulse: false,
@@ -525,13 +589,10 @@ export function App() {
       };
     }
 
-    const hasPending = projTickets.some(i => i.status === 'pending' || i.status === 'in_attesa' || i.status === 'scheduled');
-    const hasInProgress = projTickets.some(i => i.status === 'in_progress' || i.status === 'in_corso');
-    const allResolved = projTickets.every(i => i.status === 'completed' || i.status === 'completato');
-
     // 2. Verde se è tutto risolto
-    if (allResolved) {
+    if (stats?.allResolved) {
       return {
+        count,
         label: 'All Resolved',
         dotColor: 'bg-emerald-400',
         dotPulse: false,
@@ -543,8 +604,9 @@ export function App() {
     }
 
     // 3. Giallo se è in lavorazione
-    if (hasInProgress) {
+    if (stats?.hasInProgress) {
       return {
+        count,
         label: 'In Progress (Active Work)',
         dotColor: 'bg-amber-400',
         dotPulse: true,
@@ -557,6 +619,7 @@ export function App() {
 
     // 4. Rosso se ci sono difetti/interventi non ancora risolti
     return {
+      count,
       label: 'Open / Unresolved',
       dotColor: 'bg-rose-500',
       dotPulse: true,
@@ -648,9 +711,9 @@ export function App() {
             </button>
 
             {visibleProjects.map((p) => {
-              const count = interventions.filter(i => i.projectId === p.id).length;
               const isSelected = activeProjectId === p.id;
               const style = getProjectStatusStyle(p.id, isSelected);
+              const count = style.count;
 
               return (
                 <button
@@ -728,7 +791,7 @@ export function App() {
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           onlyUrgent={onlyUrgent}
-          onToggleUrgent={() => setOnlyUrgent(prev => !prev)}
+          onToggleUrgent={handleToggleUrgent}
           pendingCount={statusFilter === 'all' ? todoInterventions.length : pendingInterventions.length}
           inProgressCount={inProgressInterventions.length}
           completedCount={completedInterventions.length}
@@ -802,9 +865,9 @@ export function App() {
                     currentRole={currentUser.role}
                     currentUserName={currentUser.name}
                     onTakeCharge={handleTakeCharge}
-                    onOpenReportModal={(item) => setReportModalIntervention(item)}
-                    onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
-                    onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
+                    onOpenReportModal={handleOpenReportModal}
+                    onOpenFeedbackModal={handleOpenFeedbackModal}
+                    onPreviewPhoto={handlePreviewPhoto}
                     onDelete={handleDelete}
                   />
                 ))}
@@ -848,9 +911,9 @@ export function App() {
                     currentRole={currentUser.role}
                     currentUserName={currentUser.name}
                     onTakeCharge={handleTakeCharge}
-                    onOpenReportModal={(item) => setReportModalIntervention(item)}
-                    onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
-                    onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
+                    onOpenReportModal={handleOpenReportModal}
+                    onOpenFeedbackModal={handleOpenFeedbackModal}
+                    onPreviewPhoto={handlePreviewPhoto}
                     onDelete={handleDelete}
                   />
                 ))}
@@ -903,9 +966,9 @@ export function App() {
                     currentRole={currentUser.role}
                     currentUserName={currentUser.name}
                     onTakeCharge={handleTakeCharge}
-                    onOpenReportModal={(item) => setReportModalIntervention(item)}
-                    onOpenFeedbackModal={(item) => setFeedbackModalIntervention(item)}
-                    onPreviewPhoto={(photo) => setPreviewPhoto(photo)}
+                    onOpenReportModal={handleOpenReportModal}
+                    onOpenFeedbackModal={handleOpenFeedbackModal}
+                    onPreviewPhoto={handlePreviewPhoto}
                     onDelete={handleDelete}
                   />
                 ))}
@@ -921,98 +984,111 @@ export function App() {
         Field Service Management &copy; {new Date().getFullYear()} — Administered by Costantino
       </footer>
 
-      {/* Modals */}
-      <NewRequestModal
-        isOpen={isNewModalOpen}
-        onClose={() => setIsNewModalOpen(false)}
-        onSubmit={handleCreateIntervention}
-        currentUserName={currentUser.name}
-        existingInterventions={interventions}
-        projects={visibleProjects}
-        defaultProjectId={activeProjectId !== 'all' ? activeProjectId : undefined}
-        onAddNewProject={isAdmin ? () => {
-          setIsNewModalOpen(false);
-          setOpenProjectCreateDirectly(true);
-          setIsProjectsModalOpen(true);
-        } : undefined}
-      />
+      {/* Lazy-Loaded Modals (mounted only when active) */}
+      <Suspense fallback={null}>
+        {isNewModalOpen && (
+          <NewRequestModal
+            isOpen={isNewModalOpen}
+            onClose={() => setIsNewModalOpen(false)}
+            onSubmit={handleCreateIntervention}
+            currentUserName={currentUser.name}
+            existingInterventions={interventions}
+            projects={visibleProjects}
+            defaultProjectId={activeProjectId !== 'all' ? activeProjectId : undefined}
+            onAddNewProject={isAdmin ? () => {
+              setIsNewModalOpen(false);
+              setOpenProjectCreateDirectly(true);
+              setIsProjectsModalOpen(true);
+            } : undefined}
+          />
+        )}
 
-      <TechnicianReportModal
-        isOpen={Boolean(reportModalIntervention)}
-        onClose={() => setReportModalIntervention(null)}
-        intervention={reportModalIntervention}
-        onSaveReport={handleSaveReport}
-        currentTechnicianName={currentUser.name}
-      />
+        {reportModalIntervention && (
+          <TechnicianReportModal
+            isOpen={Boolean(reportModalIntervention)}
+            onClose={() => setReportModalIntervention(null)}
+            intervention={reportModalIntervention}
+            onSaveReport={handleSaveReport}
+            currentTechnicianName={currentUser.name}
+          />
+        )}
 
-      <ClientFeedbackModal
-        isOpen={Boolean(feedbackModalIntervention)}
-        onClose={() => setFeedbackModalIntervention(null)}
-        intervention={feedbackModalIntervention}
-        onSaveFeedback={handleSaveFeedback}
-        currentClientName={currentUser.name}
-      />
+        {feedbackModalIntervention && (
+          <ClientFeedbackModal
+            isOpen={Boolean(feedbackModalIntervention)}
+            onClose={() => setFeedbackModalIntervention(null)}
+            intervention={feedbackModalIntervention}
+            onSaveFeedback={handleSaveFeedback}
+            currentClientName={currentUser.name}
+          />
+        )}
 
-      <ImagePreviewModal
-        photo={previewPhoto}
-        onClose={() => setPreviewPhoto(null)}
-      />
+        {previewPhoto && (
+          <ImagePreviewModal
+            photo={previewPhoto}
+            onClose={() => setPreviewPhoto(null)}
+          />
+        )}
 
-      {isAdmin && (
-        <AdminUsersModal
-          isOpen={isAdminModalOpen}
-          onClose={() => setIsAdminModalOpen(false)}
-          users={users}
-          projects={projects}
-          onSaveUser={handleSaveUser}
-          onDeleteUser={handleDeleteUser}
-        />
-      )}
+        {isAdmin && isAdminModalOpen && (
+          <AdminUsersModal
+            isOpen={isAdminModalOpen}
+            onClose={() => setIsAdminModalOpen(false)}
+            users={users}
+            projects={projects}
+            onSaveUser={handleSaveUser}
+            onDeleteUser={handleDeleteUser}
+          />
+        )}
 
-      {isAdmin && (
-        <ProjectManagementModal
-          isOpen={isProjectsModalOpen}
-          onClose={() => {
-            setIsProjectsModalOpen(false);
-            setOpenProjectCreateDirectly(false);
-          }}
-          projects={projects}
-          onSaveProject={handleSaveProject}
-          onDeleteProject={handleDeleteProject}
-          initialCreate={openProjectCreateDirectly}
-        />
-      )}
+        {isAdmin && isProjectsModalOpen && (
+          <ProjectManagementModal
+            isOpen={isProjectsModalOpen}
+            onClose={() => {
+              setIsProjectsModalOpen(false);
+              setOpenProjectCreateDirectly(false);
+            }}
+            projects={projects}
+            onSaveProject={handleSaveProject}
+            onDeleteProject={handleDeleteProject}
+            initialCreate={openProjectCreateDirectly}
+          />
+        )}
 
-      {/* PWA Home Screen Installation Modal */}
-      <PwaInstallModal
-        isOpen={isInstallModalOpen}
-        onClose={() => setIsInstallModalOpen(false)}
-        onInstalledSuccess={() => showToast('🎉 App successfully installed to your Home Screen!')}
-      />
+        {isInstallModalOpen && (
+          <PwaInstallModal
+            isOpen={isInstallModalOpen}
+            onClose={() => setIsInstallModalOpen(false)}
+            onInstalledSuccess={() => showToast('🎉 App successfully installed to your Home Screen!')}
+          />
+        )}
 
-      {/* Full Database Backup & Restore Modal (JSON) */}
-      <BackupRestoreModal
-        isOpen={isBackupModalOpen}
-        onClose={() => setIsBackupModalOpen(false)}
-        interventions={interventions}
-        projects={projects}
-        users={users}
-        onDataRestored={(newInterventions, newProjects, newUsers) => {
-          setInterventions(newInterventions);
-          setProjects(newProjects);
-          setUsers(newUsers);
-          showToast('✅ Database restored successfully from JSON backup!');
-        }}
-      />
+        {isBackupModalOpen && (
+          <BackupRestoreModal
+            isOpen={isBackupModalOpen}
+            onClose={() => setIsBackupModalOpen(false)}
+            interventions={interventions}
+            projects={projects}
+            users={users}
+            onDataRestored={(newInterventions, newProjects, newUsers) => {
+              setInterventions(newInterventions);
+              setProjects(newProjects);
+              setUsers(newUsers);
+              showToast('✅ Database restored successfully from JSON backup!');
+            }}
+          />
+        )}
 
-      {/* Smart Inbound Email Assistant Modal */}
-      <SmartEmailModal
-        isOpen={isSmartEmailModalOpen}
-        onClose={() => setIsSmartEmailModalOpen(false)}
-        interventions={interventions}
-        projects={projects}
-        onExecuteEmailAction={handleExecuteEmailAction}
-      />
+        {isSmartEmailModalOpen && (
+          <SmartEmailModal
+            isOpen={isSmartEmailModalOpen}
+            onClose={() => setIsSmartEmailModalOpen(false)}
+            interventions={interventions}
+            projects={projects}
+            onExecuteEmailAction={handleExecuteEmailAction}
+          />
+        )}
+      </Suspense>
 
     </div>
   );
