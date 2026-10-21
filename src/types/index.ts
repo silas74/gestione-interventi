@@ -12,11 +12,29 @@ export type InterventionPriority = 'low' | 'medium' | 'high' | 'urgent' | 'bassa
 
 export type RecordCategory = 'intervention' | 'project_work';
 
+export type FollowUpChannel = 'email' | 'whatsapp' | 'phone' | 'on_site' | 'meeting';
+
 export interface ActionStep {
   id: string;
   text: string;
   completed: boolean;
   completedAt?: string;
+}
+
+export interface ProjectTrackingEntry {
+  id: string;
+  date: string;                // Data dell'azione / comunicazione (YYYY-MM-DD)
+  time?: string;               // Ora opzionale (HH:mm)
+  whatIDid: string;            // Cosa ho fatto
+  channel: FollowUpChannel;    // Seguito per: 'email' | 'whatsapp' | 'phone' | 'on_site' | 'meeting'
+  awaitingReply: boolean;      // Se siamo in attesa di risposta
+  waitingReplyFrom?: string;   // Da chi aspetto risposta (es. "Ing. Bianchi", "Mario Rossi", "Fornitore")
+  followUpDueDate?: string;    // Data entro cui sollecitare / scadenza risposta
+  nextStep?: string;           // Prossima azione da fare
+  referenceDoc?: string;       // Riferimento documento, schema, preventivo o file
+  replyReceived?: boolean;     // Se la risposta attesa è arrivata
+  replyReceivedAt?: string;    // Data in cui hanno risposto
+  replyNotes?: string;         // Nota sulla risposta ricevuta
 }
 
 export interface DefectPhoto {
@@ -56,6 +74,13 @@ export interface InterventionRequest {
   code: string; // e.g. INT-2026-WB1 or LAV-2026-WB1
   recordType?: RecordCategory; // 'intervention' (default) | 'project_work' (Lavori & Azioni su Progetto)
   actionSteps?: ActionStep[];  // Checklist di azioni da fare sul progetto/lavoro
+  trackingLogs?: ProjectTrackingEntry[]; // Diario di tracking: cosa ho fatto, email/whatsapp, data, da chi aspetto risposta
+  waitingReplyFrom?: string;   // Da chi aspetto attualmente risposta
+  followUpChannel?: FollowUpChannel; // Ultimo canale usato (email / whatsapp / ecc.)
+  lastActionDate?: string;     // Data ultima azione eseguita
+  whatIDidSummary?: string;    // Sintesi rapida di cosa ho fatto
+  nextActionToDo?: string;     // Prossimo passo operativo
+  followUpDueDate?: string;    // Data scadenza / sollecito risposta
   projectId?: string;
   projectName?: string; // e.g. "Workbank"
   title: string;
