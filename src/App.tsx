@@ -609,14 +609,37 @@ export function App() {
 
   const isAdmin = currentUser?.role === 'admin';
 
-  // Visible projects for this user (Memoized)
+  // Visible projects for this user (Memoized) — excludes Dendi & Workbank under "Lavori & Azioni Progetto"
   const visibleProjects = useMemo(() => {
     if (!currentUser) return [];
     return projects.filter(p => {
+      if (activeCategoryTab === 'project_work') {
+        const pName = p.name.toLowerCase();
+        const pCode = p.code.toLowerCase();
+        if (
+          p.id === 'proj-workbank' ||
+          pName.includes('workbank') ||
+          pName.includes('wordbank') ||
+          pName.includes('dendi') ||
+          pCode.includes('dendi')
+        ) {
+          return false;
+        }
+      }
       if (isAdmin || currentUser.assignedProjectIds.includes('*')) return true;
       return currentUser.assignedProjectIds.includes(p.id);
     });
-  }, [projects, currentUser, isAdmin]);
+  }, [projects, currentUser, isAdmin, activeCategoryTab]);
+
+  useEffect(() => {
+    if (
+      activeProjectId !== 'all' &&
+      visibleProjects.length > 0 &&
+      !visibleProjects.some(p => p.id === activeProjectId)
+    ) {
+      setActiveProjectId(visibleProjects[0].id);
+    }
+  }, [activeProjectId, visibleProjects]);
 
   // Counts for the 2 main tabs (Interventi & Guasti vs Lavori & Azioni Progetto)
   const categoryTabCounts = useMemo(() => {
