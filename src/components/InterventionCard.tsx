@@ -928,12 +928,12 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Defect Photos Thumbnails */}
+        {/* Screenshot / Photos Thumbnails */}
         {intervention.defectPhotos && intervention.defectPhotos.length > 0 && (
           <div className="mb-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2">
               <ImageIcon className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
-              <span>Defect photos ({intervention.defectPhotos.length}):</span>
+              <span>Screenshot ({intervention.defectPhotos.length}):</span>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {intervention.defectPhotos.map((photo) => (
