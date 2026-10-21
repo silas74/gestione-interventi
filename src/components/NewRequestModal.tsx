@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, FileText, FolderKanban } from 'lucide-react';
-import { InterventionRequest, InterventionPriority, DefectPhoto, Project } from '../types';
+import { X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, FileText, FolderKanban, Wrench, ClipboardList, Plus, CheckSquare } from 'lucide-react';
+import { InterventionRequest, InterventionPriority, DefectPhoto, Project, RecordCategory, ActionStep } from '../types';
 import { generateNextCode } from '../lib/storage';
 import { compressAndProcessImage } from '../lib/photoUtils';
 
@@ -12,6 +12,7 @@ interface NewRequestModalProps {
   existingInterventions: InterventionRequest[];
   projects: Project[];
   defaultProjectId?: string;
+  defaultRecordType?: RecordCategory;
   onAddNewProject?: () => void;
 }
 
@@ -23,13 +24,15 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   existingInterventions,
   projects,
   defaultProjectId,
+  defaultRecordType = 'intervention',
   onAddNewProject,
 }) => {
+  const [recordType, setRecordType] = useState<RecordCategory>(defaultRecordType);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(
     defaultProjectId || (projects[0]?.id ?? 'proj-workbank')
   );
   const [title, setTitle] = useState('');
-  const [clientName, setClientName] = useState(currentUserName || 'Mario Rossi');
+  const [clientName, setClientName] = useState(currentUserName || 'Costantino');
   const [clientContact, setClientContact] = useState('');
   const [siteName, setSiteName] = useState(() => {
     const proj = projects.find(p => p.id === (defaultProjectId || projects[0]?.id));
@@ -51,7 +54,31 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   const [defectPhotos, setDefectPhotos] = useState<DefectPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
 
+  // Action steps checklist state
+  const [actionSteps, setActionSteps] = useState<ActionStep[]>([]);
+  const [newStepText, setNewStepText] = useState('');
+
   if (!isOpen) return null;
+
+  const isProjectWork = recordType === 'project_work';
+
+  const handleAddActionStep = () => {
+    const trimmed = newStepText.trim();
+    if (!trimmed) return;
+    setActionSteps(prev => [
+      ...prev,
+      {
+        id: 'act_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+        text: trimmed,
+        completed: false,
+      }
+    ]);
+    setNewStepText('');
+  };
+
+  const handleRemoveActionStep = (id: string) => {
+    setActionSteps(prev => prev.filter(s => s.id !== id));
+  };
 
   // When selected project changes, update default site name and address
   const handleProjectSelect = (projId: string) => {
@@ -97,11 +124,26 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
     }
 
     const proj = projects.find(p => p.id === selectedProjectId);
-    const projCode = proj ? `INT-${proj.code}` : 'INT';
+    const prefix = isProjectWork ? 'LAV' : 'INT';
+    const projCode = proj ? `${prefix}-${proj.code}` : prefix;
+
+    // Include any pending text in newStepText if user didn't click "+"
+    const finalSteps = newStepText.trim()
+      ? [
+          ...actionSteps,
+          {
+            id: 'act_' + Date.now().toString(36) + '_last',
+            text: newStepText.trim(),
+            completed: false,
+          }
+        ]
+      : actionSteps;
 
     const newIntervention: InterventionRequest = {
-      id: 'int_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      id: (isProjectWork ? 'lav_' : 'int_') + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
       code: generateNextCode(existingInterventions, projCode),
+      recordType,
+      actionSteps: finalSteps,
       projectId: selectedProjectId,
       projectName: proj?.name || 'General',
       title: title.trim(),
@@ -131,12 +173,18 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-950/70">
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-              <FileText className="w-5 h-5" />
+            <div className={`p-2 rounded-lg ${isProjectWork ? 'bg-indigo-500/15 text-indigo-400' : 'bg-blue-500/10 text-blue-400'}`}>
+              {isProjectWork ? <ClipboardList className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">New Service Request</h3>
-              <p className="text-xs text-slate-400">Classify the service request by project and describe the defect</p>
+              <h3 className="text-base font-bold text-white">
+                {isProjectWork ? 'Nuovo Lavoro / Azione su Progetto' : 'New Service Request / Defect'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {isProjectWork
+                  ? 'Pianifica un lavoro, modifica o lista di azioni da fare su uno dei tuoi progetti'
+                  : 'Classify the service request by project and describe the defect'}
+              </p>
             </div>
           </div>
           <button
@@ -148,7 +196,35 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+
+          {/* Category Selector: Intervento/Guasto vs Lavoro/Azione Progetto */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setRecordType('intervention')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                !isProjectWork
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              <span>🛠️ Intervento / Guasto</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecordType('project_work')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                isProjectWork
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40 ring-1 ring-indigo-400/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>📋 Lavoro / Azione Progetto</span>
+            </button>
+          </div>
           
           {/* Reference Project Selection */}
           <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
@@ -262,16 +338,85 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
           {/* Problem description / What needs to be done */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Detailed Problem Description / Scope of Work <span className="text-rose-400">*</span>
+              {isProjectWork
+                ? 'Descrizione del Lavoro / Obiettivo su Progetto *'
+                : 'Detailed Problem Description / Scope of Work *'}
             </label>
             <textarea
               required
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what needs to be carried out, components to check, system modifications or observed malfunctions..."
+              placeholder={
+                isProjectWork
+                  ? 'Descrivi il lavoro da svolgere sul progetto, le modifiche da apportare o le verifiche previste...'
+                  : 'Describe what needs to be carried out, components to check, system modifications or observed malfunctions...'
+              }
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
+          </div>
+
+          {/* 📋 CHECKLIST AZIONI DA FARE SUL PROGETTO */}
+          <div className={`p-3.5 rounded-xl border space-y-2.5 ${
+            isProjectWork
+              ? 'bg-indigo-950/25 border-indigo-700/50'
+              : 'bg-slate-950/60 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                <CheckSquare className="w-4 h-4 text-indigo-400" />
+                <span>Azioni da Fare / Checklist Operativa ({actionSteps.length})</span>
+              </label>
+              <span className="text-[10px] text-slate-400">Spuntabili direttamente sulla scheda</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newStepText}
+                onChange={(e) => setNewStepText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddActionStep();
+                  }
+                }}
+                placeholder="Aggiungi un'azione da fare (es. Programmazione ETS, Test sensori, Backup) e premi Invio..."
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddActionStep}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition active:scale-95 shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Aggiungi</span>
+              </button>
+            </div>
+
+            {actionSteps.length > 0 && (
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 pt-1">
+                {actionSteps.map((step, idx) => (
+                  <div
+                    key={step.id}
+                    className="flex items-center justify-between gap-2 bg-slate-900/90 border border-slate-800 px-2.5 py-1.5 rounded-lg text-xs text-slate-200"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] font-mono text-indigo-400 font-bold">#{idx + 1}</span>
+                      <span className="truncate">{step.text}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveActionStep(step.id)}
+                      className="text-slate-500 hover:text-rose-400 p-0.5 transition shrink-0"
+                      title="Rimuovi azione"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Desired Access Date & Time + Priority */}
@@ -398,9 +543,13 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition shadow-lg shadow-blue-600/25 active:scale-95"
+              className={`px-5 py-2 rounded-lg text-xs font-semibold text-white transition shadow-lg active:scale-95 ${
+                isProjectWork
+                  ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
+                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/25'
+              }`}
             >
-              Submit Service Request
+              {isProjectWork ? 'Salva Lavoro / Azione su Progetto' : 'Submit Service Request'}
             </button>
           </div>
 
