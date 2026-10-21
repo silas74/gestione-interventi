@@ -5,7 +5,7 @@ import {
   Camera, Upload, Clipboard, Trash2, Image as ImageIcon
 } from 'lucide-react';
 import { InterventionRequest, InterventionStatus, TechnicianReport, DefectPhoto } from '../types';
-import { downloadInterventionPDF, getInterventionPDFDataUri, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
+import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
 import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
 import { COMMON_MATERIALS } from '../lib/materialsData';
@@ -307,22 +307,6 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
       completedAt: new Date().toISOString(),
       reportPhotos,
     };
-
-    const isFinished = statusOutcome === 'resolved' || (statusOutcome as string) === 'risolto';
-    const effectiveStatus: InterventionStatus = isFinished ? 'completed' : 'in_progress';
-
-    // Attach PDF Data URI
-    try {
-      const tempIntervention: InterventionRequest = {
-        ...intervention,
-        status: effectiveStatus,
-        assignedTechnician: technicianName,
-        report
-      };
-      report.pdfDataUri = getInterventionPDFDataUri(tempIntervention);
-    } catch (err) {
-      console.warn('PDF data URI generation skipped', err);
-    }
 
     onSaveReport(intervention.id, report);
     onClose();
