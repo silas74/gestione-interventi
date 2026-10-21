@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { 
-  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory 
+  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory, ProjectTrackingEntry 
 } from './types';
 import { 
   fetchInterventions, saveIntervention, deleteIntervention,
@@ -263,6 +263,90 @@ export function App() {
       ...item,
       actionSteps: item.actionSteps.filter(s => s.id !== stepId),
       updatedAt: new Date().toISOString()
+    };
+
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+  }, [interventions]);
+
+  // Project Tracking Log Handlers (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta)
+  const handleAddTrackingEntry = useCallback(async (interventionId: string, entry: Omit<ProjectTrackingEntry, 'id'>) => {
+    const item = interventions.find(i => i.id === interventionId);
+    if (!item) return;
+
+    const newEntry: ProjectTrackingEntry = {
+      ...entry,
+      id: 'trk_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+    };
+
+    const nextStatus =
+      item.status === 'pending' || item.status === 'in_attesa'
+        ? 'in_progress'
+        : item.status;
+
+    const updated: InterventionRequest = {
+      ...item,
+      status: nextStatus,
+      trackingLogs: [newEntry, ...(item.trackingLogs || [])],
+      whatIDidSummary: entry.whatIDid,
+      followUpChannel: entry.channel,
+      lastActionDate: entry.date,
+      waitingReplyFrom: entry.awaitingReply && entry.waitingReplyFrom ? entry.waitingReplyFrom : item.waitingReplyFrom,
+      followUpDueDate: entry.followUpDueDate || item.followUpDueDate,
+      nextActionToDo: entry.nextStep || item.nextActionToDo,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+    showToast(`📡 Tracking aggiornato su ${item.code}!`);
+  }, [interventions]);
+
+  const handleMarkReplyReceived = useCallback(async (interventionId: string, trackingId?: string) => {
+    const item = interventions.find(i => i.id === interventionId);
+    if (!item) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const updatedLogs = (item.trackingLogs || []).map(log => {
+      if (!trackingId || log.id === trackingId) {
+        if (log.awaitingReply && !log.replyReceived) {
+          return {
+            ...log,
+            replyReceived: true,
+            replyReceivedAt: todayStr,
+          };
+        }
+      }
+      return log;
+    });
+
+    const stillWaiting = updatedLogs.find(l => l.awaitingReply && !l.replyReceived);
+
+    const updated: InterventionRequest = {
+      ...item,
+      trackingLogs: updatedLogs,
+      waitingReplyFrom: stillWaiting ? stillWaiting.waitingReplyFrom : undefined,
+      followUpDueDate: stillWaiting ? stillWaiting.followUpDueDate : undefined,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+    showToast(`✅ Risposta registrata come ricevuta per ${item.code}!`);
+  }, [interventions]);
+
+  const handleDeleteTrackingEntry = useCallback(async (interventionId: string, trackingId: string) => {
+    const item = interventions.find(i => i.id === interventionId);
+    if (!item || !item.trackingLogs) return;
+
+    const updatedLogs = item.trackingLogs.filter(l => l.id !== trackingId);
+    const stillWaiting = updatedLogs.find(l => l.awaitingReply && !l.replyReceived);
+
+    const updated: InterventionRequest = {
+      ...item,
+      trackingLogs: updatedLogs,
+      waitingReplyFrom: stillWaiting ? stillWaiting.waitingReplyFrom : undefined,
+      updatedAt: new Date().toISOString(),
     };
 
     await saveIntervention(updated);
@@ -594,7 +678,10 @@ export function App() {
           item.description.toLowerCase().includes(q) ||
           (item.projectName && item.projectName.toLowerCase().includes(q)) ||
           (item.assignedTechnician && item.assignedTechnician.toLowerCase().includes(q)) ||
-          (item.actionSteps && item.actionSteps.some(s => s.text.toLowerCase().includes(q)));
+          (item.waitingReplyFrom && item.waitingReplyFrom.toLowerCase().includes(q)) ||
+          (item.whatIDidSummary && item.whatIDidSummary.toLowerCase().includes(q)) ||
+          (item.actionSteps && item.actionSteps.some(s => s.text.toLowerCase().includes(q))) ||
+          (item.trackingLogs && item.trackingLogs.some(t => t.whatIDid.toLowerCase().includes(q) || (t.waitingReplyFrom && t.waitingReplyFrom.toLowerCase().includes(q))));
         if (!match) return false;
       }
 
@@ -602,16 +689,24 @@ export function App() {
     });
   }, [interventions, currentUser, isAdmin, activeCategoryTab, activeProjectId, searchTerm, onlyUrgent]);
 
-  // ================= SINGLE-PASS TASK DIVISION (TO DO / IN PROGRESS / COMPLETED) =================
-  const { pendingInterventions, inProgressInterventions, todoInterventions, completedInterventions } = useMemo(() => {
+  // ================= SINGLE-PASS TASK DIVISION (TO DO / IN PROGRESS / COMPLETED / WAITING REPLY) =================
+  const { pendingInterventions, inProgressInterventions, todoInterventions, completedInterventions, waitingReplyInterventions } = useMemo(() => {
     const pending: InterventionRequest[] = [];
     const inProgress: InterventionRequest[] = [];
     const todo: InterventionRequest[] = [];
     const completed: InterventionRequest[] = [];
+    const waitingReply: InterventionRequest[] = [];
 
     for (let idx = 0; idx < filteredInterventions.length; idx++) {
       const i = filteredInterventions[idx];
       const isDone = i.status === 'completed' || i.status === 'completato';
+      const hasWaitingReply = !isDone && Boolean(
+        i.waitingReplyFrom || (i.trackingLogs && i.trackingLogs.some(t => t.awaitingReply && !t.replyReceived))
+      );
+      if (hasWaitingReply) {
+        waitingReply.push(i);
+      }
+
       if (isDone) {
         completed.push(i);
       } else {
@@ -634,6 +729,7 @@ export function App() {
       inProgressInterventions: inProgress,
       todoInterventions: todo,
       completedInterventions: completed,
+      waitingReplyInterventions: waitingReply,
     };
   }, [filteredInterventions]);
 
@@ -673,7 +769,7 @@ export function App() {
 
   const activeProjectObj = projects.find(p => p.id === activeProjectId);
 
-  const showTodoSection = statusFilter === 'all' || statusFilter === 'da_fare';
+  const showTodoSection = statusFilter === 'all' || statusFilter === 'da_fare' || statusFilter === 'attesa_risposta';
   const showInProgressSection = statusFilter === 'all' || statusFilter === 'in_lavorazione';
   const showCompletedSection = statusFilter === 'all' || statusFilter === 'fatti';
 
@@ -988,7 +1084,7 @@ export function App() {
         {/* Stats Summary */}
         <StatsCards interventions={filteredInterventions} />
 
-        {/* Filter and Search Bar with Red / Pink / Green quick switch */}
+        {/* Filter and Search Bar with Red / Pink / Green / Waiting Reply quick switch */}
         <FilterBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -999,6 +1095,7 @@ export function App() {
           pendingCount={statusFilter === 'all' ? todoInterventions.length : pendingInterventions.length}
           inProgressCount={inProgressInterventions.length}
           completedCount={completedInterventions.length}
+          waitingReplyCount={waitingReplyInterventions.length}
         />
 
         {/* Loading state */}
@@ -1037,15 +1134,27 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI DA FARE SUL PROGETTO' : 'TO DO & OPEN INTERVENTIONS'}</span>
+                    <span>
+                      {statusFilter === 'attesa_risposta'
+                        ? '⏳ IN ATTESA DI RISPOSTA (EMAIL / WHATSAPP / CLIENTE)'
+                        : activeCategoryTab === 'project_work'
+                          ? 'LAVORI & AZIONI DA FARE SUL PROGETTO'
+                          : 'TO DO & OPEN INTERVENTIONS'}
+                    </span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-sm">
-                      {statusFilter === 'all' ? todoInterventions.length : pendingInterventions.length}
+                      {statusFilter === 'attesa_risposta'
+                        ? waitingReplyInterventions.length
+                        : statusFilter === 'all'
+                          ? todoInterventions.length
+                          : pendingInterventions.length}
                     </span>
                   </h3>
                   <p className="text-[11px] text-rose-300/80">
-                    {activeCategoryTab === 'project_work'
-                      ? 'Attività di progetto, modifiche e azioni pianificate da iniziare'
-                      : 'Scheduled work, awaiting technician dispatch'}
+                    {statusFilter === 'attesa_risposta'
+                      ? 'Lavori e interventi in cui stai aspettando risposta da cliente, direzione lavori o fornitore'
+                      : activeCategoryTab === 'project_work'
+                        ? 'Attività di progetto, modifiche e azioni pianificate da iniziare'
+                        : 'Scheduled work, awaiting technician dispatch'}
                   </p>
                 </div>
               </div>
@@ -1060,13 +1169,23 @@ export function App() {
             </div>
 
             {/* Red Cards Grid */}
-            {(statusFilter === 'all' ? todoInterventions : pendingInterventions).length === 0 ? (
+            {(statusFilter === 'attesa_risposta'
+              ? waitingReplyInterventions
+              : statusFilter === 'all'
+                ? todoInterventions
+                : pendingInterventions
+            ).length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-rose-900/30 bg-rose-950/10 text-xs text-rose-300/60">
                 No open tasks waiting dispatch for this view.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(statusFilter === 'all' ? todoInterventions : pendingInterventions).map((intervention) => (
+                {(statusFilter === 'attesa_risposta'
+                  ? waitingReplyInterventions
+                  : statusFilter === 'all'
+                    ? todoInterventions
+                    : pendingInterventions
+                ).map((intervention) => (
                   <InterventionCard
                     key={intervention.id}
                     intervention={intervention}
@@ -1080,6 +1199,9 @@ export function App() {
                     onToggleActionStep={handleToggleActionStep}
                     onAddActionStep={handleAddActionStep}
                     onDeleteActionStep={handleDeleteActionStep}
+                    onAddTrackingEntry={handleAddTrackingEntry}
+                    onMarkReplyReceived={handleMarkReplyReceived}
+                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
                   />
                 ))}
               </div>
@@ -1129,6 +1251,9 @@ export function App() {
                     onToggleActionStep={handleToggleActionStep}
                     onAddActionStep={handleAddActionStep}
                     onDeleteActionStep={handleDeleteActionStep}
+                    onAddTrackingEntry={handleAddTrackingEntry}
+                    onMarkReplyReceived={handleMarkReplyReceived}
+                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
                   />
                 ))}
               </div>
@@ -1187,6 +1312,9 @@ export function App() {
                     onToggleActionStep={handleToggleActionStep}
                     onAddActionStep={handleAddActionStep}
                     onDeleteActionStep={handleDeleteActionStep}
+                    onAddTrackingEntry={handleAddTrackingEntry}
+                    onMarkReplyReceived={handleMarkReplyReceived}
+                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
                   />
                 ))}
               </div>
