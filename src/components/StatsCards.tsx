@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Clock, CheckCircle2, AlertCircle, Wrench, FileText } from 'lucide-react';
 import { InterventionRequest } from '../types';
 
@@ -6,17 +6,40 @@ interface StatsCardsProps {
   interventions: InterventionRequest[];
 }
 
-export const StatsCards: React.FC<StatsCardsProps> = ({ interventions }) => {
-  const total = interventions.length;
-  const inAttesa = interventions.filter(i => i.status === 'pending' || i.status === 'in_attesa').length;
-  const inCorso = interventions.filter(i => 
-    i.status === 'in_progress' || i.status === 'in_corso' || i.status === 'scheduled'
-  ).length;
-  const completati = interventions.filter(i => i.status === 'completed' || i.status === 'completato').length;
-  
-  const totalHours = interventions.reduce((acc, curr) => {
-    return acc + (curr.report?.hoursWorked || 0);
-  }, 0);
+export const StatsCards: React.FC<StatsCardsProps> = React.memo(({ interventions }) => {
+  const { total, inAttesa, inCorso, completati, totalHours } = useMemo(() => {
+    let pending = 0;
+    let inProg = 0;
+    let done = 0;
+    let hours = 0;
+
+    for (let idx = 0; idx < interventions.length; idx++) {
+      const i = interventions[idx];
+      const st = i.status;
+      if (st === 'completed' || st === 'completato') {
+        done++;
+      } else if (
+        st === 'in_progress' ||
+        st === 'in_corso' ||
+        st === 'scheduled' ||
+        i.report?.statusOutcome === 'waiting_for_parts' ||
+        (i.report?.statusOutcome as string) === 'in_attesa_ricambi'
+      ) {
+        inProg++;
+      } else if (st === 'pending' || st === 'in_attesa') {
+        pending++;
+      }
+      hours += i.report?.hoursWorked || 0;
+    }
+
+    return {
+      total: interventions.length,
+      inAttesa: pending,
+      inCorso: inProg,
+      completati: done,
+      totalHours: hours,
+    };
+  }, [interventions]);
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3.5 mb-6">
@@ -85,4 +108,4 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ interventions }) => {
 
     </div>
   );
-};
+});
