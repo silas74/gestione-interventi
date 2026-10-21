@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
-import { X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, FileText, FolderKanban, Wrench, ClipboardList, Plus, CheckSquare, Mail, MessageCircle, Hourglass, ArrowRight } from 'lucide-react';
-import { InterventionRequest, InterventionPriority, DefectPhoto, Project, RecordCategory, ActionStep, FollowUpChannel, ProjectTrackingEntry } from '../types';
+import React, { useState, useEffect } from 'react';
+import { 
+  X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, 
+  FileText, FolderKanban, Wrench, ClipboardList, Plus, CheckSquare, Mail, 
+  MessageCircle, Hourglass, ArrowRight, CheckCircle2 
+} from 'lucide-react';
+import { 
+  InterventionRequest, InterventionPriority, InterventionStatus, DefectPhoto, 
+  Project, RecordCategory, ActionStep, FollowUpChannel, ProjectTrackingEntry 
+} from '../types';
 import { generateNextCode } from '../lib/storage';
-import { compressAndProcessImage } from '../lib/photoUtils';
+import { compressAndProcessImage, extractImagesFromClipboard } from '../lib/photoUtils';
 
 interface NewRequestModalProps {
   isOpen: boolean;
@@ -66,6 +73,31 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   const [followUpDueDate, setFollowUpDueDate] = useState('');
   const [nextActionToDo, setNextActionToDo] = useState('');
   const [referenceDoc, setReferenceDoc] = useState('');
+  const [workStatus, setWorkStatus] = useState<InterventionStatus>('in_progress');
+
+  // Support Ctrl+V image paste in modal (great for pasting WhatsApp/Email screenshots in Project Work!)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePaste = async (e: ClipboardEvent) => {
+      const imgs = extractImagesFromClipboard(e.clipboardData);
+      if (imgs.length > 0) {
+        e.preventDefault();
+        setUploading(true);
+        try {
+          const processed = await Promise.all(
+            imgs.map((blob, i) => compressAndProcessImage(blob, `screenshot_${i + 1}.jpg`))
+          );
+          setDefectPhotos(prev => [...prev, ...processed]);
+        } catch (err) {
+          console.error('Error pasting image:', err);
+        } finally {
+          setUploading(false);
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -114,7 +146,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
       );
       setDefectPhotos(prev => [...prev, ...newPhotos]);
     } catch (err) {
-      console.error('Error compressing defect photos:', err);
+      console.error('Error compressing photos:', err);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -127,10 +159,6 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !clientName.trim() || !siteName.trim() || !description.trim()) {
-      alert('Please fill in all mandatory fields marked with *');
-      return;
-    }
 
     const proj = projects.find(p => p.id === selectedProjectId);
     const prefix = isProjectWork ? 'LAV' : 'INT';
@@ -148,34 +176,78 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         ]
       : actionSteps;
 
-    const initialTrackingLogs: ProjectTrackingEntry[] = [];
-    if (whatIDid.trim() || waitingReplyFrom.trim() || nextActionToDo.trim()) {
-      initialTrackingLogs.push({
-        id: 'trk_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-        date: actionDate || new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().slice(0, 5),
-        whatIDid: whatIDid.trim() || title.trim(),
-        channel: followUpChannel,
-        awaitingReply: Boolean(waitingReplyFrom.trim()),
+    if (isProjectWork) {
+      // Validation specific to Lavoro / Azione su Progetto
+      if (!title.trim() && !whatIDid.trim()) {
+        alert('Inserisci almeno il Titolo del Lavoro o Cosa hai fatto.');
+        return;
+      }
+
+      const effectiveTitle = title.trim() || whatIDid.trim().slice(0, 80);
+      const effectiveWhatIDid = whatIDid.trim() || title.trim();
+
+      const initialTrackingLogs: ProjectTrackingEntry[] = [
+        {
+          id: 'trk_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+          date: actionDate || new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5),
+          whatIDid: effectiveWhatIDid,
+          channel: followUpChannel,
+          awaitingReply: Boolean(waitingReplyFrom.trim()),
+          waitingReplyFrom: waitingReplyFrom.trim() || undefined,
+          followUpDueDate: followUpDueDate || undefined,
+          nextStep: nextActionToDo.trim() || undefined,
+          referenceDoc: referenceDoc.trim() || undefined,
+        }
+      ];
+
+      const newWork: InterventionRequest = {
+        id: 'lav_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+        code: generateNextCode(existingInterventions, projCode),
+        recordType: 'project_work',
+        actionSteps: finalSteps,
+        trackingLogs: initialTrackingLogs,
+        whatIDidSummary: effectiveWhatIDid,
+        followUpChannel,
+        lastActionDate: actionDate || new Date().toISOString().split('T')[0],
         waitingReplyFrom: waitingReplyFrom.trim() || undefined,
         followUpDueDate: followUpDueDate || undefined,
-        nextStep: nextActionToDo.trim() || undefined,
-        referenceDoc: referenceDoc.trim() || undefined,
-      });
+        nextActionToDo: nextActionToDo.trim() || undefined,
+        projectId: selectedProjectId,
+        projectName: proj?.name || 'General',
+        title: effectiveTitle,
+        siteName: proj?.name || 'Progetto',
+        siteAddress: proj?.siteAddress || '',
+        clientName: waitingReplyFrom.trim() || proj?.clientName || currentUserName || 'Costantino',
+        clientContact: clientContact.trim(),
+        description: effectiveWhatIDid,
+        desiredAccessDate: actionDate || new Date().toISOString().split('T')[0],
+        desiredAccessTime: new Date().toTimeString().slice(0, 5),
+        priority,
+        defectPhotos,
+        notes: notes.trim(),
+        status: workStatus,
+        assignedTechnician: currentUserName || 'Costantino',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      onSubmit(newWork);
+      onClose();
+      return;
+    }
+
+    // Standard validation for Intervento / Guasto
+    if (!title.trim() || !clientName.trim() || !siteName.trim() || !description.trim()) {
+      alert('Please fill in all mandatory fields marked with *');
+      return;
     }
 
     const newIntervention: InterventionRequest = {
-      id: (isProjectWork ? 'lav_' : 'int_') + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      id: 'int_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
       code: generateNextCode(existingInterventions, projCode),
-      recordType,
+      recordType: 'intervention',
       actionSteps: finalSteps,
-      trackingLogs: initialTrackingLogs,
-      whatIDidSummary: whatIDid.trim() || undefined,
-      followUpChannel: initialTrackingLogs.length > 0 ? followUpChannel : undefined,
-      lastActionDate: actionDate || undefined,
-      waitingReplyFrom: waitingReplyFrom.trim() || undefined,
-      followUpDueDate: followUpDueDate || undefined,
-      nextActionToDo: nextActionToDo.trim() || undefined,
       projectId: selectedProjectId,
       projectName: proj?.name || 'General',
       title: title.trim(),
@@ -189,7 +261,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
       priority,
       defectPhotos,
       notes: notes.trim(),
-      status: whatIDid.trim() ? 'in_progress' : 'pending',
+      status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -200,21 +272,27 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col max-h-[94vh] sm:max-h-[92vh] overflow-hidden">
+      <div className={`relative w-full max-w-2xl bg-slate-900 border rounded-2xl shadow-2xl flex flex-col max-h-[94vh] sm:max-h-[92vh] overflow-hidden ${
+        isProjectWork ? 'border-indigo-700/70' : 'border-slate-800'
+      }`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-950/70">
+        <div className={`flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b ${
+          isProjectWork
+            ? 'bg-gradient-to-r from-indigo-950/90 via-slate-900 to-slate-950 border-indigo-800/60'
+            : 'bg-slate-950/70 border-slate-800'
+        }`}>
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className={`p-2 rounded-lg ${isProjectWork ? 'bg-indigo-500/15 text-indigo-400' : 'bg-blue-500/10 text-blue-400'}`}>
+            <div className={`p-2 rounded-lg ${isProjectWork ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40' : 'bg-blue-500/10 text-blue-400'}`}>
               {isProjectWork ? <ClipboardList className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
             <div>
               <h3 className="text-base font-bold text-white">
-                {isProjectWork ? 'Nuovo Lavoro / Azione su Progetto' : 'New Service Request / Defect'}
+                {isProjectWork ? '📋 Nuovo Tracking Lavoro / Azione su Progetto' : '🛠️ New Service Request / Defect'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-300">
                 {isProjectWork
-                  ? 'Pianifica un lavoro, modifica o lista di azioni da fare su uno dei tuoi progetti'
+                  ? 'Traccia cosa hai fatto sul progetto, seguito per Email o WhatsApp, data e da chi aspetti risposta'
                   : 'Classify the service request by project and describe the defect'}
               </p>
             </div>
@@ -230,7 +308,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
 
-          {/* Category Selector: Intervento/Guasto vs Lavoro/Azione Progetto */}
+          {/* Category Switcher */}
           <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
             <button
               type="button"
@@ -257,29 +335,31 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
               <span>📋 Lavoro / Azione Progetto</span>
             </button>
           </div>
-          
-          {/* Reference Project Selection */}
-          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+
+          {/* Progetto di Riferimento */}
+          <div className={`p-3.5 rounded-xl border ${
+            isProjectWork ? 'bg-indigo-950/30 border-indigo-700/50' : 'bg-slate-950/70 border-slate-800'
+          }`}>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-blue-400 flex items-center gap-1.5">
-                <FolderKanban className="w-4 h-4" />
-                <span>Reference Project</span>
+              <label className="block text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                <FolderKanban className="w-4 h-4 text-indigo-400" />
+                <span>{isProjectWork ? 'Progetto su cui stai lavorando' : 'Reference Project'}</span>
                 <span className="text-rose-400">*</span>
               </label>
               {onAddNewProject && (
                 <button
                   type="button"
                   onClick={onAddNewProject}
-                  className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 underline"
+                  className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 underline"
                 >
-                  <span>+ Create New Project</span>
+                  <span>+ Crea Nuovo Progetto</span>
                 </button>
               )}
             </div>
             <select
               value={selectedProjectId}
               onChange={(e) => handleProjectSelect(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {projects.map((proj) => (
                 <option key={proj.id} value={proj.id}>
@@ -287,455 +367,592 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
                 </option>
               ))}
             </select>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Defects and tasks will be catalogued specifically under this project.
-            </p>
           </div>
 
-          {/* Defect Title / Subject */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Subject / Defect Title or Task <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Move KNX power supply under UPS / Sensor fault"
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Site & Address */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                Facility / Department <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={siteName}
-                onChange={(e) => setSiteName(e.target.value)}
-                placeholder="e.g. 1st Floor Offices, Main Switchboard"
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Site Address
-              </label>
-              <input
-                type="text"
-                value={siteAddress}
-                onChange={(e) => setSiteAddress(e.target.value)}
-                placeholder="Street, City, Postal Code"
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Requester & Contact */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-emerald-400" />
-                Requester / Contact Person <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-slate-400" />
-                Phone Number / Email
-              </label>
-              <input
-                type="text"
-                value={clientContact}
-                onChange={(e) => setClientContact(e.target.value)}
-                placeholder="e.g. +39 02 8877665"
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Problem description / What needs to be done */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              {isProjectWork
-                ? 'Descrizione del Lavoro / Obiettivo su Progetto *'
-                : 'Detailed Problem Description / Scope of Work *'}
-            </label>
-            <textarea
-              required
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={
-                isProjectWork
-                  ? 'Descrivi il lavoro da svolgere sul progetto, le modifiche da apportare o le verifiche previste...'
-                  : 'Describe what needs to be carried out, components to check, system modifications or observed malfunctions...'
-              }
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
-          </div>
-
-          {/* 📋 CHECKLIST AZIONI DA FARE SUL PROGETTO */}
-          <div className={`p-3.5 rounded-xl border space-y-2.5 ${
-            isProjectWork
-              ? 'bg-indigo-950/25 border-indigo-700/50'
-              : 'bg-slate-950/60 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                <CheckSquare className="w-4 h-4 text-indigo-400" />
-                <span>Azioni da Fare / Checklist Operativa ({actionSteps.length})</span>
-              </label>
-              <span className="text-[10px] text-slate-400">Spuntabili direttamente sulla scheda</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newStepText}
-                onChange={(e) => setNewStepText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddActionStep();
-                  }
-                }}
-                placeholder="Aggiungi un'azione da fare (es. Programmazione ETS, Test sensori, Backup) e premi Invio..."
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddActionStep}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition active:scale-95 shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Aggiungi</span>
-              </button>
-            </div>
-
-            {actionSteps.length > 0 && (
-              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 pt-1">
-                {actionSteps.map((step, idx) => (
-                  <div
-                    key={step.id}
-                    className="flex items-center justify-between gap-2 bg-slate-900/90 border border-slate-800 px-2.5 py-1.5 rounded-lg text-xs text-slate-200"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] font-mono text-indigo-400 font-bold">#{idx + 1}</span>
-                      <span className="truncate">{step.text}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveActionStep(step.id)}
-                      className="text-slate-500 hover:text-rose-400 p-0.5 transition shrink-0"
-                      title="Rimuovi azione"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 📡 TRACKING LAVORO & COMUNICAZIONI (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta) */}
-          <div className="bg-gradient-to-br from-indigo-950/35 via-slate-900 to-slate-950 p-4 rounded-xl border border-indigo-700/60 space-y-3.5 shadow-inner">
-            <div className="flex items-center justify-between flex-wrap gap-1">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  <Hourglass className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">
-                    Tracking Operativo & Follow-up (Cosa ho fatto / Email / WhatsApp / Risposte)
-                  </h4>
-                  <p className="text-[10px] text-indigo-300/80">
-                    Registra cosa hai già fatto, con quale mezzo (Email/WhatsApp), la data e da chi aspetti risposta
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 1. Cosa ho fatto */}
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-1">
-                🛠️ Cosa ho fatto / Azione Eseguita
-              </label>
-              <textarea
-                rows={2}
-                value={whatIDid}
-                onChange={(e) => setWhatIDid(e.target.value)}
-                placeholder="Es. Inviato schema aggiornato quadro KNX, richiesto orario accesso, verificata linea DALI in cantiere..."
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              />
-            </div>
-
-            {/* 2. Canale (Email / WhatsApp / Telefono / Cantiere / Riunione) + Data */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {isProjectWork ? (
+            /* =====================================================================
+               MODULO DEDICATO ESCLUSIVAMENTE A "LAVORI & AZIONI PROGETTO" (TRACKING)
+               ===================================================================== */
+            <>
+              {/* 1. Argomento / Attività del Progetto */}
               <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-1">
-                  📡 Esecuzione / Seguito per (Canale)
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setFollowUpChannel('email')}
-                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
-                      followUpChannel === 'email'
-                        ? 'bg-blue-600/30 border-blue-400 text-blue-200 shadow-sm'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Mail className="w-3 h-3 text-blue-400" />
-                    <span>Email</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFollowUpChannel('whatsapp')}
-                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
-                      followUpChannel === 'whatsapp'
-                        ? 'bg-emerald-600/30 border-emerald-400 text-emerald-200 shadow-sm'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <MessageCircle className="w-3 h-3 text-emerald-400" />
-                    <span>WhatsApp</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFollowUpChannel('phone')}
-                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
-                      followUpChannel === 'phone'
-                        ? 'bg-amber-600/30 border-amber-400 text-amber-200 shadow-sm'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Phone className="w-3 h-3 text-amber-400" />
-                    <span>Telefono</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFollowUpChannel('on_site')}
-                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
-                      followUpChannel === 'on_site'
-                        ? 'bg-indigo-600/30 border-indigo-400 text-indigo-200 shadow-sm'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Wrench className="w-3 h-3 text-indigo-400" />
-                    <span>Cantiere</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFollowUpChannel('meeting')}
-                    className={`col-span-2 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
-                      followUpChannel === 'meeting'
-                        ? 'bg-violet-600/30 border-violet-400 text-violet-200 shadow-sm'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <User className="w-3 h-3 text-violet-400" />
-                    <span>Riunione / Call</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-1">
-                  📅 Data Azione / Invio Comunicazione
-                </label>
-                <input
-                  type="date"
-                  value={actionDate}
-                  onChange={(e) => setActionDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <div className="mt-2">
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                    📎 Rif. Documento / Preventivo / File (opz.)
-                  </label>
-                  <input
-                    type="text"
-                    value={referenceDoc}
-                    onChange={(e) => setReferenceDoc(e.target.value)}
-                    placeholder="Es. Schema_QG02.pdf, Prev. #104, File .knxproj"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Da chi aspetto risposta + Scadenza Sollecito */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800/80">
-              <div>
-                <label className="block text-xs font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
-                  <Hourglass className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Da chi aspetto risposta? (se in attesa)</span>
+                <label className="block text-xs font-bold text-white mb-1">
+                  📌 Argomento / Attività del Lavoro sul Progetto <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
-                  value={waitingReplyFrom}
-                  onChange={(e) => setWaitingReplyFrom(e.target.value)}
-                  placeholder="Es. Mario Rossi, Ing. Bianchi, Direzione Lavori, Fornitore..."
-                  className="w-full bg-slate-800 border border-amber-500/40 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Es. Programmazione ETS6 Piano 1, Invio schemi DALI, Taratura sensori Lux..."
+                  className="w-full bg-slate-800 border border-indigo-500/50 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Data entro cui sollecitare / Scadenza risposta</span>
+              {/* 2. COSA HO FATTO (Campo principale del Tracking) */}
+              <div className="bg-indigo-950/30 p-3.5 rounded-xl border border-indigo-700/60 space-y-2">
+                <label className="block text-xs font-bold text-indigo-200 flex items-center gap-1.5">
+                  <Wrench className="w-4 h-4 text-indigo-400" />
+                  <span>🛠️ Cosa ho fatto (Azione eseguita / Comunicazione inviata) *</span>
                 </label>
-                <input
-                  type="date"
-                  value={followUpDueDate}
-                  onChange={(e) => setFollowUpDueDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                <textarea
+                  required
+                  rows={3}
+                  value={whatIDid}
+                  onChange={(e) => setWhatIDid(e.target.value)}
+                  placeholder="Scrivi esattamente cosa hai fatto: es. 'Preparato file ETS6 e inviata tabella gruppi DALI per approvazione', oppure 'Scritto su WhatsApp per concordare accesso sale riunioni'..."
+                  className="w-full bg-slate-900 border border-indigo-600/50 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
                 />
               </div>
-            </div>
 
-            {/* 4. Prossima azione prevista */}
-            <div>
-              <label className="block text-xs font-semibold text-emerald-300 mb-1 flex items-center gap-1.5">
-                <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Prossima Azione da Fare (Next Step)</span>
-              </label>
-              <input
-                type="text"
-                value={nextActionToDo}
-                onChange={(e) => setNextActionToDo(e.target.value)}
-                placeholder="Es. Procedere con programmazione ETS6 appena arriva conferma..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
+              {/* 3. ESECUZIONE SEGUITA PER (EMAIL / WHATSAPP / TELEFONO / CANTIERE) + DATA */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                  <label className="block text-xs font-bold text-indigo-200 mb-1.5">
+                    📡 Esecuzione / Seguito per (Canale utilizzato)
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpChannel('email')}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold border transition ${
+                        followUpChannel === 'email'
+                          ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-900/40'
+                          : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>✉️ Per Email</span>
+                    </button>
 
-          {/* Desired Access Date & Time + Priority */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-slate-950/50 p-3.5 rounded-xl border border-slate-800">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                Desired Access Date <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={desiredAccessDate}
-                onChange={(e) => setDesiredAccessDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpChannel('whatsapp')}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold border transition ${
+                        followUpChannel === 'whatsapp'
+                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-900/40'
+                          : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>💬 WhatsApp</span>
+                    </button>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
-                Desired Time
-              </label>
-              <input
-                type="time"
-                value={desiredAccessTime}
-                onChange={(e) => setDesiredAccessTime(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpChannel('phone')}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold border transition ${
+                        followUpChannel === 'phone'
+                          ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-900/40'
+                          : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>📞 Telefono</span>
+                    </button>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                Task Priority
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as InterventionPriority)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="low">Low (Standard)</option>
-                <option value="medium">Medium (Regular)</option>
-                <option value="high">High (Priority)</option>
-                <option value="urgent">Urgent (System Down)</option>
-              </select>
-            </div>
-          </div>
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpChannel('on_site')}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold border transition ${
+                        followUpChannel === 'on_site'
+                          ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-900/40'
+                          : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      <span>🏗️ In Cantiere</span>
+                    </button>
 
-          {/* Photo Upload */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Defect Photos / Images (optional)
-            </label>
-            <div className="border-2 border-dashed border-slate-700 hover:border-blue-500/70 rounded-xl p-4 text-center transition bg-slate-800/40">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                id="photo-upload"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <label
-                htmlFor="photo-upload"
-                className="cursor-pointer flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-white"
-              >
-                <Upload className="w-6 h-6 text-blue-400" />
-                <span className="text-xs font-medium">
-                  {uploading ? 'Uploading images...' : 'Click to select or take photos of the defect'}
-                </span>
-                <span className="text-[10px] text-slate-500">JPG, PNG, WEBP</span>
-              </label>
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpChannel('meeting')}
+                      className={`col-span-2 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-bold border transition ${
+                        followUpChannel === 'meeting'
+                          ? 'bg-violet-600 text-white border-violet-400 shadow-md shadow-violet-900/40'
+                          : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>👥 Riunione / Call Tecnica</span>
+                    </button>
+                  </div>
+                </div>
 
-            {defectPhotos.length > 0 && (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mt-3">
-                {defectPhotos.map((photo) => (
-                  <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-slate-700 bg-slate-800 aspect-square">
-                    <img
-                      src={photo.url}
-                      alt={photo.name}
-                      className="w-full h-full object-cover"
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-indigo-200 mb-1 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>📅 Data (Quando l'ho fatto / inviato) *</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={actionDate}
+                      onChange={(e) => setActionDate(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      📎 Documento / Schema / File inviato (opz.)
+                    </label>
+                    <input
+                      type="text"
+                      value={referenceDoc}
+                      onChange={(e) => setReferenceDoc(e.target.value)}
+                      placeholder="Es. Schema_QG02.pdf, Tabella_DALI.xlsx, .knxproj"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. DA CHI ASPETTO RISPOSTA + CONTATTO + SCADENZA SOLLECITO */}
+              <div className="bg-amber-950/25 p-3.5 rounded-xl border border-amber-600/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <Hourglass className="w-4 h-4 text-amber-400" />
+                    <span>⏳ Da chi aspetto risposta? (Lascia vuoto se non attendi risposta)</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="sm:col-span-1">
+                    <label className="block text-[11px] font-semibold text-amber-200/90 mb-1">
+                      Persona / Ente da cui aspetto risposta
+                    </label>
+                    <input
+                      type="text"
+                      value={waitingReplyFrom}
+                      onChange={(e) => setWaitingReplyFrom(e.target.value)}
+                      placeholder="Es. Mario Rossi, Ing. Bianchi, Fornitore..."
+                      className="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-1">
+                    <label className="block text-[11px] font-semibold text-amber-200/90 mb-1">
+                      Telefono / Email (per sollecito rapido)
+                    </label>
+                    <input
+                      type="text"
+                      value={clientContact}
+                      onChange={(e) => setClientContact(e.target.value)}
+                      placeholder="Es. +39 347... o email@..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-1">
+                    <label className="block text-[11px] font-semibold text-amber-200/90 mb-1">
+                      ⏰ Data entro cui sollecitare
+                    </label>
+                    <input
+                      type="date"
+                      value={followUpDueDate}
+                      onChange={(e) => setFollowUpDueDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. PROSSIMA AZIONE DA FARE + CHECKLIST PASSAGGI SUL PROGETTO */}
+              <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1.5">
+                    <ArrowRight className="w-4 h-4 text-emerald-400" />
+                    <span>➡️ Prossima Azione da Fare (Cosa resta da fare dopo)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nextActionToDo}
+                    onChange={(e) => setNextActionToDo(e.target.value)}
+                    placeholder="Es. Appena confermano gli orari, caricare programma su supervisore e fare test..."
+                    className="w-full bg-slate-800 border border-emerald-600/40 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Sotto-azioni / Checklist */}
+                <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Checklist Azioni da Fare ({actionSteps.length})</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Facoltativa — spuntabile sulla scheda</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newStepText}
+                      onChange={(e) => setNewStepText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddActionStep();
+                        }
+                      }}
+                      placeholder="Aggiungi punto elenco (es. Test Linea 1, Backup file) e premi Invio..."
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <button
                       type="button"
-                      onClick={() => handleRemovePhoto(photo.id)}
-                      className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 text-white opacity-0 group-hover:opacity-100 transition shadow"
+                      onClick={handleAddActionStep}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shrink-0"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Aggiungi</span>
                     </button>
-                    <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-slate-300 px-1 py-0.5 truncate text-center">
-                      {photo.name}
-                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Multiline Notes */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Notes for Technician (Multiline)
-            </label>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. PPE required: safety boots and helmet.&#10;Press Enter to insert a new line...&#10;Access window: 08:30 - 18:00"
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y whitespace-pre-wrap leading-relaxed"
-            />
-            <span className="text-[10px] text-slate-400">Press Enter to move down to a new line</span>
-          </div>
+                  {actionSteps.length > 0 && (
+                    <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                      {actionSteps.map((step, idx) => (
+                        <div
+                          key={step.id}
+                          className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-xs text-slate-200"
+                        >
+                          <span className="truncate"><strong className="text-indigo-400 font-mono mr-1.5">#{idx + 1}</strong>{step.text}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveActionStep(step.id)}
+                            className="text-slate-500 hover:text-rose-400 p-0.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 6. STATO DEL LAVORO + PRIORITÀ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Stato Attuale del Lavoro
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setWorkStatus('pending')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                        workStatus === 'pending'
+                          ? 'bg-rose-600 text-white border-rose-400 shadow-sm'
+                          : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🔴 Da Fare
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWorkStatus('in_progress')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                        workStatus === 'in_progress'
+                          ? 'bg-pink-600 text-white border-pink-400 shadow-sm'
+                          : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🌸 In Corso
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWorkStatus('completed')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                        workStatus === 'completed'
+                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                          : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🟢 Fatto
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Priorità Lavoro</span>
+                  </label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as InterventionPriority)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="low">Bassa (Pianificato)</option>
+                    <option value="medium">Media (Normale)</option>
+                    <option value="high">Alta (Importante)</option>
+                    <option value="urgent">Urgente (Priorità Massima)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 7. SCREENSHOT EMAIL / WHATSAPP O FOTO + NOTE AGGIUNTIVE */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="border-2 border-dashed border-slate-700 hover:border-indigo-500/70 rounded-xl p-3 text-center transition bg-slate-800/30 flex flex-col justify-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    id="work-photo-upload"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <label
+                    htmlFor="work-photo-upload"
+                    className="cursor-pointer flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-white"
+                  >
+                    <Upload className="w-5 h-5 text-indigo-400" />
+                    <span className="text-xs font-semibold">
+                      {uploading ? 'Compressione in corso...' : 'Allega Screenshot Email/WhatsApp o Foto'}
+                    </span>
+                    <span className="text-[10px] text-indigo-300">
+                      Oppure premi <strong>Ctrl+V</strong> per incollare dagli appunti
+                    </span>
+                  </label>
+                </div>
+
+                <div>
+                  <textarea
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Note tecniche aggiuntive o promemoria (opz.)..."
+                    className="w-full h-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              {defectPhotos.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {defectPhotos.map((photo) => (
+                    <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-slate-700 bg-slate-800 aspect-video">
+                      <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(photo.id)}
+                        className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 text-white"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            /* =====================================================================
+               MODULO STANDARD PER "INTERVENTI & GUASTI" (ASSISTENZA / DIFETTI)
+               ===================================================================== */
+            <>
+              {/* Defect Title / Subject */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Subject / Defect Title or Task <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Move KNX power supply under UPS / Sensor fault"
+                  className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Site & Address */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                    Facility / Department <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={siteName}
+                    onChange={(e) => setSiteName(e.target.value)}
+                    placeholder="e.g. 1st Floor Offices, Main Switchboard"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Site Address
+                  </label>
+                  <input
+                    type="text"
+                    value={siteAddress}
+                    onChange={(e) => setSiteAddress(e.target.value)}
+                    placeholder="Street, City, Postal Code"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Requester & Contact */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                    Requester / Contact Person <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                    Phone Number / Email
+                  </label>
+                  <input
+                    type="text"
+                    value={clientContact}
+                    onChange={(e) => setClientContact(e.target.value)}
+                    placeholder="e.g. +39 02 8877665"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Problem description / What needs to be done */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Detailed Problem Description / Scope of Work <span className="text-rose-400">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe what needs to be carried out, components to check, system modifications or observed malfunctions..."
+                  className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {/* Desired Access Date & Time + Priority */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-slate-950/50 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                    Desired Access Date <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={desiredAccessDate}
+                    onChange={(e) => setDesiredAccessDate(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-400" />
+                    Desired Time
+                  </label>
+                  <input
+                    type="time"
+                    value={desiredAccessTime}
+                    onChange={(e) => setDesiredAccessTime(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    Task Priority
+                  </label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as InterventionPriority)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="low">Low (Standard)</option>
+                    <option value="medium">Medium (Regular)</option>
+                    <option value="high">High (Priority)</option>
+                    <option value="urgent">Urgent (System Down)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Photo Upload */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Defect Photos / Images (optional)
+                </label>
+                <div className="border-2 border-dashed border-slate-700 hover:border-blue-500/70 rounded-xl p-4 text-center transition bg-slate-800/40">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    id="photo-upload"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <label
+                    htmlFor="photo-upload"
+                    className="cursor-pointer flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-white"
+                  >
+                    <Upload className="w-6 h-6 text-blue-400" />
+                    <span className="text-xs font-medium">
+                      {uploading ? 'Uploading images...' : 'Click to select or take photos of the defect'}
+                    </span>
+                    <span className="text-[10px] text-slate-500">JPG, PNG, WEBP (or press Ctrl+V)</span>
+                  </label>
+                </div>
+
+                {defectPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mt-3">
+                    {defectPhotos.map((photo) => (
+                      <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-slate-700 bg-slate-800 aspect-square">
+                        <img
+                          src={photo.url}
+                          alt={photo.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(photo.id)}
+                          className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 text-white opacity-0 group-hover:opacity-100 transition shadow"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-slate-300 px-1 py-0.5 truncate text-center">
+                          {photo.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Multiline Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Notes for Technician (Multiline)
+                </label>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="e.g. PPE required: safety boots and helmet.&#10;Press Enter to insert a new line...&#10;Access window: 08:30 - 18:00"
+                  className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y whitespace-pre-wrap leading-relaxed"
+                />
+              </div>
+            </>
+          )}
 
           {/* Footer Actions */}
           <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
@@ -744,17 +961,18 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition"
             >
-              Cancel
+              {isProjectWork ? 'Annulla' : 'Cancel'}
             </button>
             <button
               type="submit"
-              className={`px-5 py-2 rounded-lg text-xs font-semibold text-white transition shadow-lg active:scale-95 ${
+              className={`px-5 py-2 rounded-lg text-xs font-bold text-white transition shadow-lg active:scale-95 flex items-center gap-1.5 ${
                 isProjectWork
-                  ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
+                  ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30'
                   : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/25'
               }`}
             >
-              {isProjectWork ? 'Salva Lavoro / Azione su Progetto' : 'Submit Service Request'}
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{isProjectWork ? 'Salva nel Tracking Lavori Progetto' : 'Submit Service Request'}</span>
             </button>
           </div>
 
