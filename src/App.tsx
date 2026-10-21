@@ -1096,6 +1096,7 @@ export function App() {
           inProgressCount={inProgressInterventions.length}
           completedCount={completedInterventions.length}
           waitingReplyCount={waitingReplyInterventions.length}
+          activeCategoryTab={activeCategoryTab}
         />
 
         {/* Loading state */}
@@ -1220,12 +1221,16 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI IN CORSO / ATTESA RICAMBI' : 'IN PROGRESS & WAITING FOR PARTS'}</span>
+                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI IN CORSO' : 'IN PROGRESS & WAITING FOR PARTS'}</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-600 text-white shadow-sm">
                       {inProgressInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-pink-300/80">Active on-site tasks, inspections and orders awaiting spare parts</p>
+                  <p className="text-[11px] text-pink-300/80">
+                    {activeCategoryTab === 'project_work'
+                      ? 'Lavori di progetto avviati, attività in esecuzione e follow-up attivi'
+                      : 'Active on-site tasks, inspections and orders awaiting spare parts'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1233,7 +1238,9 @@ export function App() {
             {/* Pink Cards Grid */}
             {inProgressInterventions.length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-pink-900/30 bg-pink-950/10 text-xs text-pink-300/60">
-                No tasks currently in progress or waiting for parts.
+                {activeCategoryTab === 'project_work'
+                  ? 'Nessun lavoro attualmente in corso.'
+                  : 'No tasks currently in progress or waiting for parts.'}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
