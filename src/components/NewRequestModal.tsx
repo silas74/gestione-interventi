@@ -31,7 +31,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   existingInterventions,
   projects,
   defaultProjectId,
-  defaultRecordType = 'intervention',
+  defaultRecordType = 'project_work',
   onAddNewProject,
 }) => {
   const [recordType, setRecordType] = useState<RecordCategory>(defaultRecordType);
@@ -312,18 +312,6 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
           <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
             <button
               type="button"
-              onClick={() => setRecordType('intervention')}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
-                !isProjectWork
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
-              }`}
-            >
-              <Wrench className="w-4 h-4" />
-              <span>🛠️ Intervento / Guasto</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setRecordType('project_work')}
               className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
                 isProjectWork
@@ -333,6 +321,18 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
             >
               <ClipboardList className="w-4 h-4" />
               <span>📋 Lavoro / Azione Progetto</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecordType('intervention')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                !isProjectWork
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              <span>🛠️ Intervento / Guasto</span>
             </button>
           </div>
 
