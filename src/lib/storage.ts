@@ -2,6 +2,7 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v1';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
@@ -194,6 +195,92 @@ const INITIAL_INTERVENTIONS: InterventionRequest[] = [
   }
 ];
 
+// 4. Initial Project Works & Action Items (Lavori & Azioni sui Progetti)
+const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
+  {
+    id: 'lav-wb-001',
+    code: 'LAV-WRKB-2026-001',
+    recordType: 'project_work',
+    projectId: 'proj-workbank',
+    projectName: 'Workbank',
+    title: 'Mappatura Indirizzi di Gruppo ETS e Backup Progetto KNX Piano 1-2',
+    siteName: 'Workbank - Quadri Elettrici & Open Space',
+    siteAddress: 'Corporate Office Building, Milan',
+    clientName: 'Mario Rossi',
+    clientContact: '+39 347 8877665',
+    description: 'Verifica completa della topologia di linea KNX/DALI, esportazione file .knxproj aggiornato, etichettatura moduli in quadro e test scenari centralizzati fine giornata.',
+    desiredAccessDate: '2026-10-22',
+    desiredAccessTime: '09:00',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Salvare copia del progetto ETS6 nella cartella condivisa del cantiere.',
+    status: 'in_progress',
+    createdAt: '2026-10-18T09:00:00Z',
+    updatedAt: '2026-10-20T14:30:00Z',
+    assignedTechnician: 'Costantino',
+    actionSteps: [
+      { id: 'act-1', text: 'Scansione dispositivi su bus KNX Linea 1.1 e 1.2', completed: true, completedAt: '2026-10-19T11:00:00Z' },
+      { id: 'act-2', text: 'Verifica indirizzamento gateway DALI e gruppi corpi illuminanti', completed: true, completedAt: '2026-10-20T14:00:00Z' },
+      { id: 'act-3', text: 'Test comando spegnimento generale e feedback stato su supervisore', completed: false },
+      { id: 'act-4', text: 'Esportazione backup finale .knxproj e consegna documentazione tecnica', completed: false }
+    ]
+  },
+  {
+    id: 'lav-wb-002',
+    code: 'LAV-WRKB-2026-002',
+    recordType: 'project_work',
+    projectId: 'proj-workbank',
+    projectName: 'Workbank',
+    title: 'Taratura curve di regolazione Lux e tempi di presenza sale riunioni',
+    siteName: 'Workbank - Executive Meeting Rooms',
+    siteAddress: 'Corporate Office Building, Milan',
+    clientName: 'Mario Rossi',
+    clientContact: '+39 347 8877665',
+    description: 'Ottimizzazione dei parametri di luminosità costante (500 lux su piano di lavoro) e configurazione timer presenza a 15 minuti nelle 4 sale riunioni direzionali.',
+    desiredAccessDate: '2026-10-24',
+    desiredAccessTime: '08:30',
+    priority: 'medium',
+    defectPhotos: [],
+    notes: 'Portare luxmetro digitale certificato per calibrazione sensori.',
+    status: 'pending',
+    createdAt: '2026-10-19T10:30:00Z',
+    updatedAt: '2026-10-19T10:30:00Z',
+    assignedTechnician: 'Costantino',
+    actionSteps: [
+      { id: 'act-201', text: 'Misura lux con luce naturale e artificiale in Sala Board A & B', completed: false },
+      { id: 'act-202', text: 'Impostazione setpoint 500 lux e soglia minima dimming 15%', completed: false },
+      { id: 'act-203', text: 'Collaudo pulsante forzatura manuale e ritorno in automatico', completed: false }
+    ]
+  },
+  {
+    id: 'lav-log-001',
+    code: 'LAV-LOG-N-2026-001',
+    recordType: 'project_work',
+    projectId: 'proj-logistica',
+    projectName: 'North Logistics',
+    title: 'Adeguamento selettività magnetotermici e verifica linea pneumatica smistamento',
+    siteName: 'North Logistics - Linea Smistamento B2',
+    siteAddress: 'Facility 2, Agrate Brianza',
+    clientName: 'ACX Logistics Ltd',
+    clientContact: '+39 039 6543210',
+    description: 'Controllo serraggi sbarre quadro distribuzione principale, verifica taratura relè termici nastri trasportatori e controllo pressione attuatori pneumatici.',
+    desiredAccessDate: '2026-10-25',
+    desiredAccessTime: '07:30',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Attività programmata prima dell\'avvio del turno mattutino.',
+    status: 'pending',
+    createdAt: '2026-10-20T08:15:00Z',
+    updatedAt: '2026-10-20T08:15:00Z',
+    assignedTechnician: 'Costantino',
+    actionSteps: [
+      { id: 'act-301', text: 'Controllo termografico interruttori quadro generale QG-02', completed: false },
+      { id: 'act-302', text: 'Verifica taratura protezioni motori nastri linea B2', completed: false },
+      { id: 'act-303', text: 'Test arresto di emergenza e ripristino sicurezza PLC', completed: false }
+    ]
+  }
+];
+
 // ================= PROJECT MANAGEMENT =================
 
 export function fetchProjects(): Project[] {
@@ -295,12 +382,25 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
   try {
     const raw = localStorage.getItem(STORAGE_INTERVENTIONS);
     if (!raw) {
-      localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(INITIAL_INTERVENTIONS));
-      return INITIAL_INTERVENTIONS;
+      const combined = [...INITIAL_INTERVENTIONS, ...INITIAL_PROJECT_WORKS];
+      localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(combined));
+      localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
+      return combined;
     }
-    return JSON.parse(raw);
+    const parsed: InterventionRequest[] = JSON.parse(raw);
+    if (!localStorage.getItem(STORAGE_PROJECT_WORKS_SEEDED)) {
+      const hasProjectWorks = parsed.some(i => i.recordType === 'project_work');
+      if (!hasProjectWorks) {
+        const merged = [...parsed, ...INITIAL_PROJECT_WORKS];
+        localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(merged));
+        localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
+        return merged;
+      }
+      localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
+    }
+    return parsed;
   } catch {
-    return INITIAL_INTERVENTIONS;
+    return [...INITIAL_INTERVENTIONS, ...INITIAL_PROJECT_WORKS];
   }
 }
 
