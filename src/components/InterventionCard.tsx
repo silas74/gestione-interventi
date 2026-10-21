@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Calendar, Clock, MapPin, User, Phone, AlertTriangle, 
   CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
   Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
-  PhoneCall, MessageCircle, Share2, Mail, Camera
+  PhoneCall, MessageCircle, Share2, Mail, Camera, ClipboardList, CheckSquare, Square, Plus
 } from 'lucide-react';
 import { InterventionRequest, AppRole, DefectPhoto } from '../types';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
@@ -27,6 +27,9 @@ interface InterventionCardProps {
   onOpenFeedbackModal: (intervention: InterventionRequest) => void;
   onPreviewPhoto: (photo: DefectPhoto) => void;
   onDelete: (id: string) => void;
+  onToggleActionStep?: (interventionId: string, stepId: string) => void;
+  onAddActionStep?: (interventionId: string, text: string) => void;
+  onDeleteActionStep?: (interventionId: string, stepId: string) => void;
 }
 
 export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
@@ -38,7 +41,17 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   onOpenFeedbackModal,
   onPreviewPhoto,
   onDelete,
+  onToggleActionStep,
+  onAddActionStep,
+  onDeleteActionStep,
 }) => {
+  const [quickStepText, setQuickStepText] = useState('');
+  const [showAddStepInput, setShowAddStepInput] = useState(false);
+
+  const isProjectWork = intervention.recordType === 'project_work';
+  const actionSteps = intervention.actionSteps || [];
+  const completedStepsCount = actionSteps.filter(s => s.completed).length;
+  const stepsProgressPct = actionSteps.length > 0 ? Math.round((completedStepsCount / actionSteps.length) * 100) : 0;
   const isCompleted = intervention.status === 'completed' || intervention.status === 'completato';
   const isPending = !isCompleted; // All open tasks (pending, scheduled, in_progress)
   const isWaiting = intervention.status === 'pending' || intervention.status === 'in_attesa';
@@ -115,6 +128,14 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 flex items-center gap-1.5">
                 <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
                 <span>{intervention.projectName}</span>
+              </span>
+            )}
+
+            {/* Lavoro / Azione Progetto Badge */}
+            {isProjectWork && (
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-1 shadow-sm">
+                <ClipboardList className="w-3 h-3 text-indigo-400" />
+                <span>LAVORO / AZIONE</span>
               </span>
             )}
 
@@ -296,6 +317,129 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 mb-3 whitespace-pre-wrap leading-relaxed">
             <strong className="text-slate-400 block mb-0.5 text-[11px]">Notes for technician:</strong>
             {intervention.notes}
+          </div>
+        )}
+
+        {/* 📋 CHECKLIST AZIONI DA FARE SUL PROGETTO / LAVORO */}
+        {(isProjectWork || actionSteps.length > 0) && (
+          <div className="bg-indigo-950/25 border border-indigo-700/50 rounded-xl p-3 mb-3 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Azioni da Fare sul Progetto ({completedStepsCount}/{actionSteps.length})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {actionSteps.length > 0 && (
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    stepsProgressPct === 100
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                  }`}>
+                    {stepsProgressPct}% completato
+                  </span>
+                )}
+                {onAddActionStep && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddStepInput(prev => !prev)}
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 flex items-center gap-1 transition active:scale-95"
+                    title="Aggiungi una nuova azione da fare su questo lavoro"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Azione</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            {actionSteps.length > 0 && (
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    stepsProgressPct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'
+                  }`}
+                  style={{ width: `${stepsProgressPct}%` }}
+                />
+              </div>
+            )}
+
+            {/* Quick Add Step Input */}
+            {showAddStepInput && onAddActionStep && (
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <input
+                  type="text"
+                  value={quickStepText}
+                  onChange={(e) => setQuickStepText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (quickStepText.trim()) {
+                        onAddActionStep(intervention.id, quickStepText.trim());
+                        setQuickStepText('');
+                      }
+                    }
+                  }}
+                  placeholder="Scrivi nuova azione da fare e premi Invio..."
+                  className="flex-1 bg-slate-900 border border-indigo-600/60 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (quickStepText.trim()) {
+                      onAddActionStep(intervention.id, quickStepText.trim());
+                      setQuickStepText('');
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition"
+                >
+                  Salva
+                </button>
+              </div>
+            )}
+
+            {/* Action Steps List */}
+            {actionSteps.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic">
+                Nessuna sotto-azione inserita. Clicca "+ Azione" per aggiungere i passaggi operativi da spuntare.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                {actionSteps.map((step) => (
+                  <div
+                    key={step.id}
+                    onClick={() => onToggleActionStep && onToggleActionStep(intervention.id, step.id)}
+                    className={`flex items-center justify-between gap-2 p-2 rounded-lg border text-xs cursor-pointer transition ${
+                      step.completed
+                        ? 'bg-emerald-950/30 border-emerald-800/50 text-slate-400 line-through'
+                        : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/60 text-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2 min-w-0">
+                      {step.completed ? (
+                        <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                      )}
+                      <span className="leading-snug break-words">{step.text}</span>
+                    </div>
+                    {onDeleteActionStep && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteActionStep(intervention.id, step.id);
+                        }}
+                        className="text-slate-500 hover:text-rose-400 p-0.5 rounded transition shrink-0"
+                        title="Elimina azione"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
