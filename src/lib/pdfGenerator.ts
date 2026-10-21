@@ -99,6 +99,28 @@ export function generateInterventionReportPDF(intervention: InterventionRequest)
     currentY += 2.5;
   }
 
+  if (intervention.trackingLogs && intervention.trackingLogs.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('Project Tracking Log (Actions Done, Email/WhatsApp & Pending Replies):', 16, currentY);
+    currentY += 4.8;
+    doc.setFont('helvetica', 'normal');
+    for (const log of intervention.trackingLogs) {
+      const chLabel = log.channel.toUpperCase();
+      const replyInfo = log.waitingReplyFrom
+        ? log.replyReceived
+          ? ` | Reply received from: ${log.waitingReplyFrom}`
+          : ` | Waiting reply from: ${log.waitingReplyFrom}${log.followUpDueDate ? ` (due ${log.followUpDueDate})` : ''}`
+        : '';
+      const nextInfo = log.nextStep ? ` | Next: ${log.nextStep}` : '';
+      const line = `[${log.date} - ${chLabel}] Done: ${log.whatIDid}${replyInfo}${nextInfo}`;
+      const splitLog = doc.splitTextToSize(line, pageWidth - 36);
+      doc.text(splitLog, 18, currentY);
+      currentY += splitLog.length * 4.5 + 1.5;
+    }
+    currentY += 2.5;
+  }
+
   // Section 3: TECHNICAL EXECUTION & HOURS WORKED
   currentY = drawSectionTitle('3. TECHNICAL EXECUTION & HOURS WORKED', currentY + 1.5);
   
