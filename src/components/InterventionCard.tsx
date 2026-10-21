@@ -193,7 +193,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>COMPLETED</span>
               </span>
-            ) : isWaitingForParts ? (
+            ) : isWaitingForParts && !isProjectWork ? (
               <span className="flex items-center gap-1.5 text-xs font-black px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/50 shadow-sm shadow-pink-950/40">
                 <Clock className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
                 <span>WORKING IN PROGRESS (Waiting for Parts)</span>
@@ -201,7 +201,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
             ) : isInProgress ? (
               <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                 <Wrench className="w-3.5 h-3.5 text-amber-400" />
-                <span>WORKING IN PROGRESS</span>
+                <span>{isProjectWork ? 'IN CORSO' : 'WORKING IN PROGRESS'}</span>
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
