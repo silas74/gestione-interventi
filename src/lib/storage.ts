@@ -2,13 +2,22 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v3_panvac';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v4_hilton';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
 
-// 1. Initial Projects with Panvac & Workbank Projects
+// 1. Initial Projects with Hilton (GIAA), Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
+  {
+    id: 'proj-hilton',
+    code: 'HILTON',
+    name: 'Hilton (GIAA)',
+    description: 'Concept Design Engineering MEP / Electrical, ELV & FLS — Infra Building, HGI (Garden Inn) & Main Tower',
+    clientName: 'Lukas Van Vuuren (Hilton) / Pier Paolo Elmi',
+    siteAddress: 'Hilton Compound — Infra Building, HGI & Main Tower',
+    createdAt: '2026-10-20T14:50:00Z'
+  },
   {
     id: 'proj-panvac',
     code: 'PANVAC',
@@ -336,8 +345,203 @@ const PANVAC_INITIAL_WORKS: InterventionRequest[] = PANVAC_APPROVAL_ITEMS.map((i
   ]
 }));
 
+// Helper to create the 9 Hilton (GIAA) Electrical / ELV / FLS Concept Design items from Lukas Van Vuuren's email (20/10/2026) & Submission Form PDF
+const HILTON_ELECTRICAL_ITEMS: Array<{
+  num: string;
+  title: string;
+  whatIDid: string;
+  nextStep: string;
+  refDoc: string;
+  steps: string[];
+}> = [
+  {
+    num: '001',
+    title: 'Infra Building — Central Transformers & Strategia Espansione Main Tower + HGI',
+    whatIDid: 'Trasmesso schema preliminare cabina trasformatori centralizzata nell\'Infra Building (attuale fornitura per HGI con predisposizione espansione futura per Main Tower). Ricevuto riscontro email da Lukas Van Vuuren (20/10/2026): Hilton richiede il Design Report completo che dimostri come verranno aggiunti i futuri trasformatori/quadri per la Main Tower evitando doppi impianti o inefficienze.',
+    nextStep: 'Redigere e inviare Design Report e schema dettagliato fasi di espansione trasformatori/quadri (Fase 1 HGI -> Fase 2 Main Tower).',
+    refDoc: 'Re: GIAA - Feedbacks required from Hilton Design Team (20/10/2026)',
+    steps: [
+      'Dimensionamento trasformatori centralizzati per HGI (contratto attuale) e stima carico futuro Main Tower',
+      'Schema unifilare e layout Infra Building con spazi dedicati espansione futura senza duplicazione impianti',
+      'Invio Design Report infrastruttura elettrica a Lukas Van Vuuren e Kylie Rankin (Hilton)'
+    ]
+  },
+  {
+    num: '002',
+    title: 'Doc #2 — MEP Concept Report (Electrical, Active Fire Life Safety & ELV Systems)',
+    whatIDid: 'Ricevuta richiesta formale da Lukas Van Vuuren (Hilton) il 20/10/2026 con modulo "Hilton Concept Design Engineering Submission Form_Master.pdf": Hilton non revisiona singole parti isolate ma richiede il pacchetto completo MEP/Electrical, Active Fire Life Safety (FLS) ed ELV Concept Report.',
+    nextStep: 'Completare la sezione Electrical, Active FLS ed ELV del MEP Concept Report e caricare su Project Hub per revisione Hilton.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #2)',
+    steps: [
+      'Relazione tecnica Concept Design impianti elettrici MT/BT e generazione di emergenza',
+      'Relazione tecnica Active Fire Life Safety (FLS) e sistemi speciali ELV',
+      'Sottomissione pacchetto completo su Hilton Project Hub'
+    ]
+  },
+  {
+    num: '003',
+    title: 'Doc #4 — Electrical Distribution Schematic (MT/BT, Quadri & Alimentazioni di Sicurezza)',
+    whatIDid: 'Richiesto nel pacchetto Concept Stage Drawings di Hilton (Doc #4 del modulo allegato all\'email del 20/10/2026): schema generale di distribuzione elettrica principale e secondaria.',
+    nextStep: 'Preparare e sottomettere lo schema completo di distribuzione elettrica (Electrical Distribution Schematic) per Infra Building e HGI.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #4)',
+    steps: [
+      'Schema distribuzione principale MT/BT da Infra Building a HGI e predisposizione Main Tower',
+      'Schema distribuzione normale, preferenziale (Gruppi Elettrogeni) e sotto UPS',
+      'Verifica selettività e coordinamento con standard Hilton Brand'
+    ]
+  },
+  {
+    num: '004',
+    title: 'Doc #5 & #6 — Fire Alarm Schematic & Public Address / Voice Alarm (PAVA) Schematic',
+    whatIDid: 'Richiesti nel pacchetto Concept Stage Drawings (Doc #5 e Doc #6 dell\'allegato Hilton del 20/10/2026): schemi a blocchi impianto rivelazione incendi (Fire Alarm) ed evacuazione vocale / diffusione sonora (PAVA).',
+    nextStep: 'Elaborare gli schemi Fire Alarm e PAVA secondo gli standard Hilton Fire Life Safety (FLS).',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #5, #6)',
+    steps: [
+      'Elaborazione Doc #5: Fire Alarm Schematic (centrali, loop, interfacce comandi sicurezza)',
+      'Elaborazione Doc #6: Public Address / Voice Alarm (PAVA) Schematic',
+      'Integrazione logica con Smoke Control Schematic (Doc #9) e invio a Hilton FLS Team'
+    ]
+  },
+  {
+    num: '005',
+    title: 'Doc #16, #17 & #18 — ELV Schematics: Structured Cabling, Audio Visual (AV) & CCTV',
+    whatIDid: 'Richiesti nel pacchetto Concept Stage Drawings (Doc #16, #17, #18 dell\'allegato Hilton del 20/10/2026): schemi impianti speciali ELV (Cablaggio Strutturato, Audio/Video e TVCC).',
+    nextStep: 'Predisporre gli schemi a blocchi ELV (Structured Cabling, AV e CCTV) conformi agli standard IT/ELV Hilton.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #16, #17, #18)',
+    steps: [
+      'Elaborazione Doc #16: Structured Cabling Schematic (sale server, rack, dorsali fibra/rame, Wi-Fi)',
+      'Elaborazione Doc #17: Audio Visual (AV) Schematic per aree comuni, meeting e wellness',
+      'Elaborazione Doc #18: CCTV Schematic (videosorveglianza e sicurezza)'
+    ]
+  },
+  {
+    num: '006',
+    title: 'Doc #19 — Emergency Lighting and Illuminated Egress Signage Schematic',
+    whatIDid: 'Richiesto nel pacchetto Concept Stage Drawings (Doc #19 dell\'allegato Hilton del 20/10/2026): schema illuminazione di emergenza e segnaletica luminosa vie di fuga.',
+    nextStep: 'Preparare lo schema Emergency Lighting & Illuminated Egress Signage per HGI e Infra Building.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #19)',
+    steps: [
+      'Definizione architettura illuminazione di sicurezza e segnaletica vie di esodo',
+      'Verifica autonomie e conformità normativa FLS Hilton',
+      'Emissione tavola schematica Doc #19 per approvazione'
+    ]
+  },
+  {
+    num: '007',
+    title: 'Doc #21 & #24 — Typical Guestroom Electrical/ELV Layouts & Guestroom Energy Management (HGI)',
+    whatIDid: 'Ricevuto chiarimento nell\'email di Lukas Van Vuuren (20/10/2026): per HGI le tipologie camere sono solo Accessible (AK1), King (K1B), Twin e Suite (nessuna Junior Suite). Richiesti nel modulo Concept Design i layout tipici camere (Doc #21) e i dettagli del sistema Guestroom Energy Management GRMS (Doc #24).',
+    nextStep: 'Completare i layout elettrici/ELV delle camere tipo HGI (Accessible, King, Twin, Suite) e le specifiche Guestroom Energy Management.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #21, #24)',
+    steps: [
+      'Layout impianti elettrici, illuminazione, prese e dati per camere tipo HGI (Accessible, King, Twin, Suite)',
+      'Dettagli architettura Guestroom Energy Management System (Doc #24 - controllo accessi/clima/luci camera)',
+      'Allineamento con layout architettonici Mecanoo e standard HGI'
+    ]
+  },
+  {
+    num: '008',
+    title: 'Doc #22 & #23 — Electrical Space Planning, Main Plant Areas, Risers, Incoming Utilities & Deviation List',
+    whatIDid: 'Richiesti nel modulo Concept Design Hilton (Doc #22 e Doc #23 dell\'allegato del 20/10/2026): planimetrie spazi tecnici principali, cavedi montanti (risers), percorsi dorsali e ingressi utenze elettriche, oltre alla lista di eventuali deviazioni dagli standard Hilton (Proposed MEP Deviation List).',
+    nextStep: 'Definire planimetrie locali tecnici elettrici/ELV, montanti verticali, ingresso fornitura elettrica e compilare la MEP Deviation List.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #22, #23)',
+    steps: [
+      'Planimetrie e block diagrams locali elettrici principali, cabine MT/BT, quadri e cavedi (Doc #22)',
+      'Tracciato ingresso utenze elettriche principali e dorsali tra Infra Building, HGI e Main Tower',
+      'Compilazione Proposed MEP Deviation List (Doc #23) per la parte elettrica/ELV'
+    ]
+  },
+  {
+    num: '009',
+    title: 'Doc #3 — Sustainability & Energy Concept Report (Modello Energetico Elettrico kWh/m², CO2 & LCA)',
+    whatIDid: 'Richiesto nei Concept Stage Reports (Doc #3 dell\'allegato Hilton del 20/10/2026): report sostenibilità ed energia comprensivo di stima kWh/m² annui, impronta carbonio Kg.CO2/m² e Life Cycle Analysis (LCA) per giustificare le scelte impiantistiche.',
+    nextStep: 'Fornire i dati di assorbimento elettrico stimato (kWh/m²), efficienza illuminazione/quadri/pompe di calore e analisi LCA per il report energetico.',
+    refDoc: 'Hilton Concept Design Engineering Submission Form_Master.pdf (Doc #3)',
+    steps: [
+      'Stima consumi elettrici annui (kWh/m²) per illuminazione, forza motrice, cucina, lavanderia e centrale idrica/RO',
+      'Analisi Life Cycle (LCA) e calcolo emissioni Kg.CO2/m² a supporto delle scelte impiantistiche',
+      'Integrazione nel Sustainability/Energy Concept Report (Doc #3)'
+    ]
+  }
+];
+
+const HILTON_INITIAL_WORKS: InterventionRequest[] = HILTON_ELECTRICAL_ITEMS.map((item) => ({
+  id: `lav-hilton-${item.num}`,
+  code: `LAV-HILTON-2026-${item.num}`,
+  recordType: 'project_work',
+  projectId: 'proj-hilton',
+  projectName: 'Hilton (GIAA)',
+  title: item.title,
+  siteName: 'Hilton Compound — Infra Building & HGI',
+  siteAddress: 'Hilton GIAA Site',
+  clientName: 'Lukas Van Vuuren (Hilton Design Team)',
+  clientContact: 'Lukas.VanVuuren@Hilton.com',
+  description: item.whatIDid,
+  desiredAccessDate: '2026-10-21',
+  desiredAccessTime: '09:00',
+  priority: item.num === '001' || item.num === '002' || item.num === '003' ? 'high' : 'medium',
+  defectPhotos: [],
+  notes: 'Ricevuto via email da Lukas Van Vuuren (Hilton Project Director) il 20/10/2026 ore 14:50 con allegato Hilton Concept Design Engineering Submission Form_Master.pdf.',
+  status: 'in_progress',
+  createdAt: '2026-10-20T14:50:48Z',
+  updatedAt: '2026-10-21T09:00:00Z',
+  assignedTechnician: 'Costantino',
+  whatIDidSummary: item.whatIDid,
+  followUpChannel: 'email',
+  lastActionDate: '2026-10-20',
+  waitingReplyFrom: 'Lukas Van Vuuren / Kylie Rankin (Hilton Design Team)',
+  nextActionToDo: item.nextStep,
+  emailSource: {
+    sender: 'Lukas Van Vuuren <Lukas.VanVuuren@Hilton.com>',
+    receivedAt: '2026-10-20 14:50',
+    subject: 'Re: GIAA - Feedbacks required from Hilton Design Team',
+    projectId: 'proj-hilton',
+    projectName: 'Hilton (GIAA)'
+  },
+  emailHistory: [
+    {
+      id: `msg-hilton-${item.num}-1`,
+      sender: 'Pier Paolo Elmi <paolo@elmiconstruction.com>',
+      receivedAt: '2026-10-16 11:10',
+      subject: 'GIAA - Feedbacks required from Hilton Design Team',
+      message: 'Inviata strategia preliminare Electrical Infrastructure (trasformatori centrali in Infra Building a servizio di HGI con futura espansione per Main Tower) e richiesta feedback al team Hilton.',
+      action: 'created',
+      projectId: 'proj-hilton',
+      projectName: 'Hilton (GIAA)'
+    },
+    {
+      id: `msg-hilton-${item.num}-2`,
+      sender: 'Lukas Van Vuuren <Lukas.VanVuuren@Hilton.com>',
+      receivedAt: '2026-10-20 14:50',
+      subject: 'Re: GIAA - Feedbacks required from Hilton Design Team',
+      message: `${item.whatIDid} (Allegato: Hilton Concept Design Engineering Submission Form_Master.pdf)`,
+      action: 'follow_up',
+      projectId: 'proj-hilton',
+      projectName: 'Hilton (GIAA)'
+    }
+  ],
+  trackingLogs: [
+    {
+      id: `trk-hilton-${item.num}-1`,
+      date: '2026-10-20',
+      time: '14:50',
+      whatIDid: item.whatIDid,
+      channel: 'email',
+      awaitingReply: true,
+      waitingReplyFrom: 'Lukas Van Vuuren / Kylie Rankin (Hilton Design Team)',
+      nextStep: item.nextStep,
+      referenceDoc: item.refDoc
+    }
+  ],
+  actionSteps: item.steps.map((text, idx) => ({
+    id: `act-hilton-${item.num}-${idx + 1}`,
+    text,
+    completed: false
+  }))
+}));
+
 // 4. Initial Project Works & Action Items (Lavori & Azioni sui Progetti)
 const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
+  ...HILTON_INITIAL_WORKS,
   ...PANVAC_INITIAL_WORKS,
   {
     id: 'lav-wb-001',
@@ -501,7 +705,9 @@ export function fetchProjects(): Project[] {
       localStorage.setItem(STORAGE_PROJECTS, JSON.stringify(INITIAL_PROJECTS));
       return INITIAL_PROJECTS;
     }
-    const parsed: Project[] = JSON.parse(raw);
+    let parsed: Project[] = JSON.parse(raw);
+    let modified = false;
+
     const hasPanvac = parsed.some(
       p =>
         p.id === 'proj-panvac' ||
@@ -509,9 +715,29 @@ export function fetchProjects(): Project[] {
         p.code.toLowerCase().includes('panva')
     );
     if (!hasPanvac) {
-      const updated = [INITIAL_PROJECTS[0], ...parsed];
-      localStorage.setItem(STORAGE_PROJECTS, JSON.stringify(updated));
-      return updated;
+      const panvacDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-panvac');
+      if (panvacDefault) {
+        parsed = [panvacDefault, ...parsed];
+        modified = true;
+      }
+    }
+
+    const hasHilton = parsed.some(
+      p =>
+        p.id === 'proj-hilton' ||
+        p.name.toLowerCase().includes('hilton') ||
+        p.code.toLowerCase().includes('hilton')
+    );
+    if (!hasHilton) {
+      const hiltonDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-hilton');
+      if (hiltonDefault) {
+        parsed = [hiltonDefault, ...parsed];
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      localStorage.setItem(STORAGE_PROJECTS, JSON.stringify(parsed));
     }
     return parsed;
   } catch {
@@ -610,13 +836,25 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
           p.id === 'proj-panvac' ||
           p.name.toLowerCase().includes('panva') ||
           p.code.toLowerCase().includes('panva')
-      ) || INITIAL_PROJECTS[0];
+      ) || INITIAL_PROJECTS.find(p => p.id === 'proj-panvac')!;
 
-    const normalizedWorks = INITIAL_PROJECT_WORKS.map(w =>
-      w.projectId === 'proj-panvac'
-        ? { ...w, projectId: panvacProj.id, projectName: panvacProj.name }
-        : w
-    );
+    const hiltonProj =
+      projects.find(
+        p =>
+          p.id === 'proj-hilton' ||
+          p.name.toLowerCase().includes('hilton') ||
+          p.code.toLowerCase().includes('hilton')
+      ) || INITIAL_PROJECTS.find(p => p.id === 'proj-hilton')!;
+
+    const normalizedWorks = INITIAL_PROJECT_WORKS.map(w => {
+      if (w.projectId === 'proj-panvac') {
+        return { ...w, projectId: panvacProj.id, projectName: panvacProj.name };
+      }
+      if (w.projectId === 'proj-hilton') {
+        return { ...w, projectId: hiltonProj.id, projectName: hiltonProj.name };
+      }
+      return w;
+    });
 
     const raw = localStorage.getItem(STORAGE_INTERVENTIONS);
     if (!raw) {
