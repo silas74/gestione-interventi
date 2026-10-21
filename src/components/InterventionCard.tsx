@@ -6,8 +6,17 @@ import {
   PhoneCall, MessageCircle, Share2, Mail, Camera
 } from 'lucide-react';
 import { InterventionRequest, AppRole, DefectPhoto } from '../types';
-import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
+
+const handleDownloadPDF = async (intervention: InterventionRequest) => {
+  const { downloadInterventionPDF } = await import('../lib/pdfGenerator');
+  downloadInterventionPDF(intervention);
+};
+
+const handleSharePDF = async (intervention: InterventionRequest) => {
+  const { shareInterventionPDFViaWhatsApp } = await import('../lib/pdfGenerator');
+  await shareInterventionPDFViaWhatsApp(intervention);
+};
 
 interface InterventionCardProps {
   intervention: InterventionRequest;
@@ -20,7 +29,7 @@ interface InterventionCardProps {
   onDelete: (id: string) => void;
 }
 
-export const InterventionCard: React.FC<InterventionCardProps> = ({
+export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   intervention,
   currentRole,
   currentUserName,
@@ -378,6 +387,8 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                   <img
                     src={photo.url}
                     alt={photo.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -406,6 +417,8 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
                   <img
                     src={photo.url}
                     alt={photo.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -454,14 +467,14 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => downloadInterventionPDF(intervention)}
+                  onClick={() => handleDownloadPDF(intervention)}
                   className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-900/40 transition active:scale-95"
                 >
                   <FileDown className="w-3.5 h-3.5" />
                   <span>Interim PDF</span>
                 </button>
                 <button
-                  onClick={() => shareInterventionPDFViaWhatsApp(intervention)}
+                  onClick={() => handleSharePDF(intervention)}
                   className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow transition active:scale-95"
                   title="Share interim report directly via WhatsApp"
                 >
@@ -507,14 +520,14 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
             <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => downloadInterventionPDF(intervention)}
+                  onClick={() => handleDownloadPDF(intervention)}
                   className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition active:scale-95"
                 >
                   <FileDown className="w-3.5 h-3.5" />
                   <span>Download PDF</span>
                 </button>
                 <button
-                  onClick={() => shareInterventionPDFViaWhatsApp(intervention)}
+                  onClick={() => handleSharePDF(intervention)}
                   className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow transition active:scale-95"
                   title="Share official PDF Report directly via WhatsApp"
                 >
@@ -622,7 +635,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
           {/* Download PDF button if completed */}
           {isCompleted && (
             <button
-              onClick={() => downloadInterventionPDF(intervention)}
+              onClick={() => handleDownloadPDF(intervention)}
               className="p-1.5 rounded-lg bg-emerald-900/30 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 transition"
               title="Download PDF"
             >
@@ -636,4 +649,4 @@ export const InterventionCard: React.FC<InterventionCardProps> = ({
 
     </div>
   );
-};
+});
