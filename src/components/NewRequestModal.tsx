@@ -64,6 +64,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
   // Action steps checklist state
   const [actionSteps, setActionSteps] = useState<ActionStep[]>([]);
   const [newStepText, setNewStepText] = useState('');
+  const [focusStepId, setFocusStepId] = useState<string | null>(null);
 
   // Project Work Tracking State (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta, Prossimo step)
   const [whatIDid, setWhatIDid] = useState('');
@@ -105,16 +106,52 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
 
   const handleAddActionStep = () => {
     const trimmed = newStepText.trim();
-    if (!trimmed) return;
+    const newId = 'act_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+
+    if (trimmed) {
+      setActionSteps(prev => [
+        ...prev,
+        {
+          id: newId,
+          text: trimmed,
+          completed: false,
+        }
+      ]);
+      setNewStepText('');
+      return;
+    }
+
+    // If newStepText is empty, check if user typed in nextActionToDo above and clicked "+ Aggiungi"
+    if (nextActionToDo.trim() && !actionSteps.some(s => s.text === nextActionToDo.trim())) {
+      setActionSteps(prev => [
+        ...prev,
+        {
+          id: newId,
+          text: nextActionToDo.trim(),
+          completed: false,
+        }
+      ]);
+      return;
+    }
+
+    // Otherwise add an immediately editable blank row and focus it
     setActionSteps(prev => [
       ...prev,
       {
-        id: 'act_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-        text: trimmed,
+        id: newId,
+        text: '',
         completed: false,
       }
     ]);
-    setNewStepText('');
+    setFocusStepId(newId);
+  };
+
+  const handleUpdateActionStepText = (id: string, text: string) => {
+    setActionSteps(prev => prev.map(s => (s.id === id ? { ...s, text } : s)));
+  };
+
+  const handleToggleActionStepModal = (id: string) => {
+    setActionSteps(prev => prev.map(s => (s.id === id ? { ...s, completed: !s.completed } : s)));
   };
 
   const handleRemoveActionStep = (id: string) => {
@@ -164,8 +201,8 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
     const prefix = isProjectWork ? 'LAV' : 'INT';
     const projCode = proj ? `${prefix}-${proj.code}` : prefix;
 
-    // Include any pending text in newStepText if user didn't click "+"
-    const finalSteps = newStepText.trim()
+    // Include any pending text in newStepText if user didn't click "+" and filter out empty rows
+    const rawSteps = newStepText.trim()
       ? [
           ...actionSteps,
           {
@@ -175,6 +212,11 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
           }
         ]
       : actionSteps;
+    const finalSteps = rawSteps
+      .map(s => ({ ...s, text: s.text.trim() }))
+      .filter(s => s.text.length > 0);
+    const effectiveNextAction =
+      nextActionToDo.trim() || finalSteps.find(s => !s.completed)?.text || '';
 
     if (isProjectWork) {
       // Validation specific to Lavoro / Azione su Progetto
@@ -196,7 +238,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
           awaitingReply: Boolean(waitingReplyFrom.trim()),
           waitingReplyFrom: waitingReplyFrom.trim() || undefined,
           followUpDueDate: followUpDueDate || undefined,
-          nextStep: nextActionToDo.trim() || undefined,
+          nextStep: effectiveNextAction || undefined,
           referenceDoc: referenceDoc.trim() || undefined,
         }
       ];
@@ -212,7 +254,7 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
         lastActionDate: actionDate || new Date().toISOString().split('T')[0],
         waitingReplyFrom: waitingReplyFrom.trim() || undefined,
         followUpDueDate: followUpDueDate || undefined,
-        nextActionToDo: nextActionToDo.trim() || undefined,
+        nextActionToDo: effectiveNextAction || undefined,
         projectId: selectedProjectId,
         projectName: proj?.name || 'General',
         title: effectiveTitle,
@@ -610,17 +652,50 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
                   </div>
 
                   {actionSteps.length > 0 && (
-                    <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 pt-1">
                       {actionSteps.map((step, idx) => (
                         <div
                           key={step.id}
-                          className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-xs text-slate-200"
+                          className={`flex items-center gap-2 bg-slate-900 border px-2.5 py-1.5 rounded-lg text-xs transition ${
+                            step.completed
+                              ? 'border-emerald-700/50 bg-emerald-950/20'
+                              : 'border-indigo-500/40'
+                          }`}
                         >
-                          <span className="truncate"><strong className="text-indigo-400 font-mono mr-1.5">#{idx + 1}</strong>{step.text}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActionStepModal(step.id)}
+                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition ${
+                              step.completed
+                                ? 'bg-emerald-500 border-emerald-400 text-slate-950 font-bold'
+                                : 'border-slate-600 hover:border-indigo-400 text-transparent'
+                            }`}
+                            title="Spunta come completata"
+                          >
+                            ✓
+                          </button>
+                          <strong className="text-indigo-400 font-mono shrink-0">#{idx + 1}</strong>
+                          <input
+                            type="text"
+                            autoFocus={focusStepId === step.id}
+                            value={step.text}
+                            onChange={(e) => handleUpdateActionStepText(step.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddActionStep();
+                              }
+                            }}
+                            placeholder={`Scrivi qui l'azione #${idx + 1} da fare...`}
+                            className={`flex-1 bg-transparent border-none text-xs focus:outline-none ${
+                              step.completed ? 'line-through text-slate-400' : 'text-white placeholder-slate-500'
+                            }`}
+                          />
                           <button
                             type="button"
                             onClick={() => handleRemoveActionStep(step.id)}
-                            className="text-slate-500 hover:text-rose-400 p-0.5"
+                            className="text-slate-500 hover:text-rose-400 p-0.5 shrink-0"
+                            title="Rimuovi punto"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
