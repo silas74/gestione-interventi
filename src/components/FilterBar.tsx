@@ -13,7 +13,7 @@ interface FilterBarProps {
   completedCount?: number;
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({
+export const FilterBar: React.FC<FilterBarProps> = React.memo(({
   searchTerm,
   onSearchChange,
   statusFilter,
@@ -130,4 +130,4 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
     </div>
   );
-};
+});
