@@ -2,13 +2,22 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v2';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v3_panvac';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
 
-// 1. Initial Projects with Workbank Project
+// 1. Initial Projects with Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
+  {
+    id: 'proj-panvac',
+    code: 'PANVAC',
+    name: 'Panvac',
+    description: 'Impianti elettrici, quadri, media/bassa tensione, generazione e Low Voltage',
+    clientName: 'Aby',
+    siteAddress: 'Panvac Facility',
+    createdAt: '2026-10-01T08:00:00Z'
+  },
   {
     id: 'proj-workbank',
     code: 'WRKB',
@@ -195,8 +204,141 @@ const INITIAL_INTERVENTIONS: InterventionRequest[] = [
   }
 ];
 
+// Helper to create the 9 Panvac approval tracking items awaiting reply from Aby
+const PANVAC_APPROVAL_ITEMS: Array<{
+  num: string;
+  title: string;
+  whatIDid: string;
+  nextStep: string;
+  refDoc: string;
+}> = [
+  {
+    num: '001',
+    title: 'Approvazione LPR',
+    whatIDid: 'Inviata documentazione tecnica e scheda per approvazione sistema LPR.',
+    nextStep: 'Procedere con fornitura e installazione LPR dopo approvazione di Aby.',
+    refDoc: 'Submittal_LPR_Panvac.pdf'
+  },
+  {
+    num: '002',
+    title: 'Approvazione Cavi Class 1 e Class 2',
+    whatIDid: 'Inviate specifiche tecniche e schede cavi Class 1 e Class 2 per approvazione.',
+    nextStep: 'Procedere con ordine e posa cavi Class 1 e Class 2 dopo approvazione di Aby.',
+    refDoc: 'Spec_Cavi_Class1_Class2.pdf'
+  },
+  {
+    num: '003',
+    title: 'Approvazione Impianto di Terra',
+    whatIDid: 'Inviato progetto ed elaborati tecnici per approvazione Impianto di Terra.',
+    nextStep: 'Avviare esecuzione rete di terra dopo approvazione di Aby.',
+    refDoc: 'Schema_Impianto_Terra_Panvac.pdf'
+  },
+  {
+    num: '004',
+    title: 'Approvazione Generatore',
+    whatIDid: 'Inviata scheda tecnica e dimensionamento del Generatore per approvazione.',
+    nextStep: 'Confermare ordine e posizionamento Generatore dopo approvazione di Aby.',
+    refDoc: 'Submittal_Generatore_Panvac.pdf'
+  },
+  {
+    num: '005',
+    title: 'Approvazione AVS',
+    whatIDid: 'Inviata sottomissione tecnica e specifiche AVS (Stabilizzatore di Tensione) per approvazione.',
+    nextStep: 'Procedere con fornitura AVS dopo approvazione di Aby.',
+    refDoc: 'Submittal_AVS_Panvac.pdf'
+  },
+  {
+    num: '006',
+    title: 'Approvazione UPS',
+    whatIDid: 'Inviata documentazione tecnica e calcolo autonomia UPS per approvazione.',
+    nextStep: 'Confermare fornitura e installazione UPS dopo approvazione di Aby.',
+    refDoc: 'Submittal_UPS_Panvac.pdf'
+  },
+  {
+    num: '007',
+    title: 'Approvazione Trasformatore',
+    whatIDid: 'Inviata scheda tecnica e caratteristiche del Trasformatore per approvazione.',
+    nextStep: 'Procedere con approvvigionamento e posa Trasformatore dopo approvazione di Aby.',
+    refDoc: 'Submittal_Trasformatore_Panvac.pdf'
+  },
+  {
+    num: '008',
+    title: 'Approvazione Quadri Elettrici',
+    whatIDid: 'Inviati schemi unifilari, carpenteria e specifiche dei Quadri Elettrici per approvazione.',
+    nextStep: 'Avviare cablaggio e fornitura Quadri Elettrici dopo approvazione di Aby.',
+    refDoc: 'Schemi_Quadri_Elettrici_Panvac.pdf'
+  },
+  {
+    num: '009',
+    title: 'Approvazione Lista First Fix for Low Voltage',
+    whatIDid: 'Inviata Lista First Fix for Low Voltage (predisposizioni e tubazioni bassa tensione/speciali) per approvazione.',
+    nextStep: 'Avviare attività di First Fix Low Voltage in cantiere dopo approvazione di Aby.',
+    refDoc: 'First_Fix_List_Low_Voltage_Panvac.xlsx'
+  }
+];
+
+const PANVAC_INITIAL_WORKS: InterventionRequest[] = PANVAC_APPROVAL_ITEMS.map((item) => ({
+  id: `lav-panvac-${item.num}`,
+  code: `LAV-PANVAC-2026-${item.num}`,
+  recordType: 'project_work',
+  projectId: 'proj-panvac',
+  projectName: 'Panvac',
+  title: item.title,
+  siteName: 'Panvac Facility',
+  siteAddress: 'Panvac Site',
+  clientName: 'Aby',
+  clientContact: '',
+  description: item.whatIDid,
+  desiredAccessDate: '2026-10-21',
+  desiredAccessTime: '09:00',
+  priority: 'high',
+  defectPhotos: [],
+  notes: 'In attesa di approvazione da Aby.',
+  status: 'in_progress',
+  createdAt: '2026-10-21T09:00:00Z',
+  updatedAt: '2026-10-21T09:00:00Z',
+  assignedTechnician: 'Costantino',
+  whatIDidSummary: item.whatIDid,
+  followUpChannel: 'email',
+  lastActionDate: '2026-10-21',
+  waitingReplyFrom: 'Aby',
+  nextActionToDo: item.nextStep,
+  trackingLogs: [
+    {
+      id: `trk-panvac-${item.num}`,
+      date: '2026-10-21',
+      time: '09:30',
+      whatIDid: item.whatIDid,
+      channel: 'email',
+      awaitingReply: true,
+      waitingReplyFrom: 'Aby',
+      nextStep: item.nextStep,
+      referenceDoc: item.refDoc
+    }
+  ],
+  actionSteps: [
+    {
+      id: `act-panvac-${item.num}-1`,
+      text: `Inviata richiesta approvazione (${item.title.replace('Approvazione ', '')}) a Aby`,
+      completed: true,
+      completedAt: '2026-10-21T09:30:00Z'
+    },
+    {
+      id: `act-panvac-${item.num}-2`,
+      text: 'Ricezione approvazione / commenti da Aby',
+      completed: false
+    },
+    {
+      id: `act-panvac-${item.num}-3`,
+      text: item.nextStep,
+      completed: false
+    }
+  ]
+}));
+
 // 4. Initial Project Works & Action Items (Lavori & Azioni sui Progetti)
 const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
+  ...PANVAC_INITIAL_WORKS,
   {
     id: 'lav-wb-001',
     code: 'LAV-WRKB-2026-001',
@@ -359,7 +501,19 @@ export function fetchProjects(): Project[] {
       localStorage.setItem(STORAGE_PROJECTS, JSON.stringify(INITIAL_PROJECTS));
       return INITIAL_PROJECTS;
     }
-    return JSON.parse(raw);
+    const parsed: Project[] = JSON.parse(raw);
+    const hasPanvac = parsed.some(
+      p =>
+        p.id === 'proj-panvac' ||
+        p.name.toLowerCase().includes('panva') ||
+        p.code.toLowerCase().includes('panva')
+    );
+    if (!hasPanvac) {
+      const updated = [INITIAL_PROJECTS[0], ...parsed];
+      localStorage.setItem(STORAGE_PROJECTS, JSON.stringify(updated));
+      return updated;
+    }
+    return parsed;
   } catch {
     return INITIAL_PROJECTS;
   }
@@ -449,16 +603,31 @@ export function clearCurrentSession(): void {
 
 export async function fetchInterventions(): Promise<InterventionRequest[]> {
   try {
+    const projects = fetchProjects();
+    const panvacProj =
+      projects.find(
+        p =>
+          p.id === 'proj-panvac' ||
+          p.name.toLowerCase().includes('panva') ||
+          p.code.toLowerCase().includes('panva')
+      ) || INITIAL_PROJECTS[0];
+
+    const normalizedWorks = INITIAL_PROJECT_WORKS.map(w =>
+      w.projectId === 'proj-panvac'
+        ? { ...w, projectId: panvacProj.id, projectName: panvacProj.name }
+        : w
+    );
+
     const raw = localStorage.getItem(STORAGE_INTERVENTIONS);
     if (!raw) {
-      const combined = [...INITIAL_INTERVENTIONS, ...INITIAL_PROJECT_WORKS];
+      const combined = [... normalizedWorks, ...INITIAL_INTERVENTIONS];
       localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(combined));
       localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
       return combined;
     }
     const parsed: InterventionRequest[] = JSON.parse(raw);
     if (!localStorage.getItem(STORAGE_PROJECT_WORKS_SEEDED)) {
-      const sampleMap = new Map(INITIAL_PROJECT_WORKS.map(w => [w.id, w]));
+      const sampleMap = new Map(normalizedWorks.map(w => [w.id, w]));
       const existingIds = new Set(parsed.map(i => i.id));
       const upgraded = parsed.map(item => {
         const sample = sampleMap.get(item.id);
@@ -467,15 +636,15 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
         }
         return item;
       });
-      const missingSamples = INITIAL_PROJECT_WORKS.filter(w => !existingIds.has(w.id));
-      const merged = [...upgraded, ...missingSamples];
+      const missingSamples = normalizedWorks.filter(w => !existingIds.has(w.id));
+      const merged = [...missingSamples, ...upgraded];
       localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(merged));
       localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
       return merged;
     }
     return parsed;
   } catch {
-    return [...INITIAL_INTERVENTIONS, ...INITIAL_PROJECT_WORKS];
+    return [...INITIAL_PROJECT_WORKS, ...INITIAL_INTERVENTIONS];
   }
 }
 
