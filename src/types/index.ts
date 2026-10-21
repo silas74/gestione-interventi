@@ -10,6 +10,15 @@ export type InterventionStatus =
 
 export type InterventionPriority = 'low' | 'medium' | 'high' | 'urgent' | 'bassa' | 'media' | 'alta' | 'urgente';
 
+export type RecordCategory = 'intervention' | 'project_work';
+
+export interface ActionStep {
+  id: string;
+  text: string;
+  completed: boolean;
+  completedAt?: string;
+}
+
 export interface DefectPhoto {
   id: string;
   url: string; // base64 data url or cloud URL
@@ -44,7 +53,9 @@ export interface ClientFeedback {
 
 export interface InterventionRequest {
   id: string;
-  code: string; // e.g. INT-2026-WB1
+  code: string; // e.g. INT-2026-WB1 or LAV-2026-WB1
+  recordType?: RecordCategory; // 'intervention' (default) | 'project_work' (Lavori & Azioni su Progetto)
+  actionSteps?: ActionStep[];  // Checklist di azioni da fare sul progetto/lavoro
   projectId?: string;
   projectName?: string; // e.g. "Workbank"
   title: string;
