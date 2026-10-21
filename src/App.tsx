@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { 
-  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto 
+  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory 
 } from './types';
 import { 
   fetchInterventions, saveIntervention, deleteIntervention,
@@ -14,7 +14,7 @@ import { StatsCards } from './components/StatsCards';
 import { FilterBar } from './components/FilterBar';
 import { InterventionCard } from './components/InterventionCard';
 import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
-import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock } from 'lucide-react';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock, Wrench, ClipboardList } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
 import { verifySessionToken } from './lib/authSecurity';
 
@@ -35,6 +35,9 @@ export function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [interventions, setInterventions] = useState<InterventionRequest[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Main View Tab: 'intervention' (Interventi & Guasti) | 'project_work' (Lavori & Azioni Progetto)
+  const [activeCategoryTab, setActiveCategoryTab] = useState<RecordCategory>('intervention');
 
   // Active Project Filter: 'all' or project.id
   const [activeProjectId, setActiveProjectId] = useState<string>('proj-workbank');
@@ -183,12 +186,88 @@ export function App() {
     showToast('Project deleted.');
   };
 
-  // Intervention Handlers
+  // Intervention & Project Work Handlers
   const handleCreateIntervention = async (newReq: InterventionRequest) => {
     await saveIntervention(newReq);
     setInterventions(prev => [newReq, ...prev]);
-    showToast(`Request ${newReq.code} created for ${newReq.projectName || 'the project'}!`);
+    const targetCategory: RecordCategory = newReq.recordType === 'project_work' ? 'project_work' : 'intervention';
+    setActiveCategoryTab(targetCategory);
+    if (newReq.projectId && activeProjectId !== 'all' && activeProjectId !== newReq.projectId) {
+      setActiveProjectId(newReq.projectId);
+    }
+    showToast(
+      targetCategory === 'project_work'
+        ? `📋 Lavoro/Azione ${newReq.code} creato per ${newReq.projectName || 'il progetto'}!`
+        : `🛠️ Richiesta ${newReq.code} creata per ${newReq.projectName || 'il progetto'}!`
+    );
   };
+
+  // Interactive Action Steps Checklist Handlers
+  const handleToggleActionStep = useCallback(async (interventionId: string, stepId: string) => {
+    const item = interventions.find(i => i.id === interventionId);
+    if (!item || !item.actionSteps) return;
+
+    const updatedSteps = item.actionSteps.map(step =>
+      step.id === stepId
+        ? {
+            ...step,
+            completed: !step.completed,
+            completedAt: !step.completed ? new Date().toISOString() : undefined
+          }
+        : step
+    );
+
+    const anyCompleted = updatedSteps.some(s => s.completed);
+    let nextStatus = item.status;
+    if (anyCompleted && (item.status === 'pending' || item.status === 'in_attesa')) {
+      nextStatus = 'in_progress';
+    }
+
+    const updated: InterventionRequest = {
+      ...item,
+      actionSteps: updatedSteps,
+      status: nextStatus,
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+  }, [interventions]);
+
+  const handleAddActionStep = useCallback(async (interventionId: string, text: string) => {
+    const item = interventions.find(i => i.id === interventionId);
+    if (!item) return;
+
+    const newStep = {
+      id: 'act_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      text,
+      completed: false
+    };
+
+    const updated: InterventionRequest = {
+      ...item,
+      actionSteps: [...(item.actionSteps || []), newStep],
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+    showToast(`➕ Nuova azione aggiunta a ${item.code}`);
+  }, [interventions]);
+
+  const handleDeleteActionStep = useCallback(async (interventionId: string, stepId: string) => {
+    const item = interventions.find(i => i.id === interventionId);
+    if (!item || !item.actionSteps) return;
+
+    const updated: InterventionRequest = {
+      ...item,
+      actionSteps: item.actionSteps.filter(s => s.id !== stepId),
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+  }, [interventions]);
 
   const handleTakeCharge = useCallback(async (id: string, technicianName: string) => {
     const item = interventions.find(i => i.id === id);
@@ -445,13 +524,48 @@ export function App() {
     });
   }, [projects, currentUser, isAdmin]);
 
-  // Filter interventions by permissions + active project + search term (Memoized)
+  // Counts for the 2 main tabs (Interventi & Guasti vs Lavori & Azioni Progetto)
+  const categoryTabCounts = useMemo(() => {
+    if (!currentUser) return { interventionsTotal: 0, interventionsOpen: 0, worksTotal: 0, worksOpen: 0 };
+    const hasWildcard = isAdmin || currentUser.assignedProjectIds.includes('*');
+    let interventionsTotal = 0;
+    let interventionsOpen = 0;
+    let worksTotal = 0;
+    let worksOpen = 0;
+
+    for (let idx = 0; idx < interventions.length; idx++) {
+      const item = interventions[idx];
+      if (!hasWildcard && item.projectId && !currentUser.assignedProjectIds.includes(item.projectId)) {
+        continue;
+      }
+      if (activeProjectId !== 'all') {
+        if (item.projectId && item.projectId !== activeProjectId) continue;
+        if (!item.projectId && activeProjectId !== 'proj-workbank') continue;
+      }
+      const isWork = item.recordType === 'project_work';
+      const isDone = item.status === 'completed' || item.status === 'completato';
+      if (isWork) {
+        worksTotal++;
+        if (!isDone) worksOpen++;
+      } else {
+        interventionsTotal++;
+        if (!isDone) interventionsOpen++;
+      }
+    }
+    return { interventionsTotal, interventionsOpen, worksTotal, worksOpen };
+  }, [interventions, currentUser, isAdmin, activeProjectId]);
+
+  // Filter interventions by activeCategoryTab + permissions + active project + search term (Memoized)
   const filteredInterventions = useMemo(() => {
     if (!currentUser) return [];
     const q = searchTerm.trim().toLowerCase();
     const hasWildcard = isAdmin || currentUser.assignedProjectIds.includes('*');
 
     return interventions.filter(item => {
+      // 0. Main View Tab filter ('intervention' vs 'project_work')
+      const itemCategory: RecordCategory = item.recordType === 'project_work' ? 'project_work' : 'intervention';
+      if (itemCategory !== activeCategoryTab) return false;
+
       // 1. User permission for project
       if (!hasWildcard) {
         if (item.projectId && !currentUser.assignedProjectIds.includes(item.projectId)) {
@@ -479,13 +593,14 @@ export function App() {
           item.clientName.toLowerCase().includes(q) ||
           item.description.toLowerCase().includes(q) ||
           (item.projectName && item.projectName.toLowerCase().includes(q)) ||
-          (item.assignedTechnician && item.assignedTechnician.toLowerCase().includes(q));
+          (item.assignedTechnician && item.assignedTechnician.toLowerCase().includes(q)) ||
+          (item.actionSteps && item.actionSteps.some(s => s.text.toLowerCase().includes(q)));
         if (!match) return false;
       }
 
       return true;
     });
-  }, [interventions, currentUser, isAdmin, activeProjectId, searchTerm, onlyUrgent]);
+  }, [interventions, currentUser, isAdmin, activeCategoryTab, activeProjectId, searchTerm, onlyUrgent]);
 
   // ================= SINGLE-PASS TASK DIVISION (TO DO / IN PROGRESS / COMPLETED) =================
   const { pendingInterventions, inProgressInterventions, todoInterventions, completedInterventions } = useMemo(() => {
@@ -522,11 +637,14 @@ export function App() {
     };
   }, [filteredInterventions]);
 
-  // Precompute project ticket counts and statuses in a single O(N) pass
+  // Precompute project ticket counts and statuses in a single O(N) pass for the active tab
   const projectStatsMap = useMemo(() => {
     const map = new Map<string, { count: number; hasPending: boolean; hasInProgress: boolean; allResolved: boolean }>();
     for (let idx = 0; idx < interventions.length; idx++) {
       const item = interventions[idx];
+      const itemCategory: RecordCategory = item.recordType === 'project_work' ? 'project_work' : 'intervention';
+      if (itemCategory !== activeCategoryTab) continue;
+
       const pid = item.projectId;
       if (!pid) continue;
       let entry = map.get(pid);
@@ -546,7 +664,7 @@ export function App() {
       }
     }
     return map;
-  }, [interventions]);
+  }, [interventions, activeCategoryTab]);
 
   // If user is not authenticated, show Login screen
   if (!currentUser) {
@@ -657,6 +775,92 @@ export function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
+
+        {/* ================= MAIN VIEW SWITCHER: 1. INTERVENTI & GUASTI vs 2. LAVORI & AZIONI PROGETTO ================= */}
+        <div className="mb-4 sm:mb-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2 flex-1">
+            {/* TAB 1: INTERVENTI & GUASTI */}
+            <button
+              onClick={() => setActiveCategoryTab('intervention')}
+              className={`flex items-center justify-center sm:justify-start gap-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
+                activeCategoryTab === 'intervention'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400 shadow-lg shadow-blue-900/40'
+                  : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/70'
+              }`}
+            >
+              <Wrench className="w-4 h-4 shrink-0" />
+              <div className="text-left leading-tight">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span>Interventi & Guasti</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                    activeCategoryTab === 'intervention'
+                      ? 'bg-blue-950/80 text-blue-200 border border-blue-300/30'
+                      : 'bg-slate-800 text-slate-300'
+                  }`}>
+                    {categoryTabCounts.interventionsTotal}
+                  </span>
+                  {categoryTabCounts.interventionsOpen > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
+                      {categoryTabCounts.interventionsOpen} aperti
+                    </span>
+                  )}
+                </div>
+                <span className={`hidden md:block text-[10px] font-normal ${
+                  activeCategoryTab === 'intervention' ? 'text-blue-100' : 'text-slate-500'
+                }`}>
+                  Assistenza tecnica, chiamate guasto e riparazioni
+                </span>
+              </div>
+            </button>
+
+            {/* TAB 2: LAVORI & AZIONI PROGETTO */}
+            <button
+              onClick={() => setActiveCategoryTab('project_work')}
+              className={`flex items-center justify-center sm:justify-start gap-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
+                activeCategoryTab === 'project_work'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-indigo-400 shadow-lg shadow-indigo-900/40'
+                  : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/70'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4 shrink-0" />
+              <div className="text-left leading-tight">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span>Lavori & Azioni Progetto</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                    activeCategoryTab === 'project_work'
+                      ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-300/30'
+                      : 'bg-slate-800 text-slate-300'
+                  }`}>
+                    {categoryTabCounts.worksTotal}
+                  </span>
+                  {categoryTabCounts.worksOpen > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
+                      {categoryTabCounts.worksOpen} da fare
+                    </span>
+                  )}
+                </div>
+                <span className={`hidden md:block text-[10px] font-normal ${
+                  activeCategoryTab === 'project_work' ? 'text-indigo-100' : 'text-slate-500'
+                }`}>
+                  Lavori pianificati, attività di cantiere e checklist azioni sui progetti
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* Quick CTA for Active Tab */}
+          <button
+            onClick={() => setIsNewModalOpen(true)}
+            className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition active:scale-95 shrink-0 ${
+              activeCategoryTab === 'project_work'
+                ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/40'
+                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40'
+            }`}
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>{activeCategoryTab === 'project_work' ? '+ Nuovo Lavoro / Azione' : '+ Nuovo Intervento'}</span>
+          </button>
+        </div>
         
         {/* Project Selector Bar */}
         <div className="mb-4 sm:mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm">
@@ -833,12 +1037,16 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>TO DO & OPEN INTERVENTIONS</span>
+                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI DA FARE SUL PROGETTO' : 'TO DO & OPEN INTERVENTIONS'}</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-sm">
                       {statusFilter === 'all' ? todoInterventions.length : pendingInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-rose-300/80">Scheduled work, awaiting technician dispatch</p>
+                  <p className="text-[11px] text-rose-300/80">
+                    {activeCategoryTab === 'project_work'
+                      ? 'Attività di progetto, modifiche e azioni pianificate da iniziare'
+                      : 'Scheduled work, awaiting technician dispatch'}
+                  </p>
                 </div>
               </div>
 
@@ -847,7 +1055,7 @@ export function App() {
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow transition active:scale-95"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Add Defect</span>
+                <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : 'Add Defect'}</span>
               </button>
             </div>
 
@@ -869,6 +1077,9 @@ export function App() {
                     onOpenFeedbackModal={handleOpenFeedbackModal}
                     onPreviewPhoto={handlePreviewPhoto}
                     onDelete={handleDelete}
+                    onToggleActionStep={handleToggleActionStep}
+                    onAddActionStep={handleAddActionStep}
+                    onDeleteActionStep={handleDeleteActionStep}
                   />
                 ))}
               </div>
@@ -887,7 +1098,7 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>IN PROGRESS & WAITING FOR PARTS</span>
+                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI IN CORSO / ATTESA RICAMBI' : 'IN PROGRESS & WAITING FOR PARTS'}</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-600 text-white shadow-sm">
                       {inProgressInterventions.length}
                     </span>
@@ -915,6 +1126,9 @@ export function App() {
                     onOpenFeedbackModal={handleOpenFeedbackModal}
                     onPreviewPhoto={handlePreviewPhoto}
                     onDelete={handleDelete}
+                    onToggleActionStep={handleToggleActionStep}
+                    onAddActionStep={handleAddActionStep}
+                    onDeleteActionStep={handleDeleteActionStep}
                   />
                 ))}
               </div>
@@ -933,7 +1147,7 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>COMPLETED INTERVENTIONS</span>
+                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI PROGETTO COMPLETATI' : 'COMPLETED INTERVENTIONS'}</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-extrabold shadow-sm">
                       {completedInterventions.length}
                     </span>
@@ -970,6 +1184,9 @@ export function App() {
                     onOpenFeedbackModal={handleOpenFeedbackModal}
                     onPreviewPhoto={handlePreviewPhoto}
                     onDelete={handleDelete}
+                    onToggleActionStep={handleToggleActionStep}
+                    onAddActionStep={handleAddActionStep}
+                    onDeleteActionStep={handleDeleteActionStep}
                   />
                 ))}
               </div>
@@ -995,6 +1212,7 @@ export function App() {
             existingInterventions={interventions}
             projects={visibleProjects}
             defaultProjectId={activeProjectId !== 'all' ? activeProjectId : undefined}
+            defaultRecordType={activeCategoryTab}
             onAddNewProject={isAdmin ? () => {
               setIsNewModalOpen(false);
               setOpenProjectCreateDirectly(true);
