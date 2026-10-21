@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload, Trash2, Calendar, Clock, AlertTriangle, Building2, User, Phone, FileText, FolderKanban } from 'lucide-react';
 import { InterventionRequest, InterventionPriority, DefectPhoto, Project } from '../types';
 import { generateNextCode } from '../lib/storage';
+import { compressAndProcessImage } from '../lib/photoUtils';
 
 interface NewRequestModalProps {
   isOpen: boolean;
@@ -66,37 +67,22 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
 
     const files = Array.from(e.target.files);
-    let processed = 0;
-    const newPhotos: DefectPhoto[] = [];
-
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          newPhotos.push({
-            id: 'photo_' + Math.random().toString(36).substring(2, 9),
-            url: event.target.result as string,
-            name: file.name,
-            uploadedAt: new Date().toISOString()
-          });
-        }
-        processed++;
-        if (processed === files.length) {
-          setDefectPhotos(prev => [...prev, ...newPhotos]);
-          setUploading(false);
-        }
-      };
-      reader.onerror = () => {
-        processed++;
-        if (processed === files.length) setUploading(false);
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      const newPhotos = await Promise.all(
+        files.map((file) => compressAndProcessImage(file))
+      );
+      setDefectPhotos(prev => [...prev, ...newPhotos]);
+    } catch (err) {
+      console.error('Error compressing defect photos:', err);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const handleRemovePhoto = (id: string) => {
