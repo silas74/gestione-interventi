@@ -2,13 +2,22 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v6_eagle_hills';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v7_awash';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
 
-// 1. Initial Projects with Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
+// 1. Initial Projects with Awash Bank, Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
+  {
+    id: 'proj-awash-bank',
+    code: 'AWASH',
+    name: 'Awash Bank',
+    description: 'Impianto rilevamento CO Parking Area, sistemi Urmet e impianti tecnologici',
+    clientName: 'Awash Bank / Dodic',
+    siteAddress: 'Awash Bank Building — Parking Area & Floors',
+    createdAt: '2026-10-21T09:00:00Z'
+  },
   {
     id: 'proj-eagle-hills',
     code: 'EAGLE',
@@ -667,8 +676,127 @@ const EAGLE_HILLS_INITIAL_WORKS: InterventionRequest[] = [
   }
 ];
 
+// Helper for Awash Bank tracking items
+const AWASH_BANK_INITIAL_WORKS: InterventionRequest[] = [
+  {
+    id: 'lav-awash-001',
+    code: 'LAV-AWASH-2026-001',
+    recordType: 'project_work',
+    projectId: 'proj-awash-bank',
+    projectName: 'Awash Bank',
+    title: 'Materiale Rilevamento CO per Parking Area (Ritiro da Dodic)',
+    siteName: 'Awash Bank — Parking Area',
+    siteAddress: 'Awash Bank Building',
+    clientName: 'Dodic',
+    clientContact: '',
+    description: 'Ordinato il materiale per il sistema di rilevamento CO sulla Parking Area. Il materiale deve essere ritirato da Dodic.',
+    desiredAccessDate: '2026-10-21',
+    desiredAccessTime: '09:00',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Materiale rilevamento CO Parking Area ordinato — deve essere ritirato da Dodic.',
+    status: 'in_progress',
+    createdAt: '2026-10-21T09:00:00Z',
+    updatedAt: '2026-10-21T09:00:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Ordinato il materiale per il rilevamento CO sulla Parking Area. Deve essere ritirato da Dodic.',
+    followUpChannel: 'phone',
+    lastActionDate: '2026-10-21',
+    waitingReplyFrom: 'Dodic (Ritiro materiale rilevamento CO)',
+    nextActionToDo: 'Ritiro del materiale per rilevamento CO da parte di Dodic e consegna in cantiere (Parking Area).',
+    trackingLogs: [
+      {
+        id: 'trk-awash-001-1',
+        date: '2026-10-21',
+        time: '09:30',
+        whatIDid: 'Ordinato il materiale per il rilevamento CO sulla Parking Area. Da ritirare da Dodic.',
+        channel: 'phone',
+        awaitingReply: true,
+        waitingReplyFrom: 'Dodic (Ritiro materiale rilevamento CO)',
+        nextStep: 'Ritiro materiale da Dodic e avvio installazione rilevamento CO nella Parking Area.'
+      }
+    ],
+    actionSteps: [
+      {
+        id: 'act-awash-001-1',
+        text: 'Ordinato materiale per rilevamento CO sulla Parking Area',
+        completed: true,
+        completedAt: '2026-10-21T09:30:00Z'
+      },
+      {
+        id: 'act-awash-001-2',
+        text: 'Ritiro del materiale da parte di Dodic',
+        completed: false
+      },
+      {
+        id: 'act-awash-001-3',
+        text: 'Installazione e collaudo impianto rilevamento CO in Parking Area',
+        completed: false
+      }
+    ]
+  },
+  {
+    id: 'lav-awash-002',
+    code: 'LAV-AWASH-2026-002',
+    recordType: 'project_work',
+    projectId: 'proj-awash-bank',
+    projectName: 'Awash Bank',
+    title: 'Fornitura Materiale Urmet (In Arrivo)',
+    siteName: 'Awash Bank',
+    siteAddress: 'Awash Bank Building',
+    clientName: 'Fornitore Urmet',
+    clientContact: '',
+    description: 'Ordinato materiale Urmet per Awash Bank — materiale attualmente in arrivo.',
+    desiredAccessDate: '2026-10-21',
+    desiredAccessTime: '09:30',
+    priority: 'medium',
+    defectPhotos: [],
+    notes: 'Materiale Urmet ordinato ed in arrivo.',
+    status: 'in_progress',
+    createdAt: '2026-10-21T09:30:00Z',
+    updatedAt: '2026-10-21T09:30:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Ordinato materiale Urmet per Awash Bank — il materiale è attualmente in arrivo.',
+    followUpChannel: 'email',
+    lastActionDate: '2026-10-21',
+    waitingReplyFrom: 'Fornitore / Spedizione (Arrivo materiale Urmet)',
+    nextActionToDo: 'Attendere consegna del materiale Urmet in arrivo e procedere con installazione.',
+    trackingLogs: [
+      {
+        id: 'trk-awash-002-1',
+        date: '2026-10-21',
+        time: '09:45',
+        whatIDid: 'Ordinato materiale Urmet per il progetto Awash Bank — spedizione / materiale in arrivo.',
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: 'Fornitore / Spedizione (Arrivo materiale Urmet)',
+        nextStep: 'Verifica merce all\'arrivo e avvio installazione Urmet.'
+      }
+    ],
+    actionSteps: [
+      {
+        id: 'act-awash-002-1',
+        text: 'Ordinato materiale Urmet per Awash Bank',
+        completed: true,
+        completedAt: '2026-10-21T09:45:00Z'
+      },
+      {
+        id: 'act-awash-002-2',
+        text: 'Arrivo e ricezione materiale Urmet',
+        completed: false
+      },
+      {
+        id: 'act-awash-002-3',
+        text: 'Installazione e messa in funzione sistema Urmet',
+        completed: false
+      }
+    ]
+  }
+];
+
 // 4. Initial Project Works & Action Items (Lavori & Azioni sui Progetti)
 const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
+  ...AWASH_BANK_INITIAL_WORKS,
   ...EAGLE_HILLS_INITIAL_WORKS,
   ...HILTON_INITIAL_WORKS,
   ...PANVAC_INITIAL_WORKS,
@@ -771,6 +899,20 @@ export function fetchProjects(): Project[] {
       const eagleDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-eagle-hills');
       if (eagleDefault) {
         parsed = [eagleDefault, ...parsed];
+        modified = true;
+      }
+    }
+
+    const hasAwash = parsed.some(
+      p =>
+        p.id === 'proj-awash-bank' ||
+        p.name.toLowerCase().includes('awash') ||
+        p.code.toLowerCase().includes('awash')
+    );
+    if (!hasAwash) {
+      const awashDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-awash-bank');
+      if (awashDefault) {
+        parsed = [awashDefault, ...parsed];
         modified = true;
       }
     }
@@ -893,6 +1035,14 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
           p.code.toLowerCase().includes('eagle')
       ) || INITIAL_PROJECTS.find(p => p.id === 'proj-eagle-hills')!;
 
+    const awashProj =
+      projects.find(
+        p =>
+          p.id === 'proj-awash-bank' ||
+          p.name.toLowerCase().includes('awash') ||
+          p.code.toLowerCase().includes('awash')
+      ) || INITIAL_PROJECTS.find(p => p.id === 'proj-awash-bank')!;
+
     const normalizedWorks = INITIAL_PROJECT_WORKS.map(w => {
       if (w.projectId === 'proj-panvac') {
         return { ...w, projectId: panvacProj.id, projectName: panvacProj.name };
@@ -902,6 +1052,9 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
       }
       if (w.projectId === 'proj-eagle-hills') {
         return { ...w, projectId: eagleProj.id, projectName: eagleProj.name };
+      }
+      if (w.projectId === 'proj-awash-bank') {
+        return { ...w, projectId: awashProj.id, projectName: awashProj.name };
       }
       return w;
     });
