@@ -548,6 +548,46 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
+
+                  {/* Screenshot quick attach / Ctrl+V preview */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-indigo-300">
+                        📸 Screenshot ({defectPhotos.length})
+                      </label>
+                      <label
+                        htmlFor="work-screenshot-upload"
+                        className="cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-[10px] font-bold text-indigo-200 transition"
+                      >
+                        <Upload className="w-3 h-3" />
+                        <span>{uploading ? 'Caricamento...' : '+ Carica o premi Ctrl+V'}</span>
+                      </label>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        id="work-screenshot-upload"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                    {defectPhotos.length > 0 && (
+                      <div className="flex items-center gap-2 overflow-x-auto pt-1">
+                        {defectPhotos.map((photo) => (
+                          <div key={photo.id} className="relative group w-12 h-12 rounded-lg overflow-hidden border border-indigo-500/50 bg-slate-900 shrink-0">
+                            <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(photo.id)}
+                              className="absolute top-0.5 right-0.5 p-0.5 rounded bg-rose-600/90 text-white opacity-0 group-hover:opacity-100 transition"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -848,10 +888,10 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = ({
                 </div>
               </div>
 
-              {/* Photo Upload */}
+              {/* Photo / Screenshot Upload */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Defect Photos / Images (optional)
+                  Screenshot / Photos (optional)
                 </label>
                 <div className="border-2 border-dashed border-slate-700 hover:border-blue-500/70 rounded-xl p-4 text-center transition bg-slate-800/40">
                   <input
