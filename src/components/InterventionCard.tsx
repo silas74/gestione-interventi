@@ -260,105 +260,161 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           {intervention.title}
         </h3>
 
-        {/* Site & Client Meta info */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 p-3 rounded-xl border ${
-          isCompleted
-            ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-100/90'
-            : isWaitingForParts
-              ? 'bg-pink-950/25 border-pink-800/40 text-pink-100/95 shadow-sm shadow-pink-950/20'
-              : 'bg-rose-950/20 border-rose-900/40 text-rose-100/90'
-        }`}>
-          <div className="flex items-start gap-1.5">
-            <MapPin className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
-              isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
-            }`} />
-            <div>
-              <span className="font-semibold text-white">{intervention.siteName}</span>
-              {intervention.siteAddress && (
-                <div className="text-[11px] text-slate-400">{intervention.siteAddress}</div>
-              )}
-            </div>
-          </div>
+        {!isProjectWork && (
+          <>
+            {/* Site & Client Meta info (Only for Interventi / Guasti) */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 p-3 rounded-xl border ${
+              isCompleted
+                ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-100/90'
+                : isWaitingForParts
+                  ? 'bg-pink-950/25 border-pink-800/40 text-pink-100/95 shadow-sm shadow-pink-950/20'
+                  : 'bg-rose-950/20 border-rose-900/40 text-rose-100/90'
+            }`}>
+              <div className="flex items-start gap-1.5">
+                <MapPin className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+                  isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                }`} />
+                <div>
+                  <span className="font-semibold text-white">{intervention.siteName}</span>
+                  {intervention.siteAddress && (
+                    <div className="text-[11px] text-slate-400">{intervention.siteAddress}</div>
+                  )}
+                </div>
+              </div>
 
-          <div className="flex flex-col justify-between">
-            <div className="flex items-start gap-1.5">
-              <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
-                isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
-              }`} />
-              <div className="min-w-0">
-                <span className="font-semibold text-white truncate block">{intervention.clientName}</span>
+              <div className="flex flex-col justify-between">
+                <div className="flex items-start gap-1.5">
+                  <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+                    isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                  }`} />
+                  <div className="min-w-0">
+                    <span className="font-semibold text-white truncate block">{intervention.clientName}</span>
+                    {intervention.clientContact && (
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                        <Phone className="w-2.5 h-2.5 shrink-0" />
+                        <span className="truncate">{intervention.clientContact}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Call & Direct WhatsApp Action Buttons */}
                 {intervention.clientContact && (
-                  <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
-                    <Phone className="w-2.5 h-2.5 shrink-0" />
-                    <span className="truncate">{intervention.clientContact}</span>
+                  <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-800/60 flex-wrap">
+                    {getTelUri(intervention.clientContact) && (
+                      <a
+                        href={getTelUri(intervention.clientContact)!}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                        title={`Direct Call: ${intervention.clientContact}`}
+                      >
+                        <PhoneCall className="w-3 h-3 text-blue-400" />
+                        <span>Call</span>
+                      </a>
+                    )}
+                    <a
+                      href={getClientWhatsAppUri(intervention)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                      title={`Direct WhatsApp chat with ${intervention.clientName}`}
+                    >
+                      <MessageCircle className="w-3 h-3 text-emerald-400" />
+                      <span>WhatsApp</span>
+                    </a>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Quick Call & Direct WhatsApp Action Buttons */}
-            {intervention.clientContact && (
-              <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-800/60 flex-wrap">
-                {getTelUri(intervention.clientContact) && (
-                  <a
-                    href={getTelUri(intervention.clientContact)!}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition active:scale-95 shadow-sm"
-                    title={`Direct Call: ${intervention.clientContact}`}
-                  >
-                    <PhoneCall className="w-3 h-3 text-blue-400" />
-                    <span>Call</span>
-                  </a>
-                )}
-                <a
-                  href={getClientWhatsAppUri(intervention)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition active:scale-95 shadow-sm"
-                  title={`Direct WhatsApp chat with ${intervention.clientName}`}
-                >
-                  <MessageCircle className="w-3 h-3 text-emerald-400" />
-                  <span>WhatsApp</span>
-                </a>
+            {/* Desired Access Date & Time */}
+            <div className="flex items-center gap-3 text-xs mb-3">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+                isCompleted 
+                  ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
+                  : isWaitingForParts
+                    ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
+                    : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
+              }`}>
+                <Calendar className={`w-3.5 h-3.5 ${
+                  isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                }`} />
+                <span>Date: <strong>{intervention.desiredAccessDate}</strong></span>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Desired Access Date & Time */}
-        <div className="flex items-center gap-3 text-xs mb-3">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-            isCompleted 
-              ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
-              : isWaitingForParts
-                ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
-                : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
-          }`}>
-            <Calendar className={`w-3.5 h-3.5 ${
-              isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
-            }`} />
-            <span>Date: <strong>{intervention.desiredAccessDate}</strong></span>
-          </div>
-          {intervention.desiredAccessTime && (
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-              isCompleted 
-                ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
-                : isWaitingForParts
-                  ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
-                  : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
-            }`}>
-              <Clock className={`w-3.5 h-3.5 ${
-                isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
-              }`} />
-              <span>Time: <strong>{intervention.desiredAccessTime}</strong></span>
+              {intervention.desiredAccessTime && (
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+                  isCompleted 
+                    ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
+                    : isWaitingForParts
+                      ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
+                      : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
+                }`}>
+                  <Clock className={`w-3.5 h-3.5 ${
+                    isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                  }`} />
+                  <span>Time: <strong>{intervention.desiredAccessTime}</strong></span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Description */}
-        <div className="text-xs text-slate-300 mb-3 leading-relaxed">
-          <span className="font-semibold text-slate-200">Task details: </span>
-          <span>{intervention.description}</span>
-        </div>
+            {/* Description */}
+            <div className="text-xs text-slate-300 mb-3 leading-relaxed">
+              <span className="font-semibold text-slate-200">Task details: </span>
+              <span>{intervention.description}</span>
+            </div>
+          </>
+        )}
+
+        {/* Dedicated Quick Summary Header for Lavori & Azioni Progetto */}
+        {isProjectWork && (
+          <div className="mb-3 p-3 rounded-xl bg-indigo-950/25 border border-indigo-800/50 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 text-indigo-200 border border-indigo-700/50 font-mono text-[11px]">
+                  <Calendar className="w-3 h-3 text-indigo-400" />
+                  <span>Data: <strong>{intervention.lastActionDate || intervention.desiredAccessDate}</strong></span>
+                </span>
+                {intervention.followUpChannel && (
+                  <span className={`px-2 py-0.5 rounded-md border font-bold text-[11px] flex items-center gap-1 ${getChannelBadgeInfo(intervention.followUpChannel).cls}`}>
+                    {intervention.followUpChannel === 'email' && <Mail className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'whatsapp' && <MessageCircle className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'phone' && <Phone className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'on_site' && <Wrench className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'meeting' && <User className="w-3 h-3" />}
+                    <span>{getChannelBadgeInfo(intervention.followUpChannel).label}</span>
+                  </span>
+                )}
+              </div>
+
+              {intervention.clientContact && (
+                <div className="flex items-center gap-1.5">
+                  {getTelUri(intervention.clientContact) && (
+                    <a
+                      href={getTelUri(intervention.clientContact)!}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition"
+                    >
+                      <PhoneCall className="w-3 h-3 text-blue-400" />
+                      <span>Chiama</span>
+                    </a>
+                  )}
+                  <a
+                    href={getClientWhatsAppUri(intervention)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition"
+                  >
+                    <MessageCircle className="w-3 h-3 text-emerald-400" />
+                    <span>WhatsApp</span>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="text-slate-200 leading-relaxed">
+              <strong className="text-indigo-300">🛠️ Cosa ho fatto / Attività: </strong>
+              <span>{intervention.whatIDidSummary || intervention.description}</span>
+            </div>
+          </div>
+        )}
 
         {/* Notes (Multiline) */}
         {intervention.notes && (
