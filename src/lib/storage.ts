@@ -2,7 +2,7 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v4_hilton';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v5_clean';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
@@ -544,110 +544,6 @@ const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
   ...HILTON_INITIAL_WORKS,
   ...PANVAC_INITIAL_WORKS,
   {
-    id: 'lav-wb-001',
-    code: 'LAV-WRKB-2026-001',
-    recordType: 'project_work',
-    projectId: 'proj-workbank',
-    projectName: 'Workbank',
-    title: 'Mappatura Indirizzi di Gruppo ETS e Backup Progetto KNX Piano 1-2',
-    siteName: 'Workbank - Quadri Elettrici & Open Space',
-    siteAddress: 'Corporate Office Building, Milan',
-    clientName: 'Mario Rossi',
-    clientContact: '+39 347 8877665',
-    description: 'Verifica completa della topologia di linea KNX/DALI, esportazione file .knxproj aggiornato, etichettatura moduli in quadro e test scenari centralizzati fine giornata.',
-    desiredAccessDate: '2026-10-22',
-    desiredAccessTime: '09:00',
-    priority: 'high',
-    defectPhotos: [],
-    notes: 'Salvare copia del progetto ETS6 nella cartella condivisa del cantiere.',
-    status: 'in_progress',
-    createdAt: '2026-10-18T09:00:00Z',
-    updatedAt: '2026-10-20T14:30:00Z',
-    assignedTechnician: 'Costantino',
-    whatIDidSummary: 'Completata scansione Linea 1.1/1.2 e inviato riepilogo indirizzi DALI per approvazione.',
-    followUpChannel: 'email',
-    lastActionDate: '2026-10-20',
-    waitingReplyFrom: 'Mario Rossi / Direzione Tecnica Workbank',
-    followUpDueDate: '2026-10-23',
-    nextActionToDo: 'Configurare scenario spegnimento generale appena confermata lista orari.',
-    trackingLogs: [
-      {
-        id: 'trk-wb-101',
-        date: '2026-10-19',
-        time: '11:30',
-        whatIDid: 'Eseguita scansione bus KNX Linea 1.1 e 1.2 in cantiere e verificata tensione alimentatori.',
-        channel: 'on_site',
-        awaitingReply: false,
-        nextStep: 'Controllare gateway DALI Piano 1',
-        referenceDoc: 'Report_Topologia_ETS6.pdf'
-      },
-      {
-        id: 'trk-wb-102',
-        date: '2026-10-20',
-        time: '16:45',
-        whatIDid: 'Inviata tabella gruppi DALI e proposta orari scenario spegnimento automatico serale.',
-        channel: 'email',
-        awaitingReply: true,
-        waitingReplyFrom: 'Mario Rossi / Direzione Tecnica Workbank',
-        followUpDueDate: '2026-10-23',
-        nextStep: 'Programmare timer spegnimento su supervisore dopo conferma',
-        referenceDoc: 'Tabella_Gruppi_DALI_rev2.xlsx'
-      }
-    ],
-    actionSteps: [
-      { id: 'act-1', text: 'Scansione dispositivi su bus KNX Linea 1.1 e 1.2', completed: true, completedAt: '2026-10-19T11:00:00Z' },
-      { id: 'act-2', text: 'Verifica indirizzamento gateway DALI e gruppi corpi illuminanti', completed: true, completedAt: '2026-10-20T14:00:00Z' },
-      { id: 'act-3', text: 'Test comando spegnimento generale e feedback stato su supervisore', completed: false },
-      { id: 'act-4', text: 'Esportazione backup finale .knxproj e consegna documentazione tecnica', completed: false }
-    ]
-  },
-  {
-    id: 'lav-wb-002',
-    code: 'LAV-WRKB-2026-002',
-    recordType: 'project_work',
-    projectId: 'proj-workbank',
-    projectName: 'Workbank',
-    title: 'Taratura curve di regolazione Lux e tempi di presenza sale riunioni',
-    siteName: 'Workbank - Executive Meeting Rooms',
-    siteAddress: 'Corporate Office Building, Milan',
-    clientName: 'Mario Rossi',
-    clientContact: '+39 347 8877665',
-    description: 'Ottimizzazione dei parametri di luminosità costante (500 lux su piano di lavoro) e configurazione timer presenza a 15 minuti nelle 4 sale riunioni direzionali.',
-    desiredAccessDate: '2026-10-24',
-    desiredAccessTime: '08:30',
-    priority: 'medium',
-    defectPhotos: [],
-    notes: 'Portare luxmetro digitale certificato per calibrazione sensori.',
-    status: 'pending',
-    createdAt: '2026-10-19T10:30:00Z',
-    updatedAt: '2026-10-20T18:00:00Z',
-    assignedTechnician: 'Costantino',
-    whatIDidSummary: 'Richiesta disponibilità sale riunioni Board A e B via WhatsApp per test fotometrico.',
-    followUpChannel: 'whatsapp',
-    lastActionDate: '2026-10-20',
-    waitingReplyFrom: 'Segreteria Direzione / Facility Manager',
-    followUpDueDate: '2026-10-22',
-    nextActionToDo: 'Eseguire taratura 500 lux con luxmetro appena confermata fascia oraria sale libere.',
-    trackingLogs: [
-      {
-        id: 'trk-wb-201',
-        date: '2026-10-20',
-        time: '17:50',
-        whatIDid: 'Scritto messaggio WhatsApp con proposta intervento giovedì mattina ore 08:30 prima delle riunioni.',
-        channel: 'whatsapp',
-        awaitingReply: true,
-        waitingReplyFrom: 'Segreteria Direzione / Facility Manager',
-        followUpDueDate: '2026-10-22',
-        nextStep: 'Accesso sale riunioni per calibrazione sensori EyeZen'
-      }
-    ],
-    actionSteps: [
-      { id: 'act-201', text: 'Misura lux con luce naturale e artificiale in Sala Board A & B', completed: false },
-      { id: 'act-202', text: 'Impostazione setpoint 500 lux e soglia minima dimming 15%', completed: false },
-      { id: 'act-203', text: 'Collaudo pulsante forzatura manuale e ritorno in automatico', completed: false }
-    ]
-  },
-  {
     id: 'lav-log-001',
     code: 'LAV-LOG-N-2026-001',
     recordType: 'project_work',
@@ -864,10 +760,28 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
       return combined;
     }
     const parsed: InterventionRequest[] = JSON.parse(raw);
+    // Filter out any project_work items for Dendi or Workbank as requested
+    const cleanedParsed = parsed.filter(item => {
+      if (item.recordType === 'project_work') {
+        const pName = (item.projectName || '').toLowerCase();
+        if (
+          item.id === 'lav-wb-001' ||
+          item.id === 'lav-wb-002' ||
+          item.projectId === 'proj-workbank' ||
+          pName.includes('workbank') ||
+          pName.includes('wordbank') ||
+          pName.includes('dendi')
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+
     if (!localStorage.getItem(STORAGE_PROJECT_WORKS_SEEDED)) {
       const sampleMap = new Map(normalizedWorks.map(w => [w.id, w]));
-      const existingIds = new Set(parsed.map(i => i.id));
-      const upgraded = parsed.map(item => {
+      const existingIds = new Set(cleanedParsed.map(i => i.id));
+      const upgraded = cleanedParsed.map(item => {
         const sample = sampleMap.get(item.id);
         if (sample && (!item.trackingLogs || item.trackingLogs.length === 0)) {
           return { ...sample, ...item, trackingLogs: sample.trackingLogs, waitingReplyFrom: sample.waitingReplyFrom, followUpChannel: sample.followUpChannel, lastActionDate: sample.lastActionDate, whatIDidSummary: sample.whatIDidSummary, nextActionToDo: sample.nextActionToDo, followUpDueDate: sample.followUpDueDate };
@@ -880,7 +794,10 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
       localStorage.setItem(STORAGE_PROJECT_WORKS_SEEDED, 'true');
       return merged;
     }
-    return parsed;
+    if (cleanedParsed.length !== parsed.length) {
+      localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(cleanedParsed));
+    }
+    return cleanedParsed;
   } catch {
     return [...INITIAL_PROJECT_WORKS, ...INITIAL_INTERVENTIONS];
   }
