@@ -2,13 +2,22 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v5_clean';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v6_eagle_hills';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
 
-// 1. Initial Projects with Hilton (GIAA), Panvac & Workbank Projects
+// 1. Initial Projects with Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
+  {
+    id: 'proj-eagle-hills',
+    code: 'EAGLE',
+    name: 'Eagle Hills',
+    description: 'Automazione BMS, impianti elettrici (Electrical), Water Report e automazioni porte',
+    clientName: 'Henok & Mike',
+    siteAddress: 'Eagle Hills Compound',
+    createdAt: '2026-10-20T09:00:00Z'
+  },
   {
     id: 'proj-hilton',
     code: 'HILTON',
@@ -539,8 +548,128 @@ const HILTON_INITIAL_WORKS: InterventionRequest[] = HILTON_ELECTRICAL_ITEMS.map(
   }))
 }));
 
+// Helper for Eagle Hills / Heagle Hills tracking items
+const EAGLE_HILLS_INITIAL_WORKS: InterventionRequest[] = [
+  {
+    id: 'lav-eagle-001',
+    code: 'LAV-EAGLE-2026-001',
+    recordType: 'project_work',
+    projectId: 'proj-eagle-hills',
+    projectName: 'Eagle Hills',
+    title: 'Alimentatore Porta Scorrevole',
+    siteName: 'Eagle Hills Facility',
+    siteAddress: 'Eagle Hills Compound',
+    clientName: 'Franco',
+    clientContact: '+39 335 9988776',
+    description: 'Ordinato a voce a Franco ieri (20/10/2026) l\'alimentatore per la porta scorrevole.',
+    desiredAccessDate: '2026-10-20',
+    desiredAccessTime: '11:00',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Ordinato a voce a Franco il 20/10/2026.',
+    status: 'in_progress',
+    createdAt: '2026-10-20T11:00:00Z',
+    updatedAt: '2026-10-21T09:00:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Ordinato a voce a Franco ieri (20/10/2026) l\'alimentatore per la porta scorrevole.',
+    followUpChannel: 'phone',
+    lastActionDate: '2026-10-20',
+    waitingReplyFrom: 'Franco',
+    nextActionToDo: 'Ricevere alimentatore porta scorrevole da Franco e procedere con installazione e collaudo.',
+    trackingLogs: [
+      {
+        id: 'trk-eagle-001-1',
+        date: '2026-10-20',
+        time: '11:00',
+        whatIDid: 'Ordinato a voce a Franco l\'alimentatore per la porta scorrevole.',
+        channel: 'phone',
+        awaitingReply: true,
+        waitingReplyFrom: 'Franco',
+        nextStep: 'Ricevere alimentatore da Franco e procedere con sostituzione/collaudo porta scorrevole.'
+      }
+    ],
+    actionSteps: [
+      {
+        id: 'act-eagle-001-1',
+        text: 'Ordinato alimentatore porta scorrevole a voce a Franco (20/10/2026)',
+        completed: true,
+        completedAt: '2026-10-20T11:00:00Z'
+      },
+      {
+        id: 'act-eagle-001-2',
+        text: 'Conferma arrivo / consegna alimentatore da Franco',
+        completed: false
+      },
+      {
+        id: 'act-eagle-001-3',
+        text: 'Installazione e collaudo alimentatore porta scorrevole',
+        completed: false
+      }
+    ]
+  },
+  {
+    id: 'lav-eagle-002',
+    code: 'LAV-EAGLE-2026-002',
+    recordType: 'project_work',
+    projectId: 'proj-eagle-hills',
+    projectName: 'Eagle Hills',
+    title: 'BMS — Istruzioni d\'Uso per Electrical & Water Report',
+    siteName: 'Eagle Hills Facility',
+    siteAddress: 'Eagle Hills Compound',
+    clientName: 'Henok & Mike',
+    clientContact: 'henokb@elmiconstruction.com',
+    description: 'Mandato ieri (20/10/2026) per email a Henok e Mike le istruzioni d\'uso BMS per Electrical e il Water Report. In attesa di feedback da loro.',
+    desiredAccessDate: '2026-10-20',
+    desiredAccessTime: '15:30',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Inviato per email ieri 20/10/2026 a Henok e Mike — in attesa di feedback.',
+    status: 'in_progress',
+    createdAt: '2026-10-20T15:30:00Z',
+    updatedAt: '2026-10-21T09:00:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Mandato ieri (20/10/2026) per email a Henok e Mike le istruzioni d\'uso BMS per Electrical e il Water Report.',
+    followUpChannel: 'email',
+    lastActionDate: '2026-10-20',
+    waitingReplyFrom: 'Henok e Mike',
+    nextActionToDo: 'Attendere feedback da Henok e Mike su istruzioni d\'uso BMS (Electrical) e Water Report.',
+    trackingLogs: [
+      {
+        id: 'trk-eagle-002-1',
+        date: '2026-10-20',
+        time: '15:30',
+        whatIDid: 'Mandato per email a Henok e Mike le istruzioni d\'uso BMS per Electrical e il Water Report.',
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: 'Henok e Mike',
+        nextStep: 'Ricevere feedback / approvazione da Henok e Mike.',
+        referenceDoc: 'BMS_Istruzioni_Uso_Electrical_&_Water_Report.pdf'
+      }
+    ],
+    actionSteps: [
+      {
+        id: 'act-eagle-002-1',
+        text: 'Inviate per email a Henok e Mike le istruzioni d\'uso BMS per Electrical e Water Report (20/10/2026)',
+        completed: true,
+        completedAt: '2026-10-20T15:30:00Z'
+      },
+      {
+        id: 'act-eagle-002-2',
+        text: 'Ricezione feedback da Henok e Mike',
+        completed: false
+      },
+      {
+        id: 'act-eagle-002-3',
+        text: 'Eventuale revisione / emissione finale documentazione BMS',
+        completed: false
+      }
+    ]
+  }
+];
+
 // 4. Initial Project Works & Action Items (Lavori & Azioni sui Progetti)
 const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
+  ...EAGLE_HILLS_INITIAL_WORKS,
   ...HILTON_INITIAL_WORKS,
   ...PANVAC_INITIAL_WORKS,
   {
@@ -628,6 +757,20 @@ export function fetchProjects(): Project[] {
       const hiltonDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-hilton');
       if (hiltonDefault) {
         parsed = [hiltonDefault, ...parsed];
+        modified = true;
+      }
+    }
+
+    const hasEagleHills = parsed.some(
+      p =>
+        p.id === 'proj-eagle-hills' ||
+        p.name.toLowerCase().includes('eagle') ||
+        p.code.toLowerCase().includes('eagle')
+    );
+    if (!hasEagleHills) {
+      const eagleDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-eagle-hills');
+      if (eagleDefault) {
+        parsed = [eagleDefault, ...parsed];
         modified = true;
       }
     }
@@ -742,12 +885,23 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
           p.code.toLowerCase().includes('hilton')
       ) || INITIAL_PROJECTS.find(p => p.id === 'proj-hilton')!;
 
+    const eagleProj =
+      projects.find(
+        p =>
+          p.id === 'proj-eagle-hills' ||
+          p.name.toLowerCase().includes('eagle') ||
+          p.code.toLowerCase().includes('eagle')
+      ) || INITIAL_PROJECTS.find(p => p.id === 'proj-eagle-hills')!;
+
     const normalizedWorks = INITIAL_PROJECT_WORKS.map(w => {
       if (w.projectId === 'proj-panvac') {
         return { ...w, projectId: panvacProj.id, projectName: panvacProj.name };
       }
       if (w.projectId === 'proj-hilton') {
         return { ...w, projectId: hiltonProj.id, projectName: hiltonProj.name };
+      }
+      if (w.projectId === 'proj-eagle-hills') {
+        return { ...w, projectId: eagleProj.id, projectName: eagleProj.name };
       }
       return w;
     });
