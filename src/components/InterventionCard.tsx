@@ -253,12 +253,27 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className={`text-base font-bold mb-2 leading-snug ${
-          isPending ? 'text-white' : 'text-slate-100'
-        }`}>
-          {intervention.title}
-        </h3>
+        {/* Title — High-contrast highlighted banner that stands out from the dark card background */}
+        <div
+          className={`mb-3 px-3.5 py-2.5 rounded-xl border-l-4 shadow-md transition ${
+            isCompleted
+              ? 'bg-gradient-to-r from-emerald-500/20 via-emerald-900/20 to-slate-900/80 border-l-emerald-400 ring-1 ring-emerald-400/30'
+              : 'bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-slate-900/85 border-l-yellow-400 ring-1 ring-yellow-400/40 shadow-yellow-950/30'
+          }`}
+        >
+          <div className="text-[10px] font-extrabold uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
+            <span className={isCompleted ? 'text-emerald-400' : 'text-yellow-400'}>
+              {isProjectWork ? '📌 TASK / LAVORO PROGETTO:' : '📌 TASK / INTERVENTO:'}
+            </span>
+          </div>
+          <h3
+            className={`text-base sm:text-lg font-extrabold leading-snug tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] ${
+              isCompleted ? 'text-emerald-200' : 'text-yellow-300'
+            }`}
+          >
+            {intervention.title}
+          </h3>
+        </div>
 
         {!isProjectWork && (
           <>
