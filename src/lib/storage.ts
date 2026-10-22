@@ -2,7 +2,7 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v7_awash';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v8_supply';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
@@ -585,6 +585,7 @@ const EAGLE_HILLS_INITIAL_WORKS: InterventionRequest[] = [
     lastActionDate: '2026-10-20',
     waitingReplyFrom: 'Franco',
     nextActionToDo: 'Ricevere alimentatore porta scorrevole da Franco e procedere con installazione e collaudo.',
+    supplyStatus: 'ordered',
     trackingLogs: [
       {
         id: 'trk-eagle-001-1',
@@ -704,6 +705,7 @@ const AWASH_BANK_INITIAL_WORKS: InterventionRequest[] = [
     lastActionDate: '2026-10-21',
     waitingReplyFrom: 'Dodic (Ritiro materiale rilevamento CO)',
     nextActionToDo: 'Ritiro del materiale per rilevamento CO da parte di Dodic e consegna in cantiere (Parking Area).',
+    supplyStatus: 'ready_pickup',
     trackingLogs: [
       {
         id: 'trk-awash-001-1',
@@ -761,6 +763,7 @@ const AWASH_BANK_INITIAL_WORKS: InterventionRequest[] = [
     lastActionDate: '2026-10-21',
     waitingReplyFrom: 'Fornitore / Spedizione (Arrivo materiale Urmet)',
     nextActionToDo: 'Attendere consegna del materiale Urmet in arrivo e procedere con installazione.',
+    supplyStatus: 'shipping',
     trackingLogs: [
       {
         id: 'trk-awash-002-1',
@@ -1090,8 +1093,19 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
       const existingIds = new Set(cleanedParsed.map(i => i.id));
       const upgraded = cleanedParsed.map(item => {
         const sample = sampleMap.get(item.id);
-        if (sample && (!item.trackingLogs || item.trackingLogs.length === 0)) {
-          return { ...sample, ...item, trackingLogs: sample.trackingLogs, waitingReplyFrom: sample.waitingReplyFrom, followUpChannel: sample.followUpChannel, lastActionDate: sample.lastActionDate, whatIDidSummary: sample.whatIDidSummary, nextActionToDo: sample.nextActionToDo, followUpDueDate: sample.followUpDueDate };
+        if (sample) {
+          return {
+            ...sample,
+            ...item,
+            supplyStatus: item.supplyStatus || sample.supplyStatus,
+            trackingLogs: item.trackingLogs && item.trackingLogs.length > 0 ? item.trackingLogs : sample.trackingLogs,
+            waitingReplyFrom: item.waitingReplyFrom || sample.waitingReplyFrom,
+            followUpChannel: item.followUpChannel || sample.followUpChannel,
+            lastActionDate: item.lastActionDate || sample.lastActionDate,
+            whatIDidSummary: item.whatIDidSummary || sample.whatIDidSummary,
+            nextActionToDo: item.nextActionToDo || sample.nextActionToDo,
+            followUpDueDate: item.followUpDueDate || sample.followUpDueDate,
+          };
         }
         return item;
       });
