@@ -14,7 +14,7 @@ import { StatsCards } from './components/StatsCards';
 import { FilterBar } from './components/FilterBar';
 import { InterventionCard } from './components/InterventionCard';
 import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
-import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock, Wrench, ClipboardList } from 'lucide-react';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock, Wrench, ClipboardList, FileDown, MessageCircle } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
 import { verifySessionToken } from './lib/authSecurity';
 
@@ -446,6 +446,34 @@ export function App() {
   const handleToggleUrgent = useCallback(() => {
     setOnlyUrgent(prev => !prev);
   }, []);
+
+  // Quick inline update on card (Feature #3 & #4)
+  const handleQuickUpdateIntervention = useCallback(async (interventionId: string, updates: Partial<InterventionRequest>) => {
+    const target = interventions.find(i => i.id === interventionId);
+    if (!target) return;
+    const updated: InterventionRequest = {
+      ...target,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    await saveIntervention(updated);
+    setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
+    showToast(`✅ Aggiornato: ${updated.code}`);
+  }, [interventions]);
+
+  // Project Summary PDF & WhatsApp (Feature #2)
+  const handleDownloadProjectSummaryPDF = async () => {
+    const { downloadProjectSummaryPDF } = await import('./lib/pdfGenerator');
+    const projTitle = activeProjectObj ? activeProjectObj.name : 'Tutti i Progetti';
+    downloadProjectSummaryPDF(projTitle, filteredInterventions);
+    showToast(`📊 Riepilogo PDF generato per "${projTitle}"!`);
+  };
+
+  const handleShareProjectSummaryWhatsApp = async () => {
+    const { shareProjectSummaryViaWhatsApp } = await import('./lib/pdfGenerator');
+    const projTitle = activeProjectObj ? activeProjectObj.name : 'Tutti i Progetti';
+    shareProjectSummaryViaWhatsApp(projTitle, filteredInterventions);
+  };
 
   // Smart Email Action Handler (Antigravity Inbound Email AI)
   const handleExecuteEmailAction = async (payload: {
@@ -1006,31 +1034,57 @@ export function App() {
               </div>
             </div>
 
-            {isAdmin && (
-              <div className="flex items-center gap-2 self-start sm:self-center">
-                <button
-                  onClick={() => {
-                    setOpenProjectCreateDirectly(true);
-                    setIsProjectsModalOpen(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95"
-                  title="Create a new Project"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>+ Add New Project</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setOpenProjectCreateDirectly(false);
-                    setIsProjectsModalOpen(true);
-                  }}
-                  className="text-xs text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 transition"
-                  title="Manage all projects"
-                >
-                  <span>Manage</span>
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
+              {/* Feature #2: 1-Click Project Summary PDF & WhatsApp */}
+              {filteredInterventions.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadProjectSummaryPDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow transition active:scale-95"
+                    title="Scarica tabella PDF con lo stato aggiornato del progetto selezionato (per riunioni)"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>📊 PDF Stato Progetto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareProjectSummaryWhatsApp}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition active:scale-95"
+                    title="Invia riepilogo testuale del progetto su WhatsApp"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>💬 Riepilogo WA</span>
+                  </button>
+                </>
+              )}
+
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => {
+                      setOpenProjectCreateDirectly(true);
+                      setIsProjectsModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95"
+                    title="Create a new Project"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>+ Add New Project</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenProjectCreateDirectly(false);
+                      setIsProjectsModalOpen(true);
+                    }}
+                    className="text-xs text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 transition"
+                    title="Manage all projects"
+                  >
+                    <span>Manage</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Project Pills Tabs */}
@@ -1240,6 +1294,7 @@ export function App() {
                     onAddTrackingEntry={handleAddTrackingEntry}
                     onMarkReplyReceived={handleMarkReplyReceived}
                     onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                    onQuickUpdate={handleQuickUpdateIntervention}
                   />
                 ))}
               </div>
@@ -1298,6 +1353,7 @@ export function App() {
                     onAddTrackingEntry={handleAddTrackingEntry}
                     onMarkReplyReceived={handleMarkReplyReceived}
                     onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                    onQuickUpdate={handleQuickUpdateIntervention}
                   />
                 ))}
               </div>
@@ -1359,6 +1415,7 @@ export function App() {
                     onAddTrackingEntry={handleAddTrackingEntry}
                     onMarkReplyReceived={handleMarkReplyReceived}
                     onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                    onQuickUpdate={handleQuickUpdateIntervention}
                   />
                 ))}
               </div>
