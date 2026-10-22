@@ -906,73 +906,77 @@ export function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
 
         {/* ================= MAIN VIEW SWITCHER: 1. LAVORI & AZIONI PROGETTO vs 2. INTERVENTI & GUASTI ================= */}
-        <div className="mb-4 sm:mb-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-          <div className="grid grid-cols-2 gap-2 flex-1">
+        <div className="mb-4 sm:mb-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
             {/* TAB 1: LAVORI & AZIONI PROGETTO */}
             <button
               onClick={() => setActiveCategoryTab('project_work')}
-              className={`flex items-center justify-center sm:justify-start gap-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
+              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
                 activeCategoryTab === 'project_work'
                   ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-indigo-400 shadow-lg shadow-indigo-900/40'
                   : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/70'
               }`}
             >
-              <ClipboardList className="w-4 h-4 shrink-0" />
-              <div className="text-left leading-tight">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span>Lavori & Azioni Progetto</span>
-                  <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
-                    activeCategoryTab === 'project_work'
-                      ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-300/30'
-                      : 'bg-slate-800 text-slate-300'
-                  }`}>
-                    {categoryTabCounts.worksTotal}
-                  </span>
-                  {categoryTabCounts.worksOpen > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
-                      {categoryTabCounts.worksOpen} da fare
+              <div className="flex items-center gap-2 min-w-0">
+                <ClipboardList className="w-4 h-4 shrink-0" />
+                <div className="text-left leading-tight min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="truncate">Lavori & Azioni Progetto</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                      activeCategoryTab === 'project_work'
+                        ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-300/30'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}>
+                      {categoryTabCounts.worksTotal}
                     </span>
-                  )}
+                    {categoryTabCounts.worksOpen > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
+                        {categoryTabCounts.worksOpen} da fare
+                      </span>
+                    )}
+                  </div>
+                  <span className={`hidden lg:block text-[10px] font-normal ${
+                    activeCategoryTab === 'project_work' ? 'text-indigo-100' : 'text-slate-500'
+                  }`}>
+                    Lavori pianificati, attività di cantiere e checklist azioni sui progetti
+                  </span>
                 </div>
-                <span className={`hidden md:block text-[10px] font-normal ${
-                  activeCategoryTab === 'project_work' ? 'text-indigo-100' : 'text-slate-500'
-                }`}>
-                  Lavori pianificati, attività di cantiere e checklist azioni sui progetti
-                </span>
               </div>
             </button>
 
             {/* TAB 2: INTERVENTI & GUASTI */}
             <button
               onClick={() => setActiveCategoryTab('intervention')}
-              className={`flex items-center justify-center sm:justify-start gap-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
+              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
                 activeCategoryTab === 'intervention'
                   ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400 shadow-lg shadow-blue-900/40'
                   : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/70'
               }`}
             >
-              <Wrench className="w-4 h-4 shrink-0" />
-              <div className="text-left leading-tight">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span>Interventi & Guasti</span>
-                  <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
-                    activeCategoryTab === 'intervention'
-                      ? 'bg-blue-950/80 text-blue-200 border border-blue-300/30'
-                      : 'bg-slate-800 text-slate-300'
-                  }`}>
-                    {categoryTabCounts.interventionsTotal}
-                  </span>
-                  {categoryTabCounts.interventionsOpen > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
-                      {categoryTabCounts.interventionsOpen} aperti
+              <div className="flex items-center gap-2 min-w-0">
+                <Wrench className="w-4 h-4 shrink-0" />
+                <div className="text-left leading-tight min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="truncate">Interventi & Guasti</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                      activeCategoryTab === 'intervention'
+                        ? 'bg-blue-950/80 text-blue-200 border border-blue-300/30'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}>
+                      {categoryTabCounts.interventionsTotal}
                     </span>
-                  )}
+                    {categoryTabCounts.interventionsOpen > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
+                        {categoryTabCounts.interventionsOpen} aperti
+                      </span>
+                    )}
+                  </div>
+                  <span className={`hidden lg:block text-[10px] font-normal ${
+                    activeCategoryTab === 'intervention' ? 'text-blue-100' : 'text-slate-500'
+                  }`}>
+                    Assistenza tecnica, chiamate guasto e riparazioni
+                  </span>
                 </div>
-                <span className={`hidden md:block text-[10px] font-normal ${
-                  activeCategoryTab === 'intervention' ? 'text-blue-100' : 'text-slate-500'
-                }`}>
-                  Assistenza tecnica, chiamate guasto e riparazioni
-                </span>
               </div>
             </button>
           </div>
