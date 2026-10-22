@@ -320,3 +320,192 @@ export async function shareInterventionPDFViaWhatsApp(intervention: Intervention
   window.open(waUrl, '_blank', 'noopener,noreferrer');
   return { success: true, method: 'download-whatsapp' };
 }
+
+/**
+ * Generates and downloads a comprehensive Project Action & Submittal Tracking Summary PDF
+ * for all tasks in the selected project (or across all projects).
+ */
+export function downloadProjectSummaryPDF(projectName: string, items: InterventionRequest[]) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const todayStr = new Date().toLocaleDateString('it-IT');
+
+  const totalCount = items.length;
+  const completedCount = items.filter(i => i.status === 'completed' || i.status === 'completato').length;
+  const openCount = totalCount - completedCount;
+  const waitingReplyCount = items.filter(i => {
+    if (i.status === 'completed' || i.status === 'completato') return false;
+    return Boolean(
+      (i.waitingReplyFrom && i.waitingReplyFrom.trim()) ||
+      (i.trackingLogs && i.trackingLogs.some(t => t.awaitingReply && !t.replyReceived))
+    );
+  }).length;
+
+  const drawPageHeader = (pageNum: number) => {
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, pageWidth, 34, 'F');
+
+    doc.setTextColor(250, 204, 21); // yellow-400
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(`REPORT STATO PROGETTO & TRACKING: ${projectName.toUpperCase()}`, 14, 15);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(203, 213, 225);
+    doc.text(
+      `Data Report: ${todayStr}  |  Totale Attività: ${totalCount}  |  Aperte: ${openCount}  |  In Attesa Risposta: ${waitingReplyCount}  |  Completate: ${completedCount}  |  Pag. ${pageNum}`,
+      14,
+      25
+    );
+
+    doc.setFillColor(79, 70, 229); // indigo-600
+    doc.rect(0, 34, pageWidth, 2, 'F');
+  };
+
+  let pageNum = 1;
+  drawPageHeader(pageNum);
+  let currentY = 44;
+
+  const supplyLabels: Record<string, string> = {
+    ordered: 'MATERIALE ORDINATO',
+    shipping: 'MATERIALE IN ARRIVO',
+    ready_pickup: 'MATERIALE DA RITIRARE',
+    delivered: 'CONSEGNATO IN CANTIERE'
+  };
+
+  items.forEach((item, idx) => {
+    const isDone = item.status === 'completed' || item.status === 'completato';
+    const waitingFrom =
+      item.waitingReplyFrom ||
+      item.trackingLogs?.find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom;
+    const whatDone = item.whatIDidSummary || item.description || '-';
+    const nextStep = item.nextActionToDo || '';
+    const supplyText = item.supplyStatus && item.supplyStatus !== 'none' ? supplyLabels[item.supplyStatus] : '';
+
+    const splitWhat = doc.splitTextToSize(`Cosa è stato fatto: ${whatDone}`, pageWidth - 34);
+    const splitNext = nextStep ? doc.splitTextToSize(`Prossima azione: ${nextStep}`, pageWidth - 34) : [];
+    const stepsCount = item.actionSteps?.length || 0;
+    const blockHeight = 24 + splitWhat.length * 4.3 + (splitNext.length ? splitNext.length * 4.3 + 2 : 0) + (stepsCount > 0 ? stepsCount * 4.2 + 4 : 0);
+
+    if (currentY + blockHeight > pageHeight - 18) {
+      doc.addPage();
+      pageNum++;
+      drawPageHeader(pageNum);
+      currentY = 44;
+    }
+
+    // Task Header Box
+    if (isDone) {
+      doc.setFillColor(236, 253, 245);
+      doc.setDrawColor(16, 185, 129);
+    } else if (waitingFrom) {
+      doc.setFillColor(254, 243, 199);
+      doc.setDrawColor(245, 158, 11);
+    } else {
+      doc.setFillColor(238, 242, 255);
+      doc.setDrawColor(99, 102, 241);
+    }
+    doc.setLineWidth(0.4);
+    doc.rect(14, currentY - 4, pageWidth - 28, 9, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(15, 23, 42);
+    const statusTag = isDone ? '[COMPLETATO]' : waitingFrom ? '[ATTESA RISPOSTA]' : '[IN CORSO]';
+    const titleLine = `${idx + 1}. ${statusTag} [${item.code}] ${item.title}`;
+    doc.text(titleLine.slice(0, 92), 16, currentY + 1.8);
+
+    currentY += 9;
+
+    // Meta line: Project, Date, Waiting From, Supply Status
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(51, 65, 85);
+    const metaParts: string[] = [
+      `Progetto: ${item.projectName || projectName}`,
+      `Data: ${item.lastActionDate || item.desiredAccessDate}`
+    ];
+    if (waitingFrom && !isDone) {
+      metaParts.push(`In attesa risposta da: ${waitingFrom}`);
+    }
+    if (supplyText) {
+      metaParts.push(`Fornitura: ${supplyText}`);
+    }
+    doc.text(metaParts.join('   |   '), 16, currentY);
+    currentY += 5;
+
+    // What I did
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.8);
+    doc.setTextColor(30, 41, 59);
+    doc.text(splitWhat, 16, currentY);
+    currentY += splitWhat.length * 4.3 + 1;
+
+    // Next step
+    if (splitNext.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(5, 150, 105);
+      doc.text(splitNext, 16, currentY);
+      currentY += splitNext.length * 4.3 + 1;
+    }
+
+    // Checklist items
+    if (item.actionSteps && item.actionSteps.length > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.2);
+      doc.setTextColor(71, 85, 105);
+      for (const st of item.actionSteps) {
+        const mark = st.completed ? '[X]' : '[ ]';
+        doc.text(`   ${mark} ${st.text}`.slice(0, 110), 16, currentY);
+        currentY += 4.1;
+      }
+    }
+
+    currentY += 5;
+  });
+
+  const safeProj = projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  doc.save(`Stato_Progetto_${safeProj}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+/**
+ * Shares a formatted text summary of all tasks in the selected project via WhatsApp
+ */
+export function shareProjectSummaryViaWhatsApp(projectName: string, items: InterventionRequest[]) {
+  const todayStr = new Date().toLocaleDateString('it-IT');
+  const lines: string[] = [
+    `📊 *RIEPILOGO STATO PROGETTO: ${projectName.toUpperCase()}* (${todayStr})`,
+    `Totale attività: ${items.length}`,
+    ''
+  ];
+
+  items.forEach((item, idx) => {
+    const isDone = item.status === 'completed' || item.status === 'completato';
+    const waitingFrom =
+      item.waitingReplyFrom ||
+      item.trackingLogs?.find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom;
+    const icon = isDone ? '✅' : waitingFrom ? '⏳' : '🛠️';
+    lines.push(`${idx + 1}. ${icon} *${item.title}* (${item.code})`);
+    if (item.whatIDidSummary || item.description) {
+      lines.push(`   • Fatto: ${item.whatIDidSummary || item.description}`);
+    }
+    if (waitingFrom && !isDone) {
+      lines.push(`   • *In attesa risposta da:* ${waitingFrom} (dal ${item.lastActionDate || item.desiredAccessDate})`);
+    }
+    if (item.nextActionToDo && !isDone) {
+      lines.push(`   • Prossimo step: ${item.nextActionToDo}`);
+    }
+    lines.push('');
+  });
+
+  const text = lines.join('\n');
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+}
