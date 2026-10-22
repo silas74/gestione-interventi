@@ -476,18 +476,18 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
         {/* 📡 DIARIO TRACKING PROGETTO: COSA HO FATTO, SEGUITO PER EMAIL/WHATSAPP, DATA, DA CHI ASPETTO RISPOSTA */}
         {(isProjectWork || trackingLogs.length > 0 || intervention.whatIDidSummary) && (
           <div className="bg-slate-950/80 border border-indigo-700/50 rounded-xl p-3 mb-3 space-y-2.5">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
-                <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                <ClipboardList className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                 <span>Tracking Lavoro: Cosa ho fatto, Email/WhatsApp & Risposte ({trackingLogs.length})</span>
               </div>
               {onAddTrackingEntry && (
                 <button
                   type="button"
                   onClick={() => setShowAddTrackingForm(prev => !prev)}
-                  className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-1 transition active:scale-95"
+                  className="w-full sm:w-auto justify-center text-[11px] font-bold px-2.5 py-1.5 sm:py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-1 transition active:scale-95"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3 h-3 shrink-0" />
                   <span>{showAddTrackingForm ? 'Chiudi Form' : '+ Registra Cosa Ho Fatto / Follow-up'}</span>
                 </button>
               )}
