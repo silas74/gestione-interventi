@@ -4,10 +4,78 @@ import {
   CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
   Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
   PhoneCall, MessageCircle, Share2, Mail, Camera, ClipboardList, CheckSquare, Square, Plus,
-  Hourglass, ArrowRight, FileText
+  Hourglass, ArrowRight, FileText, Pencil, Package, Truck, Check, X, BellRing
 } from 'lucide-react';
-import { InterventionRequest, AppRole, DefectPhoto, FollowUpChannel, ProjectTrackingEntry } from '../types';
+import { InterventionRequest, AppRole, DefectPhoto, FollowUpChannel, ProjectTrackingEntry, SupplyStatus, Priority, RequestStatus } from '../types';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
+
+const SUPPLY_STEPS: { id: SupplyStatus; label: string; short: string; activeCls: string }[] = [
+  { id: 'none', label: 'Nessun Ordine', short: 'N/A', activeCls: 'bg-slate-700 text-slate-200 border-slate-500' },
+  { id: 'ordered', label: '🛒 Ordinato', short: 'Ordinato', activeCls: 'bg-amber-600 text-white border-amber-400 shadow-sm shadow-amber-950/50' },
+  { id: 'shipping', label: '🚚 In Arrivo', short: 'In Arrivo', activeCls: 'bg-sky-600 text-white border-sky-400 shadow-sm shadow-sky-950/50' },
+  { id: 'ready_pickup', label: '📦 Da Ritirare', short: 'Da Ritirare', activeCls: 'bg-purple-600 text-white border-purple-400 shadow-sm shadow-purple-950/50 animate-pulse' },
+  { id: 'delivered', label: '🏗️ In Cantiere', short: 'In Cantiere', activeCls: 'bg-emerald-600 text-white border-emerald-400 shadow-sm shadow-emerald-950/50' },
+];
+
+const getWaitingDaysInfo = (lastActionDate?: string, followUpDueDate?: string, createdAt?: string) => {
+  const refDateStr = lastActionDate || (createdAt ? createdAt.split('T')[0] : undefined);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let daysWaiting = 0;
+  if (refDateStr) {
+    const d = new Date(refDateStr);
+    if (!isNaN(d.getTime())) {
+      d.setHours(0, 0, 0, 0);
+      daysWaiting = Math.max(0, Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
+    }
+  }
+
+  let isOverdue = false;
+  if (followUpDueDate) {
+    const due = new Date(followUpDueDate);
+    if (!isNaN(due.getTime())) {
+      due.setHours(0, 0, 0, 0);
+      isOverdue = today.getTime() > due.getTime();
+    }
+  }
+
+  const isAlert = isOverdue || daysWaiting >= 3;
+  const label = daysWaiting === 0 ? 'Oggi' : daysWaiting === 1 ? 'da 1 giorno' : `da ${daysWaiting} giorni`;
+  return { daysWaiting, isOverdue, isAlert, label };
+};
+
+const getReminderWhatsAppUri = (intervention: InterventionRequest, waitingFrom: string, daysWaiting: number) => {
+  const phoneDigits = (intervention.clientContact || '').replace(/[^\d+]/g, '');
+  const cleanPhone = phoneDigits.startsWith('+') ? phoneDigits.slice(1) : phoneDigits;
+  const msg =
+    `Gentile ${waitingFrom},\n` +
+    `ti scrivo per un gentile riscontro in merito a:\n` +
+    `📌 *${intervention.title}* (${intervention.projectName || intervention.siteName || intervention.code})\n` +
+    (intervention.lastActionDate ? `📅 Inviato il: ${intervention.lastActionDate}${daysWaiting > 0 ? ` (${daysWaiting} gg fa)` : ''}\n` : '') +
+    (intervention.whatIDidSummary ? `📝 Dettaglio: ${intervention.whatIDidSummary}\n` : '') +
+    `\nResto in attesa di un tuo cortese feedback per procedere.\nGrazie, Pierluigi`;
+  const encoded = encodeURIComponent(msg);
+  return cleanPhone.length >= 6
+    ? `https://wa.me/${cleanPhone}?text=${encoded}`
+    : `https://wa.me/?text=${encoded}`;
+};
+
+const getReminderMailtoUri = (intervention: InterventionRequest, waitingFrom: string, daysWaiting: number) => {
+  const contact = (intervention.clientContact || '').trim();
+  const emailTo = contact.includes('@') ? contact : '';
+  const subject = `Sollecito / Follow-up: ${intervention.projectName ? `[${intervention.projectName}] ` : ''}${intervention.title} (${intervention.code})`;
+  const body =
+    `Gentile ${waitingFrom},\n\n` +
+    `Ti scrivo per un cortese aggiornamento / riscontro in merito a:\n` +
+    `- Progetto: ${intervention.projectName || intervention.siteName || '-'}\n` +
+    `- Oggetto: ${intervention.title} (${intervention.code})\n` +
+    (intervention.lastActionDate ? `- Data richiesta: ${intervention.lastActionDate}${daysWaiting > 0 ? ` (${daysWaiting} giorni fa)` : ''}\n` : '') +
+    (intervention.whatIDidSummary ? `- Attività / Dettaglio: ${intervention.whatIDidSummary}\n` : '') +
+    (intervention.nextActionStep ? `- Prossima azione prevista: ${intervention.nextActionStep}\n` : '') +
+    `\nResto in attesa di un tuo gentile riscontro.\n\nCordiali saluti,\nPierluigi`;
+  return `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+};
 
 const handleDownloadPDF = async (intervention: InterventionRequest) => {
   const { downloadInterventionPDF } = await import('../lib/pdfGenerator');
@@ -34,6 +102,7 @@ interface InterventionCardProps {
   onAddTrackingEntry?: (interventionId: string, entry: Omit<ProjectTrackingEntry, 'id'>) => void;
   onMarkReplyReceived?: (interventionId: string, trackingId?: string) => void;
   onDeleteTrackingEntry?: (interventionId: string, trackingId: string) => void;
+  onQuickUpdate?: (interventionId: string, updates: Partial<InterventionRequest>) => void;
 }
 
 const getChannelBadgeInfo = (channel?: FollowUpChannel) => {
@@ -66,9 +135,61 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   onAddTrackingEntry,
   onMarkReplyReceived,
   onDeleteTrackingEntry,
+  onQuickUpdate,
 }) => {
   const [quickStepText, setQuickStepText] = useState('');
   const [showAddStepInput, setShowAddStepInput] = useState(false);
+
+  // Quick inline edit state (Feature #4)
+  const [isEditingCard, setIsEditingCard] = useState(false);
+  const [editTitle, setEditTitle] = useState(intervention.title);
+  const [editWhatIDid, setEditWhatIDid] = useState(intervention.whatIDidSummary || intervention.description || '');
+  const [editWaitingFrom, setEditWaitingFrom] = useState(intervention.waitingReplyFrom || '');
+  const [editContact, setEditContact] = useState(intervention.clientContact || '');
+  const [editNextStep, setEditNextStep] = useState(intervention.nextActionStep || '');
+  const [editDueDate, setEditDueDate] = useState(intervention.followUpDueDate || '');
+  const [editPriority, setEditPriority] = useState<Priority>(intervention.priority);
+  const [editStatus, setEditStatus] = useState<RequestStatus>(intervention.status);
+  const [editSupplyStatus, setEditSupplyStatus] = useState<SupplyStatus>(intervention.supplyStatus || 'none');
+
+  const handleOpenQuickEdit = () => {
+    setEditTitle(intervention.title);
+    setEditWhatIDid(intervention.whatIDidSummary || intervention.description || '');
+    setEditWaitingFrom(
+      intervention.waitingReplyFrom ||
+      (intervention.trackingLogs || []).find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom ||
+      ''
+    );
+    setEditContact(intervention.clientContact || '');
+    setEditNextStep(intervention.nextActionStep || '');
+    setEditDueDate(intervention.followUpDueDate || '');
+    setEditPriority(intervention.priority);
+    setEditStatus(intervention.status);
+    setEditSupplyStatus(intervention.supplyStatus || 'none');
+    setIsEditingCard(true);
+  };
+
+  const handleSaveQuickEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onQuickUpdate) return;
+    const trimmedTitle = editTitle.trim() || intervention.title;
+    const trimmedWhat = editWhatIDid.trim();
+    const trimmedWaiting = editWaitingFrom.trim();
+    onQuickUpdate(intervention.id, {
+      title: trimmedTitle,
+      whatIDidSummary: trimmedWhat || undefined,
+      description: trimmedWhat || intervention.description,
+      waitingReplyFrom: trimmedWaiting || undefined,
+      clientName: trimmedWaiting || intervention.clientName,
+      clientContact: editContact.trim() || undefined,
+      nextActionStep: editNextStep.trim() || undefined,
+      followUpDueDate: editDueDate || undefined,
+      priority: editPriority,
+      status: editStatus,
+      supplyStatus: editSupplyStatus,
+    });
+    setIsEditingCard(false);
+  };
 
   // Tracking form state
   const [showAddTrackingForm, setShowAddTrackingForm] = useState(false);
@@ -81,11 +202,17 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   const [trkRefDoc, setTrkRefDoc] = useState('');
 
   const isProjectWork = intervention.recordType === 'project_work';
+  const currentSupplyStatus: SupplyStatus = intervention.supplyStatus || 'none';
   const actionSteps = intervention.actionSteps || [];
   const trackingLogs = intervention.trackingLogs || [];
   const activeWaitingFrom =
     intervention.waitingReplyFrom ||
     trackingLogs.find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom;
+  const waitingDaysInfo = getWaitingDaysInfo(
+    intervention.lastActionDate,
+    intervention.followUpDueDate,
+    intervention.createdAt
+  );
   const completedStepsCount = actionSteps.filter(s => s.completed).length;
   const stepsProgressPct = actionSteps.length > 0 ? Math.round((completedStepsCount / actionSteps.length) * 100) : 0;
   const isCompleted = intervention.status === 'completed' || intervention.status === 'completato';
@@ -228,8 +355,24 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
             )}
           </div>
 
-          {/* Top Quick Actions: WhatsApp Share + Delete */}
+          {/* Top Quick Actions: Edit + WhatsApp Share + Delete */}
           <div className="flex items-center gap-1">
+            {onQuickUpdate && (
+              <button
+                type="button"
+                onClick={() => (isEditingCard ? setIsEditingCard(false) : handleOpenQuickEdit())}
+                className={`p-1.5 rounded-lg transition active:scale-95 flex items-center gap-1 text-[11px] font-bold ${
+                  isEditingCard
+                    ? 'bg-yellow-500 text-slate-950 shadow'
+                    : 'text-yellow-300 hover:text-yellow-200 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/35 px-2'
+                }`}
+                title="Modifica rapida scheda"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{isEditingCard ? 'Chiudi' : 'Modifica'}</span>
+              </button>
+            )}
+
             <a
               href={getTicketShareWhatsAppUri(intervention)}
               target="_blank"
@@ -261,10 +404,17 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               : 'bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-slate-900/85 border-l-yellow-400 ring-1 ring-yellow-400/40 shadow-yellow-950/30'
           }`}
         >
-          <div className="text-[10px] font-extrabold uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-wider mb-0.5 flex items-center justify-between gap-1.5">
             <span className={isCompleted ? 'text-emerald-400' : 'text-yellow-400'}>
               {isProjectWork ? '📌 TASK / LAVORO PROGETTO:' : '📌 TASK / INTERVENTO:'}
             </span>
+            {currentSupplyStatus !== 'none' && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                SUPPLY_STEPS.find(s => s.id === currentSupplyStatus)?.activeCls || ''
+              }`}>
+                {SUPPLY_STEPS.find(s => s.id === currentSupplyStatus)?.label}
+              </span>
+            )}
           </div>
           <h3
             className={`text-base sm:text-lg font-extrabold leading-snug tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] ${
@@ -274,6 +424,156 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
             {intervention.title}
           </h3>
         </div>
+
+        {/* ✏️ FEATURE #4: INLINE QUICK EDIT FORM */}
+        {isEditingCard && onQuickUpdate && (
+          <form
+            onSubmit={handleSaveQuickEdit}
+            className="mb-3 p-3.5 rounded-xl bg-slate-950/95 border-2 border-yellow-500/60 shadow-xl space-y-2.5 text-xs"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span className="font-extrabold text-yellow-300 flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Modifica Rapida Scheda ({intervention.code})</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEditingCard(false)}
+                className="text-slate-400 hover:text-white p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Titolo Task / Lavoro *</label>
+              <input
+                type="text"
+                required
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-yellow-200 font-bold text-xs focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Cosa ho fatto / Dettaglio Attività</label>
+              <textarea
+                rows={2}
+                value={editWhatIDid}
+                onChange={(e) => setEditWhatIDid(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-amber-300 mb-1">⏳ Da chi aspetto risposta</label>
+                <input
+                  type="text"
+                  value={editWaitingFrom}
+                  onChange={(e) => setEditWaitingFrom(e.target.value)}
+                  placeholder="Es. Aby / Franco / Dodic..."
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-amber-600/50 text-white text-xs focus:outline-none focus:border-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">📞 Telefono / Email contatto</label>
+                <input
+                  type="text"
+                  value={editContact}
+                  onChange={(e) => setEditContact(e.target.value)}
+                  placeholder="+251... o email@..."
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">⏰ Scadenza Sollecito</label>
+                <input
+                  type="date"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-emerald-300 mb-1">➡️ Prossima Azione</label>
+                <input
+                  type="text"
+                  value={editNextStep}
+                  onChange={(e) => setEditNextStep(e.target.value)}
+                  placeholder="Prossimo passo..."
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">Priorità</label>
+                <select
+                  value={editPriority}
+                  onChange={(e) => setEditPriority(e.target.value as Priority)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+                >
+                  <option value="urgent">🚨 URGENT</option>
+                  <option value="high">🔴 HIGH</option>
+                  <option value="medium">🟠 MEDIUM</option>
+                  <option value="low">⚪ LOW</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">Stato Task</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as RequestStatus)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+                >
+                  <option value="pending">🔴 TO DO / IN ATTESA</option>
+                  <option value="in_progress">🟠 IN CORSO</option>
+                  <option value="completed">🟢 COMPLETATO</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-sky-300 mb-1">📦 Stato Materiali & Ordini</label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1">
+                {SUPPLY_STEPS.map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setEditSupplyStatus(st.id)}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition ${
+                      editSupplyStatus === st.id
+                        ? st.activeCls
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsEditingCard(false)}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Annulla
+              </button>
+              <button
+                type="submit"
+                className="px-3.5 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-extrabold flex items-center gap-1 shadow-md"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Salva Modifiche</span>
+              </button>
+            </div>
+          </form>
+        )}
 
         {!isProjectWork && (
           <>
@@ -428,6 +728,42 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               <strong className="text-indigo-300">🛠️ Cosa ho fatto / Attività: </strong>
               <span>{intervention.whatIDidSummary || intervention.description}</span>
             </div>
+
+            {/* 📦 FEATURE #3: BARRA STATO MATERIALI & ORDINI (1-CLICK STEPPER) */}
+            <div className="pt-2 border-t border-indigo-800/40">
+              <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                <span className="text-[11px] font-bold text-sky-300 flex items-center gap-1">
+                  <Package className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Stato Materiali / Fornitura:</span>
+                </span>
+                {currentSupplyStatus !== 'none' && (
+                  <span className="text-[10px] font-bold text-slate-300">
+                    Clicca per avanzare stato ➔
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-5 gap-1">
+                {SUPPLY_STEPS.map((st) => {
+                  const isActive = currentSupplyStatus === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      disabled={!onQuickUpdate}
+                      onClick={() => onQuickUpdate && onQuickUpdate(intervention.id, { supplyStatus: st.id })}
+                      className={`px-1.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold border transition text-center truncate ${
+                        isActive
+                          ? st.activeCls
+                          : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                      }`}
+                      title={`Imposta stato materiale: ${st.label}`}
+                    >
+                      {st.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -439,37 +775,80 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* ⏳ BANNER EVIDENZIATO: DA CHI ASPETTO RISPOSTA */}
+        {/* ⏳ FEATURE #1: BANNER EVIDENZIATO DA CHI ASPETTO RISPOSTA + CONTATORE GIORNI + SOLLECITO 1-CLICK */}
         {activeWaitingFrom && !isCompleted && (
-          <div className="mb-3 p-3 rounded-xl bg-amber-950/35 border border-amber-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-                <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
-                <span>Da chi aspetto risposta: <strong className="text-white underline decoration-amber-400/60">{activeWaitingFrom}</strong></span>
+          <div className={`mb-3 p-3 rounded-xl border flex flex-col gap-2.5 shadow-sm ${
+            waitingDaysInfo.isAlert
+              ? 'bg-gradient-to-r from-rose-950/55 via-amber-950/40 to-slate-900 border-rose-500/60 ring-1 ring-rose-500/30'
+              : 'bg-amber-950/35 border-amber-500/50'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-300 flex-wrap">
+                  <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+                  <span>Da chi aspetto risposta: <strong className="text-white underline decoration-amber-400/60">{activeWaitingFrom}</strong></span>
+                  {/* Waiting Days Counter Badge */}
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border flex items-center gap-1 ${
+                    waitingDaysInfo.isAlert
+                      ? 'bg-rose-600 text-white border-rose-300 shadow-sm animate-pulse'
+                      : 'bg-amber-500/25 text-amber-200 border-amber-400/50'
+                  }`}>
+                    <BellRing className="w-2.5 h-2.5" />
+                    <span>
+                      {waitingDaysInfo.isOverdue
+                        ? `🚨 SOLLECITO SCADUTO (${waitingDaysInfo.label})`
+                        : `⏳ In attesa ${waitingDaysInfo.label}`}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-amber-200/80 flex-wrap">
+                  {intervention.lastActionDate && (
+                    <span>📅 Richiesto il: <strong>{intervention.lastActionDate}</strong></span>
+                  )}
+                  {intervention.followUpChannel && (
+                    <span>📡 Tramite: <strong>{getChannelBadgeInfo(intervention.followUpChannel).short}</strong></span>
+                  )}
+                  {intervention.followUpDueDate && (
+                    <span className={waitingDaysInfo.isOverdue ? 'text-rose-300 font-extrabold underline' : 'text-amber-300 font-semibold'}>
+                      ⏰ Scadenza / Sollecito: {intervention.followUpDueDate}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-amber-200/80 flex-wrap">
-                {intervention.lastActionDate && (
-                  <span>📅 Richiesto il: <strong>{intervention.lastActionDate}</strong></span>
-                )}
-                {intervention.followUpChannel && (
-                  <span>📡 Tramite: <strong>{getChannelBadgeInfo(intervention.followUpChannel).short}</strong></span>
-                )}
-                {intervention.followUpDueDate && (
-                  <span className="text-amber-300 font-semibold">⏰ Scadenza / Sollecito: {intervention.followUpDueDate}</span>
+
+              {/* 1-Click Reminder Actions + Risposta Ricevuta */}
+              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                <a
+                  href={getReminderWhatsAppUri(intervention, activeWaitingFrom, waitingDaysInfo.daysWaiting)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-white border border-emerald-400/40 text-[11px] font-bold shadow transition active:scale-95"
+                  title={`Invia sollecito WhatsApp pre-compilato a ${activeWaitingFrom}`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Sollecita WA</span>
+                </a>
+                <a
+                  href={getReminderMailtoUri(intervention, activeWaitingFrom, waitingDaysInfo.daysWaiting)}
+                  className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/40 text-[11px] font-bold shadow transition active:scale-95"
+                  title={`Prepara email di sollecito pre-compilata per ${activeWaitingFrom}`}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Sollecita Email</span>
+                </a>
+                {onMarkReplyReceived && (
+                  <button
+                    type="button"
+                    onClick={() => onMarkReplyReceived(intervention.id)}
+                    className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-extrabold shadow transition active:scale-95"
+                    title="Segna che la risposta attesa è arrivata"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Risposta Ricevuta</span>
+                  </button>
                 )}
               </div>
             </div>
-            {onMarkReplyReceived && (
-              <button
-                type="button"
-                onClick={() => onMarkReplyReceived(intervention.id)}
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow transition active:scale-95 shrink-0"
-                title="Segna che la risposta attesa è arrivata"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Risposta Ricevuta</span>
-              </button>
-            )}
           </div>
         )}
 
