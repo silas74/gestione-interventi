@@ -14,6 +14,8 @@ export type RecordCategory = 'intervention' | 'project_work';
 
 export type FollowUpChannel = 'email' | 'whatsapp' | 'phone' | 'on_site' | 'meeting';
 
+export type SupplyStatus = 'none' | 'ordered' | 'shipping' | 'ready_pickup' | 'delivered';
+
 export interface ActionStep {
   id: string;
   text: string;
@@ -81,6 +83,8 @@ export interface InterventionRequest {
   whatIDidSummary?: string;    // Sintesi rapida di cosa ho fatto
   nextActionToDo?: string;     // Prossimo passo operativo
   followUpDueDate?: string;    // Data scadenza / sollecito risposta
+  supplyStatus?: SupplyStatus; // Stato fornitura/materiali: 'none' | 'ordered' | 'shipping' | 'ready_pickup' | 'delivered'
+  supplyNote?: string;         // Nota su ordine / fornitore / ritiro materiale
   projectId?: string;
   projectName?: string; // e.g. "Workbank"
   title: string;
