@@ -830,9 +830,22 @@ export function App() {
 
   const activeProjectObj = projects.find(p => p.id === activeProjectId);
 
-  const showTodoSection = statusFilter === 'all' || statusFilter === 'da_fare' || statusFilter === 'attesa_risposta';
-  const showInProgressSection = statusFilter === 'all' || statusFilter === 'in_lavorazione';
-  const showCompletedSection = statusFilter === 'all' || statusFilter === 'fatti';
+  const todoSectionItems =
+    statusFilter === 'attesa_risposta'
+      ? waitingReplyInterventions
+      : statusFilter === 'all'
+        ? todoInterventions
+        : pendingInterventions;
+
+  const showTodoSection =
+    (statusFilter === 'all' || statusFilter === 'da_fare' || statusFilter === 'attesa_risposta') &&
+    todoSectionItems.length > 0;
+  const showInProgressSection =
+    (statusFilter === 'all' || statusFilter === 'in_lavorazione') &&
+    inProgressInterventions.length > 0;
+  const showCompletedSection =
+    (statusFilter === 'all' || statusFilter === 'fatti') &&
+    completedInterventions.length > 0;
 
   const handleExportExcel = () => {
     const targetList = completedInterventions.length > 0 ? completedInterventions : filteredInterventions;
@@ -1261,49 +1274,33 @@ export function App() {
             </div>
 
             {/* Red Cards Grid */}
-            {(statusFilter === 'attesa_risposta'
-              ? waitingReplyInterventions
-              : statusFilter === 'all'
-                ? todoInterventions
-                : pendingInterventions
-            ).length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-dashed border-rose-900/30 bg-rose-950/10 text-xs text-rose-300/60">
-                No open tasks waiting dispatch for this view.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(statusFilter === 'attesa_risposta'
-                  ? waitingReplyInterventions
-                  : statusFilter === 'all'
-                    ? todoInterventions
-                    : pendingInterventions
-                ).map((intervention) => (
-                  <InterventionCard
-                    key={intervention.id}
-                    intervention={intervention}
-                    currentRole={currentUser.role}
-                    currentUserName={currentUser.name}
-                    onTakeCharge={handleTakeCharge}
-                    onOpenReportModal={handleOpenReportModal}
-                    onOpenFeedbackModal={handleOpenFeedbackModal}
-                    onPreviewPhoto={handlePreviewPhoto}
-                    onDelete={handleDelete}
-                    onToggleActionStep={handleToggleActionStep}
-                    onAddActionStep={handleAddActionStep}
-                    onDeleteActionStep={handleDeleteActionStep}
-                    onAddTrackingEntry={handleAddTrackingEntry}
-                    onMarkReplyReceived={handleMarkReplyReceived}
-                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
-                    onQuickUpdate={handleQuickUpdateIntervention}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {todoSectionItems.map((intervention) => (
+                <InterventionCard
+                  key={intervention.id}
+                  intervention={intervention}
+                  currentRole={currentUser.role}
+                  currentUserName={currentUser.name}
+                  onTakeCharge={handleTakeCharge}
+                  onOpenReportModal={handleOpenReportModal}
+                  onOpenFeedbackModal={handleOpenFeedbackModal}
+                  onPreviewPhoto={handlePreviewPhoto}
+                  onDelete={handleDelete}
+                  onToggleActionStep={handleToggleActionStep}
+                  onAddActionStep={handleAddActionStep}
+                  onDeleteActionStep={handleDeleteActionStep}
+                  onAddTrackingEntry={handleAddTrackingEntry}
+                  onMarkReplyReceived={handleMarkReplyReceived}
+                  onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                  onQuickUpdate={handleQuickUpdateIntervention}
+                />
+              ))}
+            </div>
           </section>
         )}
 
         {/* ================= SECTION 2: 🌸 IN PROGRESS & WAITING FOR PARTS (PINK TONES) ================= */}
-        {!loading && (statusFilter === 'all' ? inProgressInterventions.length > 0 : showInProgressSection) && (
+        {!loading && showInProgressSection && (
           <section className="mb-10">
             {/* Pink Section Header */}
             <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-pink-950/70 via-slate-900 to-slate-900 border border-pink-700/50 shadow-lg shadow-pink-950/20">
@@ -1328,36 +1325,28 @@ export function App() {
             </div>
 
             {/* Pink Cards Grid */}
-            {inProgressInterventions.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-dashed border-pink-900/30 bg-pink-950/10 text-xs text-pink-300/60">
-                {activeCategoryTab === 'project_work'
-                  ? 'Nessun lavoro attualmente in corso.'
-                  : 'No tasks currently in progress or waiting for parts.'}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {inProgressInterventions.map((intervention) => (
-                  <InterventionCard
-                    key={intervention.id}
-                    intervention={intervention}
-                    currentRole={currentUser.role}
-                    currentUserName={currentUser.name}
-                    onTakeCharge={handleTakeCharge}
-                    onOpenReportModal={handleOpenReportModal}
-                    onOpenFeedbackModal={handleOpenFeedbackModal}
-                    onPreviewPhoto={handlePreviewPhoto}
-                    onDelete={handleDelete}
-                    onToggleActionStep={handleToggleActionStep}
-                    onAddActionStep={handleAddActionStep}
-                    onDeleteActionStep={handleDeleteActionStep}
-                    onAddTrackingEntry={handleAddTrackingEntry}
-                    onMarkReplyReceived={handleMarkReplyReceived}
-                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
-                    onQuickUpdate={handleQuickUpdateIntervention}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {inProgressInterventions.map((intervention) => (
+                <InterventionCard
+                  key={intervention.id}
+                  intervention={intervention}
+                  currentRole={currentUser.role}
+                  currentUserName={currentUser.name}
+                  onTakeCharge={handleTakeCharge}
+                  onOpenReportModal={handleOpenReportModal}
+                  onOpenFeedbackModal={handleOpenFeedbackModal}
+                  onPreviewPhoto={handlePreviewPhoto}
+                  onDelete={handleDelete}
+                  onToggleActionStep={handleToggleActionStep}
+                  onAddActionStep={handleAddActionStep}
+                  onDeleteActionStep={handleDeleteActionStep}
+                  onAddTrackingEntry={handleAddTrackingEntry}
+                  onMarkReplyReceived={handleMarkReplyReceived}
+                  onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                  onQuickUpdate={handleQuickUpdateIntervention}
+                />
+              ))}
+            </div>
           </section>
         )}
 
@@ -1392,13 +1381,8 @@ export function App() {
             </div>
 
             {/* Green Cards Grid */}
-            {completedInterventions.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-dashed border-emerald-900/30 bg-emerald-950/10 text-xs text-emerald-300/60">
-                No completed interventions yet for the selected filters.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {completedInterventions.map((intervention) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {completedInterventions.map((intervention) => (
                   <InterventionCard
                     key={intervention.id}
                     intervention={intervention}
@@ -1418,8 +1402,7 @@ export function App() {
                     onQuickUpdate={handleQuickUpdateIntervention}
                   />
                 ))}
-              </div>
-            )}
+            </div>
           </section>
         )}
 
