@@ -1,5 +1,5 @@
-// Field Service PWA - Service Worker v2.5.2 (Network-First for fresh updates)
-const CACHE_NAME = 'field-service-pwa-v2.5.2';
+// Field Service PWA - Service Worker v2.5.3 (Network-First for fresh updates)
+const CACHE_NAME = 'field-service-pwa-v2.5.3';
 
 const PRECACHE_ASSETS = [
   './',
