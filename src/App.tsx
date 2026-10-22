@@ -838,7 +838,8 @@ export function App() {
         : pendingInterventions;
 
   const showTodoSection =
-    statusFilter === 'all' || statusFilter === 'da_fare' || statusFilter === 'attesa_risposta';
+    (statusFilter === 'all' || statusFilter === 'da_fare' || statusFilter === 'attesa_risposta') &&
+    todoSectionItems.length > 0;
   const showInProgressSection =
     (statusFilter === 'all' || statusFilter === 'in_lavorazione') &&
     inProgressInterventions.length > 0;
@@ -1177,18 +1178,8 @@ export function App() {
                 <span className="font-bold text-white text-sm">{activeProjectObj.name}</span>
                 <span className="text-slate-400 ml-2">({activeProjectObj.code}) — {activeProjectObj.description}</span>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {activeProjectObj.siteAddress && (
-                  <span className="text-[11px] text-slate-400">Facility: {activeProjectObj.siteAddress}</span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setIsNewModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition active:scale-95"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>+ Aggiungi su {activeProjectObj.name}</span>
-                </button>
+              <div className="text-[11px] text-slate-400">
+                {activeProjectObj.siteAddress && <span>Facility: {activeProjectObj.siteAddress}</span>}
               </div>
             </div>
           )}
@@ -1239,9 +1230,9 @@ export function App() {
 
         {/* ================= SECTION 1: 🔴 OPEN & TO DO SERVICE TASKS (RED TONES) ================= */}
         {!loading && showTodoSection && (
-          <section className={todoSectionItems.length > 0 ? 'mb-10' : 'mb-4'}>
+          <section className="mb-10">
             {/* Red Section Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-slate-900 border border-rose-800/50 shadow-lg shadow-rose-950/20">
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-slate-900 border border-rose-800/50 shadow-lg shadow-rose-950/20">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
                   <AlertCircle className="w-4 h-4 animate-pulse" />
@@ -1268,41 +1259,31 @@ export function App() {
                   </p>
                 </div>
               </div>
-
-              <button
-                onClick={() => setIsNewModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow transition active:scale-95 shrink-0"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : 'Add Defect'}</span>
-              </button>
             </div>
 
-            {/* Red Cards Grid (only rendered when there are items — no empty placeholder box) */}
-            {todoSectionItems.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {todoSectionItems.map((intervention) => (
-                  <InterventionCard
-                    key={intervention.id}
-                    intervention={intervention}
-                    currentRole={currentUser.role}
-                    currentUserName={currentUser.name}
-                    onTakeCharge={handleTakeCharge}
-                    onOpenReportModal={handleOpenReportModal}
-                    onOpenFeedbackModal={handleOpenFeedbackModal}
-                    onPreviewPhoto={handlePreviewPhoto}
-                    onDelete={handleDelete}
-                    onToggleActionStep={handleToggleActionStep}
-                    onAddActionStep={handleAddActionStep}
-                    onDeleteActionStep={handleDeleteActionStep}
-                    onAddTrackingEntry={handleAddTrackingEntry}
-                    onMarkReplyReceived={handleMarkReplyReceived}
-                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
-                    onQuickUpdate={handleQuickUpdateIntervention}
-                  />
-                ))}
-              </div>
-            )}
+            {/* Red Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {todoSectionItems.map((intervention) => (
+                <InterventionCard
+                  key={intervention.id}
+                  intervention={intervention}
+                  currentRole={currentUser.role}
+                  currentUserName={currentUser.name}
+                  onTakeCharge={handleTakeCharge}
+                  onOpenReportModal={handleOpenReportModal}
+                  onOpenFeedbackModal={handleOpenFeedbackModal}
+                  onPreviewPhoto={handlePreviewPhoto}
+                  onDelete={handleDelete}
+                  onToggleActionStep={handleToggleActionStep}
+                  onAddActionStep={handleAddActionStep}
+                  onDeleteActionStep={handleDeleteActionStep}
+                  onAddTrackingEntry={handleAddTrackingEntry}
+                  onMarkReplyReceived={handleMarkReplyReceived}
+                  onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                  onQuickUpdate={handleQuickUpdateIntervention}
+                />
+              ))}
+            </div>
           </section>
         )}
 
@@ -1310,7 +1291,7 @@ export function App() {
         {!loading && showInProgressSection && (
           <section className="mb-10">
             {/* Pink Section Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-pink-950/70 via-slate-900 to-slate-900 border border-pink-700/50 shadow-lg shadow-pink-950/20">
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-pink-950/70 via-slate-900 to-slate-900 border border-pink-700/50 shadow-lg shadow-pink-950/20">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 shrink-0">
                   <Clock className="w-4 h-4 animate-pulse" />
@@ -1329,14 +1310,6 @@ export function App() {
                   </p>
                 </div>
               </div>
-
-              <button
-                onClick={() => setIsNewModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold shadow transition active:scale-95 shrink-0"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : '+ Nuovo Intervento'}</span>
-              </button>
             </div>
 
             {/* Pink Cards Grid */}
