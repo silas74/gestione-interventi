@@ -6,7 +6,7 @@ import {
   PhoneCall, MessageCircle, Share2, Mail, Camera, ClipboardList, CheckSquare, Square, Plus,
   Hourglass, ArrowRight, FileText, Pencil, Package, Truck, Check, X, BellRing
 } from 'lucide-react';
-import { InterventionRequest, AppRole, DefectPhoto, FollowUpChannel, ProjectTrackingEntry, SupplyStatus, Priority, RequestStatus } from '../types';
+import { InterventionRequest, AppRole, DefectPhoto, FollowUpChannel, ProjectTrackingEntry, SupplyStatus, InterventionPriority, InterventionStatus } from '../types';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
 
 const SUPPLY_STEPS: { id: SupplyStatus; label: string; short: string; activeCls: string }[] = [
@@ -72,7 +72,7 @@ const getReminderMailtoUri = (intervention: InterventionRequest, waitingFrom: st
     `- Oggetto: ${intervention.title} (${intervention.code})\n` +
     (intervention.lastActionDate ? `- Data richiesta: ${intervention.lastActionDate}${daysWaiting > 0 ? ` (${daysWaiting} giorni fa)` : ''}\n` : '') +
     (intervention.whatIDidSummary ? `- Attività / Dettaglio: ${intervention.whatIDidSummary}\n` : '') +
-    (intervention.nextActionStep ? `- Prossima azione prevista: ${intervention.nextActionStep}\n` : '') +
+    (intervention.nextActionToDo ? `- Prossima azione prevista: ${intervention.nextActionToDo}\n` : '') +
     `\nResto in attesa di un tuo gentile riscontro.\n\nCordiali saluti,\nPierluigi`;
   return `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 };
@@ -146,10 +146,10 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   const [editWhatIDid, setEditWhatIDid] = useState(intervention.whatIDidSummary || intervention.description || '');
   const [editWaitingFrom, setEditWaitingFrom] = useState(intervention.waitingReplyFrom || '');
   const [editContact, setEditContact] = useState(intervention.clientContact || '');
-  const [editNextStep, setEditNextStep] = useState(intervention.nextActionStep || '');
+  const [editNextStep, setEditNextStep] = useState(intervention.nextActionToDo || '');
   const [editDueDate, setEditDueDate] = useState(intervention.followUpDueDate || '');
-  const [editPriority, setEditPriority] = useState<Priority>(intervention.priority);
-  const [editStatus, setEditStatus] = useState<RequestStatus>(intervention.status);
+  const [editPriority, setEditPriority] = useState<InterventionPriority>(intervention.priority);
+  const [editStatus, setEditStatus] = useState<InterventionStatus>(intervention.status);
   const [editSupplyStatus, setEditSupplyStatus] = useState<SupplyStatus>(intervention.supplyStatus || 'none');
 
   const handleOpenQuickEdit = () => {
@@ -161,7 +161,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
       ''
     );
     setEditContact(intervention.clientContact || '');
-    setEditNextStep(intervention.nextActionStep || '');
+    setEditNextStep(intervention.nextActionToDo || '');
     setEditDueDate(intervention.followUpDueDate || '');
     setEditPriority(intervention.priority);
     setEditStatus(intervention.status);
@@ -182,7 +182,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
       waitingReplyFrom: trimmedWaiting || undefined,
       clientName: trimmedWaiting || intervention.clientName,
       clientContact: editContact.trim() || undefined,
-      nextActionStep: editNextStep.trim() || undefined,
+      nextActionToDo: editNextStep.trim() || undefined,
       followUpDueDate: editDueDate || undefined,
       priority: editPriority,
       status: editStatus,
@@ -513,7 +513,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                 <label className="block text-[11px] font-bold text-slate-300 mb-1">Priorità</label>
                 <select
                   value={editPriority}
-                  onChange={(e) => setEditPriority(e.target.value as Priority)}
+                  onChange={(e) => setEditPriority(e.target.value as InterventionPriority)}
                   className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
                 >
                   <option value="urgent">🚨 URGENT</option>
@@ -526,7 +526,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                 <label className="block text-[11px] font-bold text-slate-300 mb-1">Stato Task</label>
                 <select
                   value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as RequestStatus)}
+                  onChange={(e) => setEditStatus(e.target.value as InterventionStatus)}
                   className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
                 >
                   <option value="pending">🔴 TO DO / IN ATTESA</option>
