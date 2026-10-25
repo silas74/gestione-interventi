@@ -243,16 +243,16 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   }[intervention.priority] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
 
   return (
-    <div className={`rounded-2xl p-5 shadow-xl transition-all duration-200 flex flex-col justify-between border ${
+    <div className={`rounded-2xl p-4 sm:p-5 liquid-glass-card flex flex-col justify-between border ${
       isPending
         ? isUrgent
-          ? 'bg-gradient-to-b from-rose-950/35 via-slate-900 to-slate-900 animate-flash-card-urgent ring-1 ring-red-500/40'
+          ? 'liquid-glass-card-rose animate-flash-card-urgent ring-1 ring-red-500/40'
           : isWaitingForParts
-            ? 'bg-gradient-to-b from-pink-950/35 via-slate-900 to-slate-900 border-pink-700/60 hover:border-pink-500/80 shadow-pink-950/30 ring-1 ring-pink-500/30'
+            ? 'liquid-glass-card-pink hover:border-pink-400/80 ring-1 ring-pink-500/30'
             : isInProgress
-              ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-900 border-amber-700/60 hover:border-amber-500/80 shadow-amber-950/25'
-              : 'bg-gradient-to-b from-rose-950/25 via-slate-900 to-slate-900 border-rose-800/45 hover:border-rose-600/70 shadow-rose-950/20'
-        : 'bg-gradient-to-b from-emerald-950/25 via-slate-900 to-slate-900 border-emerald-800/45 hover:border-emerald-600/70 shadow-emerald-950/20'
+              ? 'liquid-glass-card-amber hover:border-amber-400/80'
+              : 'liquid-glass-card-rose hover:border-rose-400/75'
+        : 'liquid-glass-card-emerald hover:border-emerald-400/75'
     }`}>
       
       <div>
