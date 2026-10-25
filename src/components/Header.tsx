@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isAdmin = currentUser.role === 'admin';
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-6 lg:px-8 py-3 shadow-lg">
+    <header className="sticky top-0 z-30 liquid-glass-header px-3 sm:px-6 lg:px-8 py-3">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         
         {/* Top Row: Logo, Brand & Mobile Quick Actions */}
