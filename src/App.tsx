@@ -919,11 +919,21 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen liquid-ambient-bg text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+      {/* Hidden SVG Refraction Filter for Liquid Glass Effect (kevinbism/liquid-glass-effect) */}
+      <svg className="hidden" aria-hidden="true">
+        <defs>
+          <filter id="liquid-glass-refraction" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.012" numOctaves="2" seed="7" result="noise" />
+            <feGaussianBlur in="noise" stdDeviation="1.5" result="smoothNoise" />
+            <feDisplacementMap in="SourceGraphic" in2="smoothNoise" scale="14" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-blue-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-blue-400/30 flex items-center gap-2 animate-bounce">
+        <div className="fixed bottom-5 right-5 z-50 liquid-glass bg-blue-600/80 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-blue-300/40 flex items-center gap-2 animate-bounce">
           <CheckCircle2 className="w-4 h-4" />
           <span className="text-xs font-semibold">{toastMessage}</span>
         </div>
@@ -947,15 +957,15 @@ export function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
 
         {/* ================= MAIN VIEW SWITCHER: 1. LAVORI & AZIONI PROGETTO vs 2. INTERVENTI & GUASTI ================= */}
-        <div className="mb-4 sm:mb-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+        <div className="mb-4 sm:mb-5 liquid-glass rounded-2xl p-2 sm:p-2.5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
             {/* TAB 1: LAVORI & AZIONI PROGETTO */}
             <button
               onClick={() => setActiveCategoryTab('project_work')}
-              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
+              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border liquid-glass-btn ${
                 activeCategoryTab === 'project_work'
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-indigo-400 shadow-lg shadow-indigo-900/40'
-                  : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/70'
+                  ? 'bg-gradient-to-r from-indigo-600/85 to-violet-600/85 text-white border-indigo-300/60 shadow-lg shadow-indigo-900/40'
+                  : 'bg-slate-950/55 text-slate-300 border-white/10 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -977,7 +987,7 @@ export function App() {
                     )}
                   </div>
                   <span className={`hidden lg:block text-[10px] font-normal ${
-                    activeCategoryTab === 'project_work' ? 'text-indigo-100' : 'text-slate-500'
+                    activeCategoryTab === 'project_work' ? 'text-indigo-100' : 'text-slate-400'
                   }`}>
                     Lavori pianificati, attività di cantiere e checklist azioni sui progetti
                   </span>
@@ -988,10 +998,10 @@ export function App() {
             {/* TAB 2: INTERVENTI & GUASTI */}
             <button
               onClick={() => setActiveCategoryTab('intervention')}
-              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border ${
+              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border liquid-glass-btn ${
                 activeCategoryTab === 'intervention'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400 shadow-lg shadow-blue-900/40'
-                  : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/70'
+                  ? 'bg-gradient-to-r from-blue-600/85 to-blue-500/85 text-white border-blue-300/60 shadow-lg shadow-blue-900/40'
+                  : 'bg-slate-950/55 text-slate-300 border-white/10 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -1013,7 +1023,7 @@ export function App() {
                     )}
                   </div>
                   <span className={`hidden lg:block text-[10px] font-normal ${
-                    activeCategoryTab === 'intervention' ? 'text-blue-100' : 'text-slate-500'
+                    activeCategoryTab === 'intervention' ? 'text-blue-100' : 'text-slate-400'
                   }`}>
                     Assistenza tecnica, chiamate guasto e riparazioni
                   </span>
@@ -1025,10 +1035,10 @@ export function App() {
           {/* Quick CTA for Active Tab */}
           <button
             onClick={() => setIsNewModalOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition active:scale-95 shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border ${
               activeCategoryTab === 'project_work'
-                ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/40'
-                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40'
+                ? 'bg-indigo-600/85 hover:bg-indigo-500 border-indigo-300/40 shadow-indigo-900/40'
+                : 'bg-blue-600/85 hover:bg-blue-500 border-blue-300/40 shadow-blue-900/40'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
@@ -1037,13 +1047,13 @@ export function App() {
         </div>
         
         {/* Project Selector Bar */}
-        <div className="mb-4 sm:mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm">
+        <div className="mb-4 sm:mb-6 liquid-glass rounded-2xl p-3 sm:p-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <FolderKanban className="w-5 h-5 text-blue-400" />
               <div>
                 <h2 className="text-sm font-bold text-white">Project Defect & Service Classification</h2>
-                <p className="text-[11px] text-slate-400">Select a project to view only its dedicated defects and service tasks</p>
+                <p className="text-[11px] text-slate-300">Select a project to view only its dedicated defects and service tasks</p>
               </div>
             </div>
 
@@ -1054,7 +1064,7 @@ export function App() {
                   <button
                     type="button"
                     onClick={handleDownloadProjectSummaryPDF}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow transition active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/90 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow transition active:scale-95 liquid-glass-btn border border-amber-200/50"
                     title="Scarica tabella PDF con lo stato aggiornato del progetto selezionato (per riunioni)"
                   >
                     <FileDown className="w-3.5 h-3.5" />
@@ -1063,7 +1073,7 @@ export function App() {
                   <button
                     type="button"
                     onClick={handleShareProjectSummaryWhatsApp}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/85 hover:bg-emerald-500 text-white text-xs font-bold shadow transition active:scale-95 liquid-glass-btn border border-emerald-300/40"
                     title="Invia riepilogo testuale del progetto su WhatsApp"
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
@@ -1079,7 +1089,7 @@ export function App() {
                       setOpenProjectCreateDirectly(true);
                       setIsProjectsModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/85 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95 liquid-glass-btn border border-blue-300/40"
                     title="Create a new Project"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
@@ -1090,7 +1100,7 @@ export function App() {
                       setOpenProjectCreateDirectly(false);
                       setIsProjectsModalOpen(true);
                     }}
-                    className="text-xs text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 transition"
+                    className="text-xs text-slate-200 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-white/15 bg-slate-800/60 hover:bg-slate-700/70 transition liquid-glass-btn"
                     title="Manage all projects"
                   >
                     <span>Manage</span>
@@ -1104,10 +1114,10 @@ export function App() {
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setActiveProjectId('all')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 liquid-glass-btn border ${
                 activeProjectId === 'all'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                  ? 'bg-blue-600/90 text-white border-blue-300/50 shadow-md shadow-blue-600/30'
+                  : 'bg-slate-800/65 text-slate-300 border-white/10 hover:text-white hover:bg-slate-700/75'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -1124,7 +1134,7 @@ export function App() {
                   key={p.id}
                   onClick={() => setActiveProjectId(p.id)}
                   title={`${p.name} — Status: ${style.label} (${count} tickets)`}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 border ${style.btnClass}`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 border liquid-glass-btn ${style.btnClass}`}
                 >
                   <span className={`w-2 h-2 rounded-full ${style.dotColor} ${style.dotPulse ? 'animate-pulse' : ''}`}></span>
                   <span>{p.name}</span>
@@ -1150,35 +1160,47 @@ export function App() {
             )}
           </div>
 
-          {/* Status Color Legend */}
-          <div className="flex items-center gap-3.5 text-[11px] text-slate-400 flex-wrap pt-2.5 mt-2.5 border-t border-slate-800/60">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Project Status:</span>
-            <span className="flex items-center gap-1.5 bg-rose-950/30 px-2 py-0.5 rounded-md border border-rose-900/40">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-              <span className="text-rose-300">Open / Not Resolved</span>
-            </span>
-            <span className="flex items-center gap-1.5 bg-amber-950/30 px-2 py-0.5 rounded-md border border-amber-900/40">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              <span className="text-amber-300">In Progress</span>
-            </span>
-            <span className="flex items-center gap-1.5 bg-emerald-950/30 px-2 py-0.5 rounded-md border border-emerald-900/40">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span className="text-emerald-300">All Resolved</span>
-            </span>
-            <span className="flex items-center gap-1.5 bg-pink-950/30 px-2 py-0.5 rounded-md border border-pink-900/40">
-              <span className="w-2 h-2 rounded-full bg-pink-400"></span>
-              <span className="text-pink-300">Empty (No Tasks)</span>
-            </span>
+          {/* Status Color Legend + "+ Aggiungi Lavoro / Azione" button right under the project pills */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 mt-2.5 border-t border-white/10">
+            <div className="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Project Status:</span>
+              <span className="flex items-center gap-1.5 bg-rose-950/35 px-2 py-0.5 rounded-md border border-rose-500/30">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span className="text-rose-300">Open / Not Resolved</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-amber-950/35 px-2 py-0.5 rounded-md border border-amber-500/30">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span className="text-amber-300">In Progress</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-emerald-950/35 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="text-emerald-300">All Resolved</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-pink-950/35 px-2 py-0.5 rounded-md border border-pink-500/30">
+                <span className="w-2 h-2 rounded-full bg-pink-400"></span>
+                <span className="text-pink-300">Empty (No Tasks)</span>
+              </span>
+            </div>
+
+            {/* + Aggiungi Lavoro / Azione button directly under Project pills */}
+            <button
+              type="button"
+              onClick={() => setIsNewModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border border-rose-300/40"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : '+ Aggiungi Intervento'}</span>
+            </button>
           </div>
 
           {/* Project Focus Header info */}
           {activeProjectObj && (
-            <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-300 gap-2">
+            <div className="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-200 gap-2">
               <div>
                 <span className="font-bold text-white text-sm">{activeProjectObj.name}</span>
-                <span className="text-slate-400 ml-2">({activeProjectObj.code}) — {activeProjectObj.description}</span>
+                <span className="text-slate-300 ml-2">({activeProjectObj.code}) — {activeProjectObj.description}</span>
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-[11px] text-slate-300">
                 {activeProjectObj.siteAddress && <span>Facility: {activeProjectObj.siteAddress}</span>}
               </div>
             </div>
