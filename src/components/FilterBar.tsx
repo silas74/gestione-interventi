@@ -30,7 +30,7 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(({
   activeCategoryTab = 'project_work'
 }) => {
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 mb-6 bg-slate-900/60 p-2.5 sm:p-3 rounded-2xl border border-slate-800">
+    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 mb-6 liquid-glass p-2.5 sm:p-3 rounded-2xl">
       
       {/* Search Input */}
       <div className="relative flex-1">
