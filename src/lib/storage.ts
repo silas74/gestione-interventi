@@ -2,7 +2,7 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v8_supply';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v9_panvac_avr';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
@@ -40,8 +40,8 @@ const INITIAL_PROJECTS: Project[] = [
     id: 'proj-panvac',
     code: 'PANVAC',
     name: 'Panvac',
-    description: 'Impianti elettrici, quadri, media/bassa tensione, generazione e Low Voltage',
-    clientName: 'Aby',
+    description: 'Impianti elettrici, quadri, AVR / AVS 2500 kVA (Orion Plus 2500-15), media/bassa tensione, generazione e Low Voltage',
+    clientName: 'Abiy Taye (aby@elmiconstruction.com)',
     siteAddress: 'Panvac Facility',
     createdAt: '2026-10-01T08:00:00Z'
   },
@@ -231,13 +231,17 @@ const INITIAL_INTERVENTIONS: InterventionRequest[] = [
   }
 ];
 
-// Helper to create the 9 Panvac approval tracking items awaiting reply from Aby
+// Helper to create the 9 Panvac approval tracking items awaiting reply from Abiy Taye
 const PANVAC_APPROVAL_ITEMS: Array<{
   num: string;
   title: string;
   whatIDid: string;
   nextStep: string;
   refDoc: string;
+  date?: string;
+  time?: string;
+  waitingFrom?: string;
+  notes?: string;
 }> = [
   {
     num: '001',
@@ -269,10 +273,14 @@ const PANVAC_APPROVAL_ITEMS: Array<{
   },
   {
     num: '005',
-    title: 'Approvazione AVS',
-    whatIDid: 'Inviata sottomissione tecnica e specifiche AVS (Stabilizzatore di Tensione) per approvazione.',
-    nextStep: 'Procedere con fornitura AVS dopo approvazione di Aby.',
-    refDoc: 'Submittal_AVS_Panvac.pdf'
+    title: 'Approvazione AVR / AVS 2500 kVA (Orion Plus 2500-15)',
+    whatIDid: 'Inviata via email (26/10/2026 — Oggetto: "Panvac AVS submital") ad Abiy Taye (aby@elmiconstruction.com) e in CC ad Alberto Elmi, Yordanos Neway, Amanuel Ant e Michael Tadesse la sottomissione tecnica (submittal) per l\'AVR da 2500 kVA con allegata scheda tecnica "Orion plus_2500-15_en_08102026.pdf".',
+    nextStep: 'Attendere approvazione submittal AVR 2500 kVA (Orion Plus 2500-15) da Abiy Taye per procedere con ordine e fornitura.',
+    refDoc: 'Orion plus_2500-15_en_08102026.pdf (Email: "Panvac AVS submital" - 26/10/2026)',
+    date: '2026-10-26',
+    time: '14:43',
+    waitingFrom: 'Abiy Taye (aby@elmiconstruction.com) — CC: Alberto Elmi, Yordanos Neway, Amanuel Ant, Michael Tadesse',
+    notes: 'Submittal AVR 2500 kVA (Orion Plus 2500-15) trasmesso via email il 26/10/2026 ad Abiy Taye. In attesa di approvazione formale.'
   },
   {
     num: '006',
@@ -304,64 +312,71 @@ const PANVAC_APPROVAL_ITEMS: Array<{
   }
 ];
 
-const PANVAC_INITIAL_WORKS: InterventionRequest[] = PANVAC_APPROVAL_ITEMS.map((item) => ({
-  id: `lav-panvac-${item.num}`,
-  code: `LAV-PANVAC-2026-${item.num}`,
-  recordType: 'project_work',
-  projectId: 'proj-panvac',
-  projectName: 'Panvac',
-  title: item.title,
-  siteName: 'Panvac Facility',
-  siteAddress: 'Panvac Site',
-  clientName: 'Aby',
-  clientContact: '',
-  description: item.whatIDid,
-  desiredAccessDate: '2026-10-21',
-  desiredAccessTime: '09:00',
-  priority: 'high',
-  defectPhotos: [],
-  notes: 'In attesa di approvazione da Aby.',
-  status: 'in_progress',
-  createdAt: '2026-10-21T09:00:00Z',
-  updatedAt: '2026-10-21T09:00:00Z',
-  assignedTechnician: 'Costantino',
-  whatIDidSummary: item.whatIDid,
-  followUpChannel: 'email',
-  lastActionDate: '2026-10-21',
-  waitingReplyFrom: 'Aby',
-  nextActionToDo: item.nextStep,
-  trackingLogs: [
-    {
-      id: `trk-panvac-${item.num}`,
-      date: '2026-10-21',
-      time: '09:30',
-      whatIDid: item.whatIDid,
-      channel: 'email',
-      awaitingReply: true,
-      waitingReplyFrom: 'Aby',
-      nextStep: item.nextStep,
-      referenceDoc: item.refDoc
-    }
-  ],
-  actionSteps: [
-    {
-      id: `act-panvac-${item.num}-1`,
-      text: `Inviata richiesta approvazione (${item.title.replace('Approvazione ', '')}) a Aby`,
-      completed: true,
-      completedAt: '2026-10-21T09:30:00Z'
-    },
-    {
-      id: `act-panvac-${item.num}-2`,
-      text: 'Ricezione approvazione / commenti da Aby',
-      completed: false
-    },
-    {
-      id: `act-panvac-${item.num}-3`,
-      text: item.nextStep,
-      completed: false
-    }
-  ]
-}));
+const PANVAC_INITIAL_WORKS: InterventionRequest[] = PANVAC_APPROVAL_ITEMS.map((item) => {
+  const itemDate = item.date || '2026-10-21';
+  const itemTime = item.time || '09:30';
+  const waitingTarget = item.waitingFrom || 'Abiy Taye (aby@elmiconstruction.com)';
+  return {
+    id: `lav-panvac-${item.num}`,
+    code: `LAV-PANVAC-2026-${item.num}`,
+    recordType: 'project_work',
+    projectId: 'proj-panvac',
+    projectName: 'Panvac',
+    title: item.title,
+    siteName: 'Panvac Facility',
+    siteAddress: 'Panvac Site',
+    clientName: 'Abiy Taye',
+    clientContact: 'aby@elmiconstruction.com',
+    description: item.whatIDid,
+    desiredAccessDate: itemDate,
+    desiredAccessTime: itemTime,
+    priority: 'high',
+    defectPhotos: [],
+    notes: item.notes || 'In attesa di approvazione da Abiy Taye.',
+    status: 'in_progress',
+    createdAt: `${itemDate}T${itemTime}:00Z`,
+    updatedAt: `${itemDate}T${itemTime}:00Z`,
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: item.whatIDid,
+    followUpChannel: 'email',
+    lastActionDate: itemDate,
+    waitingReplyFrom: waitingTarget,
+    nextActionToDo: item.nextStep,
+    trackingLogs: [
+      {
+        id: `trk-panvac-${item.num}`,
+        date: itemDate,
+        time: itemTime,
+        whatIDid: item.whatIDid,
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: waitingTarget,
+        nextStep: item.nextStep,
+        referenceDoc: item.refDoc
+      }
+    ],
+    actionSteps: [
+      {
+        id: `act-panvac-${item.num}-1`,
+        text: item.num === '005'
+          ? 'Inviato Submittal AVR 2500 kVA (Orion plus_2500-15_en_08102026.pdf) via email ad Abiy Taye e team Elmi'
+          : `Inviata richiesta approvazione (${item.title.replace('Approvazione ', '')}) ad Abiy Taye`,
+        completed: true,
+        completedAt: `${itemDate}T${itemTime}:00Z`
+      },
+      {
+        id: `act-panvac-${item.num}-2`,
+        text: 'Ricezione approvazione / commenti da Abiy Taye',
+        completed: false
+      },
+      {
+        id: `act-panvac-${item.num}-3`,
+        text: item.nextStep,
+        completed: false
+      }
+    ]
+  };
+});
 
 // Helper to create the 9 Hilton (GIAA) Electrical / ELV / FLS Concept Design items from Lukas Van Vuuren's email (20/10/2026) & Submission Form PDF
 const HILTON_ELECTRICAL_ITEMS: Array<{
@@ -1094,9 +1109,19 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
       const upgraded = cleanedParsed.map(item => {
         const sample = sampleMap.get(item.id);
         if (sample) {
+          if (item.id === 'lav-panvac-005') {
+            return {
+              ...item,
+              ...sample,
+              status: item.status || sample.status,
+              supplyStatus: item.supplyStatus || sample.supplyStatus,
+            };
+          }
           return {
             ...sample,
             ...item,
+            clientName: sample.clientName || item.clientName,
+            clientContact: sample.clientContact || item.clientContact,
             supplyStatus: item.supplyStatus || sample.supplyStatus,
             trackingLogs: item.trackingLogs && item.trackingLogs.length > 0 ? item.trackingLogs : sample.trackingLogs,
             waitingReplyFrom: item.waitingReplyFrom || sample.waitingReplyFrom,
