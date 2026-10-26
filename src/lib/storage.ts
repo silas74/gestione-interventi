@@ -2,13 +2,22 @@ import { InterventionRequest, UserAccount, Project } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v9_panvac_avr';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v10_gemb';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
 
-// 1. Initial Projects with Awash Bank, Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
+// 1. Initial Projects with German Embassy (GEMB), Awash Bank, Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
+  {
+    id: 'proj-german-embassy',
+    code: 'GEMB',
+    name: 'German Embassy (GEMB)',
+    description: 'Small Project Area & East Guard House — Ricambi AVR 400 kVA (Fan Controller & Main Board L1) e UPS 6 kVA con batterie (AEC)',
+    clientName: 'Michael Tadesse (michael.tadesse@elmiconstruction.com)',
+    siteAddress: 'German Embassy — Small Project Area & East Guard House',
+    createdAt: '2026-10-24T09:01:00Z'
+  },
   {
     id: 'proj-awash-bank',
     code: 'AWASH',
@@ -812,8 +821,141 @@ const AWASH_BANK_INITIAL_WORKS: InterventionRequest[] = [
   }
 ];
 
+// Helper for German Embassy (GEMB) tracking items from Michael Tadesse's email (24/10/2026 - "GEMB | Small Project UPS and AVR Parts")
+const GEMB_INITIAL_WORKS: InterventionRequest[] = [
+  {
+    id: 'lav-gemb-001',
+    code: 'LAV-GEMB-2026-001',
+    recordType: 'project_work',
+    projectId: 'proj-german-embassy',
+    projectName: 'German Embassy (GEMB)',
+    title: 'Ordine Ricambi AVR 400 kVA — Fan Controller Board & Main AVR Board (Fase L1)',
+    siteName: 'German Embassy — Small Project Area',
+    siteAddress: 'German Embassy — Small Project Area',
+    clientName: 'Michael Tadesse',
+    clientContact: 'michael.tadesse@elmiconstruction.com',
+    description: 'A seguito di un incidente elettrico lato rete (utility side) nella Small Project Area della German Embassy, si sono danneggiate la Fan Controller Board e la Main Board dell\'AVR da 400 kVA (specificamente sulla fase L1). Poiché la policy della German Embassy non consente il pagamento diretto ad AEC, Michael Tadesse ha chiesto (email del 24/10/2026) il nostro supporto per ordinare le schede di ricambio.',
+    desiredAccessDate: '2026-10-24',
+    desiredAccessTime: '09:00',
+    priority: 'urgent',
+    defectPhotos: [],
+    notes: 'Policy German Embassy non permette pagamento diretto ad AEC. Michael Tadesse invierà i Part Numbers rilevati dai dispositivi fisici.',
+    status: 'in_progress',
+    createdAt: '2026-10-24T09:01:00Z',
+    updatedAt: '2026-10-24T09:01:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Ricevuta richiesta via email da Michael Tadesse (24/10/2026 — Oggetto: "GEMB | Small Project UPS and AVR Parts", CC: Pier Paolo Elmi, Bethel Haddis, Tsega Alemayehu, Zelalem Mitiku, Abel Korra) per ordinare tramite AEC: 1) 400 kVA AVR Fan Controller Board e Main AVR Board (danneggiate su L1).',
+    followUpChannel: 'email',
+    lastActionDate: '2026-10-24',
+    waitingReplyFrom: 'Michael Tadesse (Part Numbers dai dispositivi fisici) & Quotazione AEC',
+    nextActionToDo: 'Ricevere i Part Numbers fisici dell\'AVR 400 kVA da Michael Tadesse, procedere con ordine ricambi (Fan Controller Board + Main AVR Board L1) presso AEC e programmare sostituzione.',
+    supplyStatus: 'none',
+    trackingLogs: [
+      {
+        id: 'trk-gemb-001-1',
+        date: '2026-10-24',
+        time: '09:01',
+        whatIDid: 'Ricevuta email da Michael Tadesse (michael.tadesse@elmiconstruction.com): guasto su AVR 400 kVA (Fan Controller Board + Main Board L1) per evento elettrico lato rete. Condiviso contatto AEC da manuale, ma per policy l\'Ambasciata Tedesca non può pagare direttamente AEC e richiede supporto per l\'ordine dei ricambi.',
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: 'Michael Tadesse (Invio Part Numbers schede fisiche AVR 400 kVA)',
+        nextStep: 'Acquisire Part Numbers delle schede AVR 400 kVA, ordinare i ricambi ad AEC e sostituirli in sito.',
+        referenceDoc: 'GEMB | Small Project UPS and AVR Parts (24/10/2026)'
+      }
+    ],
+    actionSteps: [
+      {
+        id: 'act-gemb-001-1',
+        text: 'Ricevuta segnalazione guasto AVR 400 kVA (L1) e richiesta ordine ricambi da Michael Tadesse (24/10/2026)',
+        completed: true,
+        completedAt: '2026-10-24T09:01:00Z'
+      },
+      {
+        id: 'act-gemb-001-2',
+        text: 'Ricevere da Michael Tadesse i Part Numbers rilevati fisicamente sull\'AVR 400 kVA',
+        completed: false
+      },
+      {
+        id: 'act-gemb-001-3',
+        text: 'Ordinare 400 kVA AVR Fan Controller Board + Main AVR Board tramite AEC',
+        completed: false
+      },
+      {
+        id: 'act-gemb-001-4',
+        text: 'Sostituzione schede AVR 400 kVA nella Small Project Area e collaudo fase L1',
+        completed: false
+      }
+    ]
+  },
+  {
+    id: 'lav-gemb-002',
+    code: 'LAV-GEMB-2026-002',
+    recordType: 'project_work',
+    projectId: 'proj-german-embassy',
+    projectName: 'German Embassy (GEMB)',
+    title: 'Ordine Ricambio UPS 6 kVA con Batterie — East Guard House (Guasto Scheda AC/DC MOSFET)',
+    siteName: 'German Embassy — East Guard House',
+    siteAddress: 'German Embassy — Small Project Area (East Guard House)',
+    clientName: 'Michael Tadesse',
+    clientContact: 'michael.tadesse@elmiconstruction.com',
+    description: 'A seguito dell\'incidente elettrico lato rete nella Small Project Area, anche l\'UPS da 6 kVA situato nella East Guard House è rimasto danneggiato (scheda AC/DC MOSFET fuori uso / bruciata). Poiché l\'Ambasciata Tedesca non può effettuare pagamenti diretti ad AEC per policy interna, Michael Tadesse ha richiesto (24/10/2026) di ordinare un UPS da 6 kVA completo di batterie.',
+    desiredAccessDate: '2026-10-24',
+    desiredAccessTime: '09:00',
+    priority: 'urgent',
+    defectPhotos: [],
+    notes: 'Scheda AC/DC MOSFET dell\'UPS 6 kVA bruciata (East Guard House). Richiesto ordine di 6 kVA UPS con batteria.',
+    status: 'in_progress',
+    createdAt: '2026-10-24T09:01:00Z',
+    updatedAt: '2026-10-24T09:01:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Ricevuta richiesta via email da Michael Tadesse (24/10/2026 — Oggetto: "GEMB | Small Project UPS and AVR Parts") per ordinare tramite AEC: 2) 6 kVA UPS completo di batteria per la East Guard House (scheda AC/DC MOSFET danneggiata).',
+    followUpChannel: 'email',
+    lastActionDate: '2026-10-24',
+    waitingReplyFrom: 'Michael Tadesse (Part Numbers / Targhetta UPS 6 kVA) & Quotazione AEC',
+    nextActionToDo: 'Ricevere i Part Numbers del dispositivo fisico da Michael Tadesse, procedere con ordine di 6 kVA UPS con batterie tramite AEC e installarlo presso East Guard House.',
+    supplyStatus: 'none',
+    trackingLogs: [
+      {
+        id: 'trk-gemb-002-1',
+        date: '2026-10-24',
+        time: '09:01',
+        whatIDid: 'Ricevuta email da Michael Tadesse (michael.tadesse@elmiconstruction.com): UPS da 6 kVA nella East Guard House danneggiato (scheda AC/DC MOSFET bruciata) in seguito a sovratensione/guasto lato rete. Richiesto ordine di 6 kVA UPS con batteria tramite nostra intermediazione con AEC.',
+        channel: 'email',
+        awaitingReply: true,
+        waitingReplyFrom: 'Michael Tadesse (Part Numbers dispositivo fisico UPS 6 kVA)',
+        nextStep: 'Ricevere Part Numbers da Michael Tadesse, ordinare UPS 6 kVA + batterie da AEC e procedere con installazione in East Guard House.',
+        referenceDoc: 'GEMB | Small Project UPS and AVR Parts (24/10/2026)'
+      }
+    ],
+    actionSteps: [
+      {
+        id: 'act-gemb-002-1',
+        text: 'Ricevuta segnalazione guasto UPS 6 kVA (AC/DC MOSFET board dead) presso East Guard House (24/10/2026)',
+        completed: true,
+        completedAt: '2026-10-24T09:01:00Z'
+      },
+      {
+        id: 'act-gemb-002-2',
+        text: 'Ricevere da Michael Tadesse i Part Numbers / dati di targa dell\'UPS 6 kVA fisico',
+        completed: false
+      },
+      {
+        id: 'act-gemb-002-3',
+        text: 'Ordinare 6 kVA UPS completo di batterie tramite AEC',
+        completed: false
+      },
+      {
+        id: 'act-gemb-002-4',
+        text: 'Sostituzione e collaudo UPS 6 kVA + batterie presso East Guard House',
+        completed: false
+      }
+    ]
+  }
+];
+
 // 4. Initial Project Works & Action Items (Lavori & Azioni sui Progetti)
 const INITIAL_PROJECT_WORKS: InterventionRequest[] = [
+  ...GEMB_INITIAL_WORKS,
   ...AWASH_BANK_INITIAL_WORKS,
   ...EAGLE_HILLS_INITIAL_WORKS,
   ...HILTON_INITIAL_WORKS,
@@ -931,6 +1073,21 @@ export function fetchProjects(): Project[] {
       const awashDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-awash-bank');
       if (awashDefault) {
         parsed = [awashDefault, ...parsed];
+        modified = true;
+      }
+    }
+
+    const hasGemb = parsed.some(
+      p =>
+        p.id === 'proj-german-embassy' ||
+        p.name.toLowerCase().includes('german') ||
+        p.name.toLowerCase().includes('gemb') ||
+        p.code.toLowerCase().includes('gemb')
+    );
+    if (!hasGemb) {
+      const gembDefault = INITIAL_PROJECTS.find(p => p.id === 'proj-german-embassy');
+      if (gembDefault) {
+        parsed = [gembDefault, ...parsed];
         modified = true;
       }
     }
@@ -1061,6 +1218,15 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
           p.code.toLowerCase().includes('awash')
       ) || INITIAL_PROJECTS.find(p => p.id === 'proj-awash-bank')!;
 
+    const gembProj =
+      projects.find(
+        p =>
+          p.id === 'proj-german-embassy' ||
+          p.name.toLowerCase().includes('german') ||
+          p.name.toLowerCase().includes('gemb') ||
+          p.code.toLowerCase().includes('gemb')
+      ) || INITIAL_PROJECTS.find(p => p.id === 'proj-german-embassy')!;
+
     const normalizedWorks = INITIAL_PROJECT_WORKS.map(w => {
       if (w.projectId === 'proj-panvac') {
         return { ...w, projectId: panvacProj.id, projectName: panvacProj.name };
@@ -1073,6 +1239,9 @@ export async function fetchInterventions(): Promise<InterventionRequest[]> {
       }
       if (w.projectId === 'proj-awash-bank') {
         return { ...w, projectId: awashProj.id, projectName: awashProj.name };
+      }
+      if (w.projectId === 'proj-german-embassy') {
+        return { ...w, projectId: gembProj.id, projectName: gembProj.name };
       }
       return w;
     });
