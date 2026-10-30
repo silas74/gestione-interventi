@@ -44,11 +44,11 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+                <h1 className="font-display text-sm sm:text-base font-extrabold tracking-tight text-white truncate">
                   FIELD SERVICE
                 </h1>
-                <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0">
-                  PWA Ready
+                <span className="font-mono text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/35 shrink-0">
+                  IMPECCABLE UI
                 </span>
               </div>
               <p className="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block">
