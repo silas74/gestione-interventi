@@ -1,78 +1,21 @@
 import React, { useState } from 'react';
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Phone,
-  AlertTriangle,
-  CheckCircle2,
-  Wrench,
-  FileDown,
-  MessageSquare,
-  Star,
-  Trash2,
-  Image as ImageIcon,
-  Shield,
-  FolderKanban,
-  AlertCircle,
-  PhoneCall,
-  MessageCircle,
-  Share2,
-  Mail,
-  Camera,
-  ClipboardList,
-  CheckSquare,
-  Square,
-  Plus,
-  Hourglass,
-  ArrowRight,
-  FileText,
-  Pencil,
-  Package,
-  Truck,
-  Check,
-  X,
-  BellRing,
-  ShoppingCart,
-  Building2,
-  Bookmark,
-  Paperclip,
+import { 
+  Calendar, Clock, MapPin, User, Phone, AlertTriangle, 
+  CheckCircle2, Wrench, FileDown, MessageSquare, Star, 
+  Trash2, Image as ImageIcon, Shield, FolderKanban, AlertCircle,
+  PhoneCall, MessageCircle, Share2, Mail, Camera, ClipboardList, CheckSquare, Square, Plus,
+  Hourglass, ArrowRight, FileText, Pencil, Package, Truck, Check, X, BellRing
 } from 'lucide-react';
-import {
-  InterventionRequest,
-  AppRole,
-  DefectPhoto,
-  FollowUpChannel,
-  ProjectTrackingEntry,
-  SupplyStatus,
-  InterventionPriority,
-  InterventionStatus,
-} from '../types';
+import { InterventionRequest, AppRole, DefectPhoto, FollowUpChannel, ProjectTrackingEntry, SupplyStatus, InterventionPriority, InterventionStatus } from '../types';
 import { getTelUri, getClientWhatsAppUri, getTicketShareWhatsAppUri } from '../lib/contactUtils';
 
-const SUPPLY_STEPS: { id: SupplyStatus; label: string; short: string }[] = [
-  { id: 'none', label: 'Nessun ordine', short: 'Nessuno' },
-  { id: 'ordered', label: 'Ordinato', short: 'Ordinato' },
-  { id: 'shipping', label: 'In arrivo', short: 'In arrivo' },
-  { id: 'ready_pickup', label: 'Da ritirare', short: 'Da ritirare' },
-  { id: 'delivered', label: 'In cantiere', short: 'In cantiere' },
+const SUPPLY_STEPS: { id: SupplyStatus; label: string; short: string; activeCls: string }[] = [
+  { id: 'none', label: 'Nessun Ordine', short: 'N/A', activeCls: 'bg-slate-700 text-slate-200 border-slate-500' },
+  { id: 'ordered', label: '🛒 Ordinato', short: 'Ordinato', activeCls: 'bg-amber-600 text-white border-amber-400 shadow-sm shadow-amber-950/50' },
+  { id: 'shipping', label: '🚚 In Arrivo', short: 'In Arrivo', activeCls: 'bg-sky-600 text-white border-sky-400 shadow-sm shadow-sky-950/50' },
+  { id: 'ready_pickup', label: '📦 Da Ritirare', short: 'Da Ritirare', activeCls: 'bg-purple-600 text-white border-purple-400 shadow-sm shadow-purple-950/50 animate-pulse' },
+  { id: 'delivered', label: '🏗️ In Cantiere', short: 'In Cantiere', activeCls: 'bg-emerald-600 text-white border-emerald-400 shadow-sm shadow-emerald-950/50' },
 ];
-
-const renderSupplyIcon = (status: SupplyStatus) => {
-  switch (status) {
-    case 'ordered':
-      return <ShoppingCart className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />;
-    case 'shipping':
-      return <Truck className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />;
-    case 'ready_pickup':
-      return <Package className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />;
-    case 'delivered':
-      return <Building2 className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />;
-    default:
-      return null;
-  }
-};
 
 const getWaitingDaysInfo = (lastActionDate?: string, followUpDueDate?: string, createdAt?: string) => {
   const refDateStr = lastActionDate || (createdAt ? createdAt.split('T')[0] : undefined);
@@ -98,7 +41,7 @@ const getWaitingDaysInfo = (lastActionDate?: string, followUpDueDate?: string, c
   }
 
   const isAlert = isOverdue || daysWaiting >= 3;
-  const label = daysWaiting === 0 ? 'oggi' : daysWaiting === 1 ? 'da 1 giorno' : `da ${daysWaiting} giorni`;
+  const label = daysWaiting === 0 ? 'Oggi' : daysWaiting === 1 ? 'da 1 giorno' : `da ${daysWaiting} giorni`;
   return { daysWaiting, isOverdue, isAlert, label };
 };
 
@@ -108,9 +51,9 @@ const getReminderWhatsAppUri = (intervention: InterventionRequest, waitingFrom: 
   const msg =
     `Gentile ${waitingFrom},\n` +
     `ti scrivo per un gentile riscontro in merito a:\n` +
-    `- ${intervention.title} (${intervention.projectName || intervention.siteName || intervention.code})\n` +
-    (intervention.lastActionDate ? `- Inviato il: ${intervention.lastActionDate}${daysWaiting > 0 ? ` (${daysWaiting} gg fa)` : ''}\n` : '') +
-    (intervention.whatIDidSummary ? `- Dettaglio: ${intervention.whatIDidSummary}\n` : '') +
+    `📌 *${intervention.title}* (${intervention.projectName || intervention.siteName || intervention.code})\n` +
+    (intervention.lastActionDate ? `📅 Inviato il: ${intervention.lastActionDate}${daysWaiting > 0 ? ` (${daysWaiting} gg fa)` : ''}\n` : '') +
+    (intervention.whatIDidSummary ? `📝 Dettaglio: ${intervention.whatIDidSummary}\n` : '') +
     `\nResto in attesa di un tuo cortese feedback per procedere.\nGrazie, Pierluigi`;
   const encoded = encodeURIComponent(msg);
   return cleanPhone.length >= 6
@@ -165,31 +108,15 @@ interface InterventionCardProps {
 const getChannelBadgeInfo = (channel?: FollowUpChannel) => {
   switch (channel) {
     case 'email':
-      return { label: 'Seguito per email', short: 'Email' };
+      return { label: 'Seguito per Email', short: 'Email', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/40', icon: 'email' };
     case 'whatsapp':
-      return { label: 'Seguito su WhatsApp', short: 'WhatsApp' };
+      return { label: 'Seguito per WhatsApp', short: 'WhatsApp', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', icon: 'whatsapp' };
     case 'phone':
-      return { label: 'Seguito per telefono', short: 'Telefono' };
+      return { label: 'Seguito per Telefono', short: 'Telefono', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/40', icon: 'phone' };
     case 'meeting':
-      return { label: 'Riunione tecnica', short: 'Riunione' };
+      return { label: 'Riunione / Call', short: 'Riunione', cls: 'bg-violet-500/20 text-violet-300 border-violet-500/40', icon: 'meeting' };
     default:
-      return { label: 'Eseguito in cantiere', short: 'Cantiere' };
-  }
-};
-
-const formatPriorityLabel = (priority: string) => {
-  switch (priority) {
-    case 'urgent':
-    case 'urgente':
-      return 'Priorità urgente';
-    case 'high':
-    case 'alta':
-      return 'Priorità alta';
-    case 'medium':
-    case 'media':
-      return 'Priorità media';
-    default:
-      return 'Priorità bassa';
+      return { label: 'Eseguito in Cantiere', short: 'Cantiere', cls: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40', icon: 'on_site' };
   }
 };
 
@@ -213,7 +140,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   const [quickStepText, setQuickStepText] = useState('');
   const [showAddStepInput, setShowAddStepInput] = useState(false);
 
-  // Quick inline edit state
+  // Quick inline edit state (Feature #4)
   const [isEditingCard, setIsEditingCard] = useState(false);
   const [editTitle, setEditTitle] = useState(intervention.title);
   const [editWhatIDid, setEditWhatIDid] = useState(intervention.whatIDidSummary || intervention.description || '');
@@ -230,8 +157,8 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
     setEditWhatIDid(intervention.whatIDidSummary || intervention.description || '');
     setEditWaitingFrom(
       intervention.waitingReplyFrom ||
-        (intervention.trackingLogs || []).find((t) => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom ||
-        ''
+      (intervention.trackingLogs || []).find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom ||
+      ''
     );
     setEditContact(intervention.clientContact || '');
     setEditNextStep(intervention.nextActionToDo || '');
@@ -280,135 +207,168 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
   const trackingLogs = intervention.trackingLogs || [];
   const activeWaitingFrom =
     intervention.waitingReplyFrom ||
-    trackingLogs.find((t) => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom;
+    trackingLogs.find(t => t.awaitingReply && !t.replyReceived)?.waitingReplyFrom;
   const waitingDaysInfo = getWaitingDaysInfo(
     intervention.lastActionDate,
     intervention.followUpDueDate,
     intervention.createdAt
   );
-  const completedStepsCount = actionSteps.filter((s) => s.completed).length;
+  const completedStepsCount = actionSteps.filter(s => s.completed).length;
   const stepsProgressPct = actionSteps.length > 0 ? Math.round((completedStepsCount / actionSteps.length) * 100) : 0;
   const isCompleted = intervention.status === 'completed' || intervention.status === 'completato';
-  const isPending = !isCompleted;
+  const isPending = !isCompleted; // All open tasks (pending, scheduled, in_progress)
   const isWaiting = intervention.status === 'pending' || intervention.status === 'in_attesa';
   const isUrgent = intervention.priority === 'urgent' || intervention.priority === 'urgente';
-  const isWaitingForParts =
-    intervention.report?.statusOutcome === 'waiting_for_parts' ||
-    (intervention.report?.statusOutcome as string) === 'in_attesa_ricambi';
+  const isWaitingForParts = (intervention.report?.statusOutcome === 'waiting_for_parts' || 
+                            (intervention.report?.statusOutcome as string) === 'in_attesa_ricambi');
   const isInProgress = (intervention.status === 'in_progress' || intervention.status === 'in_corso') && !isCompleted;
 
   const isAdmin = currentRole === 'admin';
   const isTechOrAdmin = currentRole === 'admin' || currentRole === 'technician' || currentRole === 'tecnico';
 
+  // Priority Styles
+  const priorityBadge = {
+    urgent: isPending
+      ? 'animate-flash-urgent font-black tracking-wider shadow-md'
+      : 'bg-red-500/25 text-red-300 border-red-500/50 font-bold',
+    urgente: isPending
+      ? 'animate-flash-urgent font-black tracking-wider shadow-md'
+      : 'bg-red-500/25 text-red-300 border-red-500/50 font-bold',
+    high: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold',
+    alta: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold',
+    medium: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
+    media: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
+    low: 'bg-slate-500/20 text-slate-300 border-slate-500/40',
+    bassa: 'bg-slate-500/20 text-slate-300 border-slate-500/40',
+  }[intervention.priority] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
+
   return (
-    <div
-      className={`rounded-lg p-6 bg-zinc-900 flex flex-col justify-between border transition ${
-        isUrgent && isPending ? 'border-zinc-500' : 'border-zinc-800 hover:border-zinc-700'
-      }`}
-    >
+    <div className={`rounded-2xl p-4 sm:p-5 liquid-glass-card flex flex-col justify-between border ${
+      isPending
+        ? isUrgent
+          ? 'liquid-glass-card-rose animate-flash-card-urgent ring-1 ring-red-500/40'
+          : isWaitingForParts
+            ? 'liquid-glass-card-pink hover:border-pink-400/80 ring-1 ring-pink-500/30'
+            : isInProgress
+              ? 'liquid-glass-card-amber hover:border-amber-400/80'
+              : 'liquid-glass-card-rose hover:border-rose-400/75'
+        : 'liquid-glass-card-emerald hover:border-emerald-400/75'
+    }`}>
+      
       <div>
-        {/* Urgent Banner — Neutral palette, zero glow */}
+        {/* Urgent Alert Siren Banner (flashing Red <-> Yellow) */}
         {isUrgent && isPending && (
-          <div className="mb-4 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-600 flex items-center justify-between text-xs font-semibold text-zinc-100">
-            <span className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-zinc-200 shrink-0" strokeWidth={1.75} />
-              <span>Priorità urgente — Azione richiesta</span>
+          <div className="mb-3 px-3 py-1.5 rounded-xl animate-flash-urgent flex items-center justify-between text-xs font-black tracking-wider shadow-md">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 animate-flash-siren shrink-0" />
+              <span>URGENT PRIORITY ALERT</span>
             </span>
-            <span className="font-mono text-xs font-normal text-zinc-300">Intervento prioritario</span>
+            <span className="text-[10px] font-mono uppercase bg-black/30 px-2 py-0.5 rounded-md border border-white/20">
+              ACTION REQUIRED
+            </span>
           </div>
         )}
 
-        {/* Top bar: Code, Project, State, Priority & Quick actions */}
-        <div className="flex items-center justify-between gap-2 mb-4">
+        {/* Top bar: Code, Project, State Badge, Priority & Delete */}
+        <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
+            
             {/* Code */}
-            <span className="font-mono imp-tabular text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-800">
+            <span className={`font-mono text-xs font-bold px-2.5 py-1 rounded-md border ${
+              isPending 
+                ? isWaitingForParts
+                  ? 'bg-pink-950/60 text-pink-200 border-pink-600/60 shadow-sm shadow-pink-900/30'
+                  : isInProgress
+                    ? 'bg-amber-950/50 text-amber-200 border-amber-700/50'
+                    : 'bg-rose-950/50 text-rose-200 border-rose-700/50' 
+                : 'bg-emerald-950/50 text-emerald-200 border-emerald-700/50'
+            }`}>
               {intervention.code}
             </span>
 
             {/* Project Badge */}
             {intervention.projectName && (
-              <span className="text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-800 flex items-center gap-2">
-                <FolderKanban className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 flex items-center gap-1.5">
+                <FolderKanban className="w-3.5 h-3.5 text-blue-400" />
                 <span>{intervention.projectName}</span>
               </span>
             )}
 
             {/* Lavoro / Azione Progetto Badge */}
             {isProjectWork && (
-              <span className="text-xs font-normal px-2 py-1 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 flex items-center gap-2">
-                <ClipboardList className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>Lavoro progetto</span>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-1 shadow-sm">
+                <ClipboardList className="w-3 h-3 text-indigo-400" />
+                <span>LAVORO / AZIONE</span>
               </span>
             )}
 
-            {/* Follow-up Channel */}
+            {/* Badge Canale Ultimo Follow-up (Email / WhatsApp / ecc.) */}
             {intervention.followUpChannel && (
-              <span className="text-xs font-normal px-2 py-1 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 flex items-center gap-2">
-                {intervention.followUpChannel === 'email' && <Mail className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                {intervention.followUpChannel === 'whatsapp' && <MessageCircle className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                {intervention.followUpChannel === 'phone' && <Phone className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                {intervention.followUpChannel === 'on_site' && <Wrench className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                {intervention.followUpChannel === 'meeting' && <User className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${getChannelBadgeInfo(intervention.followUpChannel).cls}`}>
+                {intervention.followUpChannel === 'email' && <Mail className="w-3 h-3" />}
+                {intervention.followUpChannel === 'whatsapp' && <MessageCircle className="w-3 h-3" />}
+                {intervention.followUpChannel === 'phone' && <Phone className="w-3 h-3" />}
+                {intervention.followUpChannel === 'on_site' && <Wrench className="w-3 h-3" />}
+                {intervention.followUpChannel === 'meeting' && <User className="w-3 h-3" />}
                 <span>{getChannelBadgeInfo(intervention.followUpChannel).label}</span>
               </span>
             )}
 
-            {/* Main Status Badge */}
+            {/* MAIN STATUS BADGE (PINK = WORKING IN PROGRESS / WAITING FOR PARTS, AMBER = IN PROGRESS, RED = TO DO, GREEN = COMPLETED) */}
             {isCompleted ? (
-              <span className="flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-800">
-                <CheckCircle2 className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>Completato</span>
+              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>COMPLETED</span>
               </span>
             ) : isWaitingForParts && !isProjectWork ? (
-              <span className="flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-700">
-                <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>In lavorazione (attesa ricambi)</span>
+              <span className="flex items-center gap-1.5 text-xs font-black px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/50 shadow-sm shadow-pink-950/40">
+                <Clock className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                <span>WORKING IN PROGRESS (Waiting for Parts)</span>
               </span>
             ) : isInProgress ? (
-              <span className="flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-800">
-                <Wrench className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>In corso</span>
+              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isProjectWork ? 'IN CORSO' : 'WORKING IN PROGRESS'}</span>
               </span>
             ) : (
-              <span className="flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-800">
-                <AlertCircle className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>Da fare</span>
+              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                <span>TO DO</span>
               </span>
             )}
 
             {/* Priority */}
-            <span className="text-xs font-normal px-2 py-1 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 flex items-center gap-2">
-              {isUrgent && isPending && <AlertTriangle className="w-3.5 h-3.5 text-zinc-300" strokeWidth={1.75} />}
-              <span>{formatPriorityLabel(intervention.priority)}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${priorityBadge}`}>
+              {isUrgent && isPending && <AlertTriangle className="w-3 h-3 animate-flash-siren" />}
+              <span>{intervention.priority}</span>
             </span>
 
             {/* Inbound Email Source Badge */}
             {intervention.emailSource && (
-              <span
-                className="text-xs font-normal px-2 py-1 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 flex items-center gap-2"
-                title={`Ricevuto via email da ${intervention.emailSource.sender} il ${intervention.emailSource.receivedAt}`}
+              <span 
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center gap-1 shadow-sm"
+                title={`Ricevuto via Email da ${intervention.emailSource.sender} il ${intervention.emailSource.receivedAt}`}
               >
-                <Mail className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                <Mail className="w-3 h-3 text-blue-400" />
                 <span>Email</span>
               </span>
             )}
           </div>
 
           {/* Top Quick Actions: Edit + WhatsApp Share + Delete */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {onQuickUpdate && (
               <button
                 type="button"
                 onClick={() => (isEditingCard ? setIsEditingCard(false) : handleOpenQuickEdit())}
-                className={`px-2 py-2 rounded-lg transition flex items-center gap-2 text-xs ${
+                className={`p-1.5 rounded-lg transition active:scale-95 flex items-center gap-1 text-[11px] font-bold ${
                   isEditingCard
-                    ? 'bg-zinc-100 text-zinc-950 font-semibold'
-                    : 'text-zinc-300 hover:text-zinc-100 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 font-normal'
+                    ? 'bg-yellow-500 text-slate-950 shadow'
+                    : 'text-yellow-300 hover:text-yellow-200 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/35 px-2'
                 }`}
                 title="Modifica rapida scheda"
               >
-                <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} />
+                <Pencil className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{isEditingCard ? 'Chiudi' : 'Modifica'}</span>
               </button>
             )}
@@ -417,204 +377,199 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               href={getTicketShareWhatsAppUri(intervention)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-zinc-100 p-2 rounded-lg hover:bg-zinc-800 transition"
-              title="Condividi riepilogo su WhatsApp"
+              className="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-slate-800 transition active:scale-95"
+              title="Share ticket summary via WhatsApp"
             >
-              <Share2 className="w-4 h-4" strokeWidth={1.75} />
+              <Share2 className="w-4 h-4" />
             </a>
 
+            {/* Delete button (Admin or owner) */}
             {(isAdmin || isWaiting) && (
               <button
                 onClick={() => onDelete(intervention.id)}
-                className="text-zinc-400 hover:text-zinc-100 p-2 rounded-lg hover:bg-zinc-800 transition"
-                title="Elimina richiesta"
+                className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition active:scale-95"
+                title="Delete request"
               >
-                <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                <Trash2 className="w-4 h-4" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Title Header Box — Neutral surface, zero gradient */}
-        <div className="mb-4 p-4 rounded-lg bg-zinc-950 border border-zinc-800">
-          <div className="text-xs font-normal text-zinc-400 mb-2 flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2">
-              <Bookmark className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-              <span>{isProjectWork ? 'Attività progetto' : 'Intervento tecnico'}</span>
+        {/* Title — High-contrast highlighted banner that stands out from the dark card background */}
+        <div
+          className={`mb-3 px-3.5 py-2.5 rounded-xl border-l-4 shadow-md transition ${
+            isCompleted
+              ? 'bg-gradient-to-r from-emerald-500/20 via-emerald-900/20 to-slate-900/80 border-l-emerald-400 ring-1 ring-emerald-400/30'
+              : 'bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-slate-900/85 border-l-yellow-400 ring-1 ring-yellow-400/40 shadow-yellow-950/30'
+          }`}
+        >
+          <div className="text-[10px] font-extrabold uppercase tracking-wider mb-0.5 flex items-center justify-between gap-1.5">
+            <span className={isCompleted ? 'text-emerald-400' : 'text-yellow-400'}>
+              {isProjectWork ? '📌 TASK / LAVORO PROGETTO:' : '📌 TASK / INTERVENTO:'}
             </span>
             {currentSupplyStatus !== 'none' && (
-              <span className="px-2 py-1 rounded bg-zinc-900 text-zinc-200 text-xs font-semibold border border-zinc-700 flex items-center gap-2">
-                {renderSupplyIcon(currentSupplyStatus)}
-                <span>{SUPPLY_STEPS.find((s) => s.id === currentSupplyStatus)?.label}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                SUPPLY_STEPS.find(s => s.id === currentSupplyStatus)?.activeCls || ''
+              }`}>
+                {SUPPLY_STEPS.find(s => s.id === currentSupplyStatus)?.label}
               </span>
             )}
           </div>
-          <h3 className="text-base sm:text-lg font-semibold leading-snug text-zinc-100">
+          <h3
+            className={`text-base sm:text-lg font-extrabold leading-snug tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] ${
+              isCompleted ? 'text-emerald-200' : 'text-yellow-300'
+            }`}
+          >
             {intervention.title}
           </h3>
         </div>
 
-        {/* Inline Quick Edit Form */}
+        {/* ✏️ FEATURE #4: INLINE QUICK EDIT FORM */}
         {isEditingCard && onQuickUpdate && (
           <form
             onSubmit={handleSaveQuickEdit}
-            className="mb-4 p-4 rounded-lg bg-zinc-950 border border-zinc-700 space-y-4 text-xs"
+            className="mb-3 p-3.5 rounded-xl bg-slate-950/95 border-2 border-yellow-500/60 shadow-xl space-y-2.5 text-xs"
           >
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-              <span className="font-semibold text-zinc-100 flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>Modifica rapida scheda ({intervention.code})</span>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span className="font-extrabold text-yellow-300 flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Modifica Rapida Scheda ({intervention.code})</span>
               </span>
               <button
                 type="button"
                 onClick={() => setIsEditingCard(false)}
-                className="text-zinc-400 hover:text-zinc-100 p-2 rounded"
+                className="text-slate-400 hover:text-white p-1 rounded"
               >
-                <X className="w-4 h-4" strokeWidth={1.75} />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-normal text-zinc-400 mb-2">Titolo attività o lavoro *</label>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Titolo Task / Lavoro *</label>
               <input
                 type="text"
                 required
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 font-semibold text-xs focus:outline-none focus:border-zinc-600"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-yellow-200 font-bold text-xs focus:outline-none focus:border-yellow-400"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-normal text-zinc-400 mb-2">Cosa ho fatto / Dettaglio attività</label>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Cosa ho fatto / Dettaglio Attività</label>
               <textarea
                 rows={2}
                 value={editWhatIDid}
                 onChange={(e) => setEditWhatIDid(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 font-normal text-xs focus:outline-none focus:border-zinc-600"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
-                <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                  <Hourglass className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                  <span>Da chi aspetto risposta</span>
-                </label>
+                <label className="block text-[11px] font-bold text-amber-300 mb-1">⏳ Da chi aspetto risposta</label>
                 <input
                   type="text"
                   value={editWaitingFrom}
                   onChange={(e) => setEditWaitingFrom(e.target.value)}
-                  placeholder="Es. Aby, Franco, Dodic..."
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs focus:outline-none focus:border-zinc-600"
+                  placeholder="Es. Aby / Franco / Dodic..."
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-amber-600/50 text-white text-xs focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                  <Phone className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                  <span>Telefono o email contatto</span>
-                </label>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">📞 Telefono / Email contatto</label>
                 <input
                   type="text"
                   value={editContact}
                   onChange={(e) => setEditContact(e.target.value)}
                   placeholder="+251... o email@..."
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs focus:outline-none focus:border-zinc-600"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                  <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                  <span>Scadenza sollecito</span>
-                </label>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">⏰ Scadenza Sollecito</label>
                 <input
                   type="date"
                   value={editDueDate}
                   onChange={(e) => setEditDueDate(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs focus:outline-none focus:border-zinc-600"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
-                <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                  <ArrowRight className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                  <span>Prossima azione</span>
-                </label>
+                <label className="block text-[11px] font-bold text-emerald-300 mb-1">➡️ Prossima Azione</label>
                 <input
                   type="text"
                   value={editNextStep}
                   onChange={(e) => setEditNextStep(e.target.value)}
                   placeholder="Prossimo passo..."
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs focus:outline-none focus:border-zinc-600"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-normal text-zinc-400 mb-2">Priorità</label>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">Priorità</label>
                 <select
                   value={editPriority}
                   onChange={(e) => setEditPriority(e.target.value as InterventionPriority)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs focus:outline-none focus:border-zinc-600"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
                 >
-                  <option value="urgent">Urgente</option>
-                  <option value="high">Alta</option>
-                  <option value="medium">Media</option>
-                  <option value="low">Bassa</option>
+                  <option value="urgent">🚨 URGENT</option>
+                  <option value="high">🔴 HIGH</option>
+                  <option value="medium">🟠 MEDIUM</option>
+                  <option value="low">⚪ LOW</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-normal text-zinc-400 mb-2">Stato attività</label>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">Stato Task</label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as InterventionStatus)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-100 text-xs focus:outline-none focus:border-zinc-600"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-yellow-400"
                 >
-                  <option value="pending">Da fare / In attesa</option>
-                  <option value="in_progress">In corso</option>
-                  <option value="completed">Completato</option>
+                  <option value="pending">🔴 TO DO / IN ATTESA</option>
+                  <option value="in_progress">🟠 IN CORSO</option>
+                  <option value="completed">🟢 COMPLETATO</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                <Package className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>Stato materiali e ordini</span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <label className="block text-[11px] font-bold text-sky-300 mb-1">📦 Stato Materiali & Ordini</label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1">
                 {SUPPLY_STEPS.map((st) => (
                   <button
                     key={st.id}
                     type="button"
                     onClick={() => setEditSupplyStatus(st.id)}
-                    className={`px-2 py-2 rounded-lg text-xs border transition flex items-center justify-center gap-2 ${
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition ${
                       editSupplyStatus === st.id
-                        ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold'
-                        : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200 font-normal'
+                        ? st.activeCls
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                     }`}
                   >
-                    {renderSupplyIcon(st.id)}
-                    <span>{st.label}</span>
+                    {st.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setIsEditingCard(false)}
-                className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-normal"
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
               >
                 Annulla
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold flex items-center gap-2"
+                className="px-3.5 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-extrabold flex items-center gap-1 shadow-md"
               >
-                <Check className="w-4 h-4" strokeWidth={1.75} />
-                <span>Salva modifiche</span>
+                <Check className="w-3.5 h-3.5" />
+                <span>Salva Modifiche</span>
               </button>
             </div>
           </form>
@@ -622,52 +577,63 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
 
         {!isProjectWork && (
           <>
-            {/* Site & Client Meta info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mb-4 p-4 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-200">
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+            {/* Site & Client Meta info (Only for Interventi / Guasti) */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 p-3 rounded-xl border ${
+              isCompleted
+                ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-100/90'
+                : isWaitingForParts
+                  ? 'bg-pink-950/25 border-pink-800/40 text-pink-100/95 shadow-sm shadow-pink-950/20'
+                  : 'bg-rose-950/20 border-rose-900/40 text-rose-100/90'
+            }`}>
+              <div className="flex items-start gap-1.5">
+                <MapPin className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+                  isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                }`} />
                 <div>
-                  <span className="font-semibold text-zinc-100">{intervention.siteName}</span>
+                  <span className="font-semibold text-white">{intervention.siteName}</span>
                   {intervention.siteAddress && (
-                    <div className="text-xs text-zinc-400 mt-1">{intervention.siteAddress}</div>
+                    <div className="text-[11px] text-slate-400">{intervention.siteAddress}</div>
                   )}
                 </div>
               </div>
 
               <div className="flex flex-col justify-between">
-                <div className="flex items-start gap-2">
-                  <User className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+                <div className="flex items-start gap-1.5">
+                  <User className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+                    isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                  }`} />
                   <div className="min-w-0">
-                    <span className="font-semibold text-zinc-100 truncate block">{intervention.clientName}</span>
+                    <span className="font-semibold text-white truncate block">{intervention.clientName}</span>
                     {intervention.clientContact && (
-                      <div className="text-xs text-zinc-400 flex items-center gap-2 mt-1 truncate">
-                        <Phone className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                        <Phone className="w-2.5 h-2.5 shrink-0" />
                         <span className="truncate">{intervention.clientContact}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
+                {/* Quick Call & Direct WhatsApp Action Buttons */}
                 {intervention.clientContact && (
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800 flex-wrap">
+                  <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-800/60 flex-wrap">
                     {getTelUri(intervention.clientContact) && (
                       <a
                         href={getTelUri(intervention.clientContact)!}
-                        className="flex items-center gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
-                        title={`Chiama: ${intervention.clientContact}`}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                        title={`Direct Call: ${intervention.clientContact}`}
                       >
-                        <PhoneCall className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                        <span>Chiama</span>
+                        <PhoneCall className="w-3 h-3 text-blue-400" />
+                        <span>Call</span>
                       </a>
                     )}
                     <a
                       href={getClientWhatsAppUri(intervention)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
-                      title={`Chat WhatsApp con ${intervention.clientName}`}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition active:scale-95 shadow-sm"
+                      title={`Direct WhatsApp chat with ${intervention.clientName}`}
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                      <MessageCircle className="w-3 h-3 text-emerald-400" />
                       <span>WhatsApp</span>
                     </a>
                   </div>
@@ -676,26 +642,38 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
             </div>
 
             {/* Desired Access Date & Time */}
-            <div className="flex items-center gap-4 text-xs mb-4">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 text-zinc-200 border border-zinc-800">
-                <Calendar className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>
-                  Data: <strong className="font-semibold">{intervention.desiredAccessDate}</strong>
-                </span>
+            <div className="flex items-center gap-3 text-xs mb-3">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+                isCompleted 
+                  ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
+                  : isWaitingForParts
+                    ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
+                    : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
+              }`}>
+                <Calendar className={`w-3.5 h-3.5 ${
+                  isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                }`} />
+                <span>Date: <strong>{intervention.desiredAccessDate}</strong></span>
               </div>
               {intervention.desiredAccessTime && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 text-zinc-200 border border-zinc-800">
-                  <Clock className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                  <span>
-                    Ora: <strong className="font-semibold">{intervention.desiredAccessTime}</strong>
-                  </span>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+                  isCompleted 
+                    ? 'bg-slate-800/80 text-emerald-200 border-emerald-800/40' 
+                    : isWaitingForParts
+                      ? 'bg-slate-800/80 text-pink-200 border-pink-800/40'
+                      : 'bg-slate-800/80 text-rose-200 border-rose-800/40'
+                }`}>
+                  <Clock className={`w-3.5 h-3.5 ${
+                    isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+                  }`} />
+                  <span>Time: <strong>{intervention.desiredAccessTime}</strong></span>
                 </div>
               )}
             </div>
 
             {/* Description */}
-            <div className="text-xs text-zinc-300 mb-4 leading-relaxed">
-              <span className="font-semibold text-zinc-100">Dettagli attività: </span>
+            <div className="text-xs text-slate-300 mb-3 leading-relaxed">
+              <span className="font-semibold text-slate-200">Task details: </span>
               <span>{intervention.description}</span>
             </div>
           </>
@@ -703,35 +681,33 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
 
         {/* Dedicated Quick Summary Header for Lavori & Azioni Progetto */}
         {isProjectWork && (
-          <div className="mb-4 p-4 rounded-lg bg-zinc-950 border border-zinc-800 space-y-4 text-xs">
+          <div className="mb-3 p-3 rounded-xl bg-indigo-950/25 border border-indigo-800/50 space-y-2 text-xs">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="flex items-center gap-2 px-2 py-1 rounded bg-zinc-900 text-zinc-200 border border-zinc-800 font-mono imp-tabular text-xs">
-                  <Calendar className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                  <span>
-                    Data: <strong className="font-semibold">{intervention.lastActionDate || intervention.desiredAccessDate}</strong>
-                  </span>
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 text-indigo-200 border border-indigo-700/50 font-mono text-[11px]">
+                  <Calendar className="w-3 h-3 text-indigo-400" />
+                  <span>Data: <strong>{intervention.lastActionDate || intervention.desiredAccessDate}</strong></span>
                 </span>
                 {intervention.followUpChannel && (
-                  <span className="px-2 py-1 rounded bg-zinc-900 text-zinc-300 border border-zinc-800 font-normal text-xs flex items-center gap-2">
-                    {intervention.followUpChannel === 'email' && <Mail className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                    {intervention.followUpChannel === 'whatsapp' && <MessageCircle className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                    {intervention.followUpChannel === 'phone' && <Phone className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                    {intervention.followUpChannel === 'on_site' && <Wrench className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                    {intervention.followUpChannel === 'meeting' && <User className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
+                  <span className={`px-2 py-0.5 rounded-md border font-bold text-[11px] flex items-center gap-1 ${getChannelBadgeInfo(intervention.followUpChannel).cls}`}>
+                    {intervention.followUpChannel === 'email' && <Mail className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'whatsapp' && <MessageCircle className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'phone' && <Phone className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'on_site' && <Wrench className="w-3 h-3" />}
+                    {intervention.followUpChannel === 'meeting' && <User className="w-3 h-3" />}
                     <span>{getChannelBadgeInfo(intervention.followUpChannel).label}</span>
                   </span>
                 )}
               </div>
 
               {intervention.clientContact && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {getTelUri(intervention.clientContact) && (
                     <a
                       href={getTelUri(intervention.clientContact)!}
-                      className="flex items-center gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/35 text-[11px] font-semibold transition"
                     >
-                      <PhoneCall className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                      <PhoneCall className="w-3 h-3 text-blue-400" />
                       <span>Chiama</span>
                     </a>
                   )}
@@ -739,38 +715,34 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                     href={getClientWhatsAppUri(intervention)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition"
                   >
-                    <MessageCircle className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                    <MessageCircle className="w-3 h-3 text-emerald-400" />
                     <span>WhatsApp</span>
                   </a>
                 </div>
               )}
             </div>
 
-            <div className="text-zinc-200 leading-relaxed flex items-start gap-2">
-              <Wrench className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
-              <div>
-                <strong className="font-semibold text-zinc-100">Cosa ho fatto / Attività: </strong>
-                <span>{intervention.whatIDidSummary || intervention.description}</span>
-              </div>
+            <div className="text-slate-200 leading-relaxed">
+              <strong className="text-indigo-300">🛠️ Cosa ho fatto / Attività: </strong>
+              <span>{intervention.whatIDidSummary || intervention.description}</span>
             </div>
 
-            {/* Supply Status Stepper */}
-            <div className="pt-2 border-t border-zinc-800">
-              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <span className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-                  <Package className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                  <span>Stato materiali e fornitura</span>
+            {/* 📦 FEATURE #3: BARRA STATO MATERIALI & ORDINI (1-CLICK STEPPER) */}
+            <div className="pt-2 border-t border-indigo-800/40">
+              <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                <span className="text-[11px] font-bold text-sky-300 flex items-center gap-1">
+                  <Package className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Stato Materiali / Fornitura:</span>
                 </span>
                 {currentSupplyStatus !== 'none' && (
-                  <span className="text-xs font-normal text-zinc-400 flex items-center gap-2">
-                    <span>Clicca per aggiornare stato</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                  <span className="text-[10px] font-bold text-slate-300">
+                    Clicca per avanzare stato ➔
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-1">
                 {SUPPLY_STEPS.map((st) => {
                   const isActive = currentSupplyStatus === st.id;
                   return (
@@ -779,15 +751,14 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                       type="button"
                       disabled={!onQuickUpdate}
                       onClick={() => onQuickUpdate && onQuickUpdate(intervention.id, { supplyStatus: st.id })}
-                      className={`px-2 py-2 rounded-lg text-xs border transition flex items-center justify-center gap-2 truncate ${
+                      className={`px-1.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold border transition text-center truncate ${
                         isActive
-                          ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold'
-                          : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200 font-normal'
+                          ? st.activeCls
+                          : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
                       }`}
                       title={`Imposta stato materiale: ${st.label}`}
                     >
-                      {renderSupplyIcon(st.id)}
-                      <span className="truncate">{st.label}</span>
+                      {st.label}
                     </button>
                   );
                 })}
@@ -796,87 +767,84 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Notes */}
+        {/* Notes (Multiline) */}
         {intervention.notes && (
-          <div className="text-xs text-zinc-300 bg-zinc-950 p-4 rounded-lg border border-zinc-800 mb-4 whitespace-pre-wrap leading-relaxed">
-            <strong className="font-semibold text-zinc-200 block mb-2">Note per il tecnico:</strong>
+          <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 mb-3 whitespace-pre-wrap leading-relaxed">
+            <strong className="text-slate-400 block mb-0.5 text-[11px]">Notes for technician:</strong>
             {intervention.notes}
           </div>
         )}
 
-        {/* Waiting Reply Banner + Days Counter + 1-Click Reminder */}
+        {/* ⏳ FEATURE #1: BANNER EVIDENZIATO DA CHI ASPETTO RISPOSTA + CONTATORE GIORNI + SOLLECITO 1-CLICK */}
         {activeWaitingFrom && !isCompleted && (
-          <div className="mb-4 p-4 rounded-lg bg-zinc-950 border border-zinc-700 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200 flex-wrap">
-                  <Hourglass className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  <span>
-                    Da chi aspetto risposta: <strong className="font-semibold text-zinc-100 underline">{activeWaitingFrom}</strong>
-                  </span>
-                  <span className="px-2 py-1 rounded bg-zinc-900 text-zinc-200 text-xs font-semibold border border-zinc-700 flex items-center gap-2">
-                    <BellRing className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+          <div className={`mb-3 p-3 rounded-xl border flex flex-col gap-2.5 shadow-sm ${
+            waitingDaysInfo.isAlert
+              ? 'bg-gradient-to-r from-rose-950/55 via-amber-950/40 to-slate-900 border-rose-500/60 ring-1 ring-rose-500/30'
+              : 'bg-amber-950/35 border-amber-500/50'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-300 flex-wrap">
+                  <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+                  <span>Da chi aspetto risposta: <strong className="text-white underline decoration-amber-400/60">{activeWaitingFrom}</strong></span>
+                  {/* Waiting Days Counter Badge */}
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border flex items-center gap-1 ${
+                    waitingDaysInfo.isAlert
+                      ? 'bg-rose-600 text-white border-rose-300 shadow-sm animate-pulse'
+                      : 'bg-amber-500/25 text-amber-200 border-amber-400/50'
+                  }`}>
+                    <BellRing className="w-2.5 h-2.5" />
                     <span>
                       {waitingDaysInfo.isOverdue
-                        ? `Sollecito scaduto (${waitingDaysInfo.label})`
-                        : `In attesa ${waitingDaysInfo.label}`}
+                        ? `🚨 SOLLECITO SCADUTO (${waitingDaysInfo.label})`
+                        : `⏳ In attesa ${waitingDaysInfo.label}`}
                     </span>
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-zinc-400 flex-wrap">
+                <div className="flex items-center gap-3 text-[11px] text-amber-200/80 flex-wrap">
                   {intervention.lastActionDate && (
-                    <span className="flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>
-                        Richiesto il: <strong className="font-semibold text-zinc-200">{intervention.lastActionDate}</strong>
-                      </span>
-                    </span>
+                    <span>📅 Richiesto il: <strong>{intervention.lastActionDate}</strong></span>
                   )}
                   {intervention.followUpChannel && (
-                    <span className="flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>
-                        Tramite: <strong className="font-semibold text-zinc-200">{getChannelBadgeInfo(intervention.followUpChannel).short}</strong>
-                      </span>
-                    </span>
+                    <span>📡 Tramite: <strong>{getChannelBadgeInfo(intervention.followUpChannel).short}</strong></span>
                   )}
                   {intervention.followUpDueDate && (
-                    <span className="flex items-center gap-2 font-semibold text-zinc-200">
-                      <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>Scadenza sollecito: {intervention.followUpDueDate}</span>
+                    <span className={waitingDaysInfo.isOverdue ? 'text-rose-300 font-extrabold underline' : 'text-amber-300 font-semibold'}>
+                      ⏰ Scadenza / Sollecito: {intervention.followUpDueDate}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap shrink-0">
+              {/* 1-Click Reminder Actions + Risposta Ricevuta */}
+              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                 <a
                   href={getReminderWhatsAppUri(intervention, activeWaitingFrom, waitingDaysInfo.daysWaiting)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 text-xs font-normal transition"
-                  title={`Invia sollecito WhatsApp a ${activeWaitingFrom}`}
+                  className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-white border border-emerald-400/40 text-[11px] font-bold shadow transition active:scale-95"
+                  title={`Invia sollecito WhatsApp pre-compilato a ${activeWaitingFrom}`}
                 >
-                  <MessageCircle className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                  <span>Sollecita WhatsApp</span>
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Sollecita WA</span>
                 </a>
                 <a
                   href={getReminderMailtoUri(intervention, activeWaitingFrom, waitingDaysInfo.daysWaiting)}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 text-xs font-normal transition"
-                  title={`Prepara email di sollecito per ${activeWaitingFrom}`}
+                  className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-700/80 hover:bg-blue-600 text-white border border-blue-400/40 text-[11px] font-bold shadow transition active:scale-95"
+                  title={`Prepara email di sollecito pre-compilata per ${activeWaitingFrom}`}
                 >
-                  <Mail className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                  <span>Sollecita email</span>
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Sollecita Email</span>
                 </a>
                 {onMarkReplyReceived && (
                   <button
                     type="button"
                     onClick={() => onMarkReplyReceived(intervention.id)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition"
+                    className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-extrabold shadow transition active:scale-95"
                     title="Segna che la risposta attesa è arrivata"
                   >
-                    <CheckCircle2 className="w-4 h-4" strokeWidth={1.75} />
-                    <span>Risposta ricevuta</span>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Risposta Ricevuta</span>
                   </button>
                 )}
               </div>
@@ -884,160 +852,155 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Diario Tracking Progetto */}
+        {/* 📡 DIARIO TRACKING PROGETTO: COSA HO FATTO, SEGUITO PER EMAIL/WHATSAPP, DATA, DA CHI ASPETTO RISPOSTA */}
         {(isProjectWork || trackingLogs.length > 0 || intervention.whatIDidSummary) && (
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 mb-4 space-y-4">
+          <div className="bg-slate-950/80 border border-indigo-700/50 rounded-xl p-3 mb-3 space-y-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <ClipboardList className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                <span>
-                  Registro attività, comunicazioni e risposte ·{' '}
-                  <span className="font-mono imp-tabular">{trackingLogs.length}</span>
-                </span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                <ClipboardList className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>Tracking Lavoro: Cosa ho fatto, Email/WhatsApp & Risposte ({trackingLogs.length})</span>
               </div>
               {onAddTrackingEntry && (
                 <button
                   type="button"
-                  onClick={() => setShowAddTrackingForm((prev) => !prev)}
-                  className="w-full sm:w-auto justify-center text-xs font-semibold px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 flex items-center gap-2 transition"
+                  onClick={() => setShowAddTrackingForm(prev => !prev)}
+                  className="w-full sm:w-auto justify-center text-[11px] font-bold px-2.5 py-1.5 sm:py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-1 transition active:scale-95"
                 >
-                  <Plus className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-                  <span>{showAddTrackingForm ? 'Chiudi modulo' : 'Registra attività o follow-up'}</span>
+                  <Plus className="w-3 h-3 shrink-0" />
+                  <span>{showAddTrackingForm ? 'Chiudi Form' : '+ Registra Cosa Ho Fatto / Follow-up'}</span>
                 </button>
               )}
             </div>
 
+            {/* Sintesi rapida ultimo stato e Prossima Azione */}
             {(intervention.whatIDidSummary || intervention.nextActionToDo) && (
-              <div className="p-4 rounded-lg bg-zinc-900 border border-zinc-800 text-xs space-y-2">
+              <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-800/50 text-xs space-y-1">
                 {intervention.whatIDidSummary && (
-                  <div className="text-zinc-200 flex items-start gap-2">
-                    <Wrench className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
-                    <div>
-                      <span className="font-semibold text-zinc-100">Ultima azione eseguita: </span>
-                      <span>{intervention.whatIDidSummary}</span>
-                    </div>
+                  <div className="text-slate-200">
+                    <span className="font-bold text-indigo-300">🛠️ Ultima azione fatta: </span>
+                    <span>{intervention.whatIDidSummary}</span>
                   </div>
                 )}
                 {intervention.nextActionToDo && (
-                  <div className="text-zinc-300 flex items-start gap-2">
-                    <ArrowRight className="w-4 h-4 shrink-0 mt-0.5 text-zinc-400" strokeWidth={1.75} />
-                    <span>
-                      <strong className="font-semibold text-zinc-100">Prossima azione:</strong> {intervention.nextActionToDo}
-                    </span>
+                  <div className="text-emerald-300 flex items-start gap-1">
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-400" />
+                    <span><strong>Prossima azione da fare:</strong> {intervention.nextActionToDo}</span>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Add Tracking Entry Form */}
+            {/* Form rapido inline per aggiungere una voce di Tracking */}
             {showAddTrackingForm && onAddTrackingEntry && (
-              <div className="p-4 rounded-lg bg-zinc-900 border border-zinc-700 space-y-4">
-                <div className="text-xs font-semibold text-zinc-100">
-                  Nuova voce di registro (attività, canale, data e risposta attesa)
+              <div className="p-3 rounded-xl bg-slate-900 border border-indigo-500/50 space-y-2.5 animate-fadeIn">
+                <div className="text-xs font-bold text-indigo-300">
+                  Nuova Voce di Tracking (Cosa ho fatto, Email/WhatsApp, Data, Da chi aspetto risposta)
                 </div>
 
                 <div>
-                  <label className="block text-xs font-normal text-zinc-400 mb-2">Cosa ho fatto *</label>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Cosa ho fatto *
+                  </label>
                   <textarea
                     rows={2}
                     value={trkWhatIDid}
                     onChange={(e) => setTrkWhatIDid(e.target.value)}
-                    placeholder="Descrivi l'attività svolta..."
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 resize-none"
+                    placeholder="Descrivi cosa hai fatto (es. Inviato schema, scritto su WhatsApp per accesso, eseguita modifica ETS...)"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-normal text-zinc-400 mb-2">Canale comunicazione</label>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Seguito per (Email / WhatsApp / ecc.)
+                    </label>
                     <select
                       value={trkChannel}
                       onChange={(e) => setTrkChannel(e.target.value as FollowUpChannel)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     >
-                      <option value="email">Seguito per email</option>
-                      <option value="whatsapp">Seguito su WhatsApp</option>
-                      <option value="phone">Seguito per telefono</option>
-                      <option value="on_site">Eseguito in cantiere</option>
-                      <option value="meeting">Riunione tecnica</option>
+                      <option value="email">✉️ Seguito per Email</option>
+                      <option value="whatsapp">💬 Seguito per WhatsApp</option>
+                      <option value="phone">📞 Seguito per Telefono</option>
+                      <option value="on_site">🏗️ Eseguito in Cantiere</option>
+                      <option value="meeting">👥 Riunione / Call Tecnica</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-normal text-zinc-400 mb-2">Data</label>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Data
+                    </label>
                     <input
                       type="date"
                       value={trkDate}
                       onChange={(e) => setTrkDate(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                      <Hourglass className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>Da chi aspetto risposta (opzionale)</span>
+                    <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                      ⏳ Da chi aspetto risposta? (opz.)
                     </label>
                     <input
                       type="text"
                       value={trkWaitingFrom}
                       onChange={(e) => setTrkWaitingFrom(e.target.value)}
                       placeholder="Es. Mario Rossi, Ing. Bianchi, Fornitore..."
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
                     />
                   </div>
 
                   <div>
-                    <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                      <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>Data entro cui sollecitare (opzionale)</span>
+                    <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                      ⏰ Data entro cui sollecitare (opz.)
                     </label>
                     <input
                       type="date"
                       value={trkDueDate}
                       onChange={(e) => setTrkDueDate(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-400"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>Prossima azione da fare (opzionale)</span>
+                    <label className="block text-[11px] font-semibold text-emerald-300 mb-1">
+                      ➡️ Prossima azione da fare (opz.)
                     </label>
                     <input
                       type="text"
                       value={trkNextStep}
                       onChange={(e) => setTrkNextStep(e.target.value)}
                       placeholder="Es. Collaudo in campo dopo conferma..."
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-400"
                     />
                   </div>
 
                   <div>
-                    <label className="flex items-center gap-2 text-xs font-normal text-zinc-400 mb-2">
-                      <Paperclip className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                      <span>Riferimento documento o schema (opzionale)</span>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      📎 Rif. Documento / Schema / Prev. (opz.)
                     </label>
                     <input
                       type="text"
                       value={trkRefDoc}
                       onChange={(e) => setTrkRefDoc(e.target.value)}
-                      placeholder="Es. Schema_QG.pdf, Preventivo #12..."
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      placeholder="Es. Schema_QG.pdf, Prev. #12..."
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowAddTrackingForm(false)}
-                    className="px-4 py-2 rounded-lg text-xs text-zinc-400 hover:text-zinc-100 bg-zinc-950 border border-zinc-800"
+                    className="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-white bg-slate-800"
                   >
                     Annulla
                   </button>
@@ -1045,7 +1008,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                     type="button"
                     onClick={() => {
                       if (!trkWhatIDid.trim()) {
-                        alert('Inserisci cosa hai fatto prima di salvare.');
+                        alert('Inserisci cosa hai fatto prima di salvare il tracking.');
                         return;
                       }
                       onAddTrackingEntry(intervention.id, {
@@ -1066,48 +1029,44 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                       setTrkRefDoc('');
                       setShowAddTrackingForm(false);
                     }}
-                    className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition"
+                    className="px-3.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition"
                   >
-                    Salva nel registro
+                    Salva nel Tracking
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Tracking Entries List */}
+            {/* Lista Cronologica del Tracking */}
             {trackingLogs.length === 0 ? (
-              <p className="text-xs text-zinc-400">
-                Nessun movimento registrato. Premi "Registra attività o follow-up" per tracciare email, WhatsApp e risposte attese.
+              <p className="text-[11px] text-slate-400 italic">
+                Nessun movimento registrato. Premi "+ Registra Cosa Ho Fatto / Follow-up" per tracciare attività, email, WhatsApp e risposte attese.
               </p>
             ) : (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {trackingLogs.map((log) => {
                   const chInfo = getChannelBadgeInfo(log.channel);
                   return (
                     <div
                       key={log.id}
-                      className="p-4 rounded-lg bg-zinc-900 border border-zinc-800 text-xs space-y-2"
+                      className="p-2.5 rounded-xl bg-slate-900/95 border border-slate-800 text-xs space-y-1.5"
                     >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono imp-tabular text-xs font-semibold px-2 py-1 rounded bg-zinc-950 text-zinc-200 border border-zinc-800 flex items-center gap-2">
-                            <Calendar className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                            <span>
-                              {log.date}
-                              {log.time ? ` ${log.time}` : ''}
-                            </span>
+                      <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700">
+                            📅 {log.date}{log.time ? ` ${log.time}` : ''}
                           </span>
-                          <span className="text-xs font-normal px-2 py-1 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 flex items-center gap-2">
-                            {log.channel === 'email' && <Mail className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                            {log.channel === 'whatsapp' && <MessageCircle className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                            {log.channel === 'phone' && <Phone className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                            {log.channel === 'on_site' && <Wrench className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
-                            {log.channel === 'meeting' && <User className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${chInfo.cls}`}>
+                            {log.channel === 'email' && <Mail className="w-3 h-3" />}
+                            {log.channel === 'whatsapp' && <MessageCircle className="w-3 h-3" />}
+                            {log.channel === 'phone' && <Phone className="w-3 h-3" />}
+                            {log.channel === 'on_site' && <Wrench className="w-3 h-3" />}
+                            {log.channel === 'meeting' && <User className="w-3 h-3" />}
                             <span>{chInfo.label}</span>
                           </span>
                           {log.referenceDoc && (
-                            <span className="text-xs px-2 py-1 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 flex items-center gap-2">
-                              <FileText className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
+                              <FileText className="w-2.5 h-2.5 text-indigo-400" />
                               <span>{log.referenceDoc}</span>
                             </span>
                           )}
@@ -1117,31 +1076,31 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                           <button
                             type="button"
                             onClick={() => onDeleteTrackingEntry(intervention.id, log.id)}
-                            className="text-zinc-500 hover:text-zinc-200 p-2 transition"
-                            title="Elimina voce di registro"
+                            className="text-slate-500 hover:text-rose-400 p-0.5 transition"
+                            title="Elimina voce di tracking"
                           >
-                            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         )}
                       </div>
 
-                      <div className="text-zinc-100 leading-relaxed">
-                        <strong className="font-semibold text-zinc-300">Cosa ho fatto: </strong>
+                      <div className="text-slate-100 leading-relaxed">
+                        <strong className="text-indigo-300">Cosa ho fatto: </strong>
                         <span>{log.whatIDid}</span>
                       </div>
 
                       {log.waitingReplyFrom && (
-                        <div className="flex items-center justify-between gap-2 pt-2 flex-wrap">
-                          <div className="inline-flex items-center gap-2 px-2 py-1 rounded bg-zinc-950 text-zinc-200 text-xs font-normal border border-zinc-800">
-                            {log.replyReceived ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                            ) : (
-                              <Hourglass className="w-3.5 h-3.5 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                            )}
+                        <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                            log.replyReceived
+                              ? 'bg-emerald-950/40 text-emerald-300 border-emerald-700/50'
+                              : 'bg-amber-950/40 text-amber-300 border-amber-600/50'
+                          }`}>
+                            <Hourglass className="w-3 h-3 shrink-0" />
                             <span>
                               {log.replyReceived
-                                ? `Risposta ricevuta da: ${log.waitingReplyFrom}${log.replyReceivedAt ? ` (${log.replyReceivedAt})` : ''}`
-                                : `Aspetto risposta da: ${log.waitingReplyFrom}${log.followUpDueDate ? ` (entro ${log.followUpDueDate})` : ''}`}
+                                ? `✅ Risposta ricevuta da: ${log.waitingReplyFrom}${log.replyReceivedAt ? ` (${log.replyReceivedAt})` : ''}`
+                                : `⏳ Aspetto risposta da: ${log.waitingReplyFrom}${log.followUpDueDate ? ` (entro ${log.followUpDueDate})` : ''}`}
                             </span>
                           </div>
 
@@ -1149,21 +1108,18 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                             <button
                               type="button"
                               onClick={() => onMarkReplyReceived(intervention.id, log.id)}
-                              className="text-xs font-semibold px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-950 flex items-center gap-2 transition"
+                              className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 transition"
                             >
-                              <Check className="w-3.5 h-3.5" strokeWidth={1.75} />
-                              <span>Segna risposta ricevuta</span>
+                              ✓ Segna Risposta Ricevuta
                             </button>
                           )}
                         </div>
                       )}
 
                       {log.nextStep && (
-                        <div className="text-xs text-zinc-300 flex items-center gap-2 pt-2">
-                          <ArrowRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                          <span>
-                            <strong className="font-semibold text-zinc-100">Prossimo passo:</strong> {log.nextStep}
-                          </span>
+                        <div className="text-[11px] text-emerald-300/90 flex items-center gap-1 pt-0.5">
+                          <ArrowRight className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span><strong>Prossimo step:</strong> {log.nextStep}</span>
                         </div>
                       )}
                     </div>
@@ -1174,50 +1130,53 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Checklist Azioni da Fare sul Progetto */}
+        {/* 📋 CHECKLIST AZIONI DA FARE SUL PROGETTO / LAVORO */}
         {(isProjectWork || actionSteps.length > 0) && (
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 mb-4 space-y-4">
+          <div className="bg-indigo-950/25 border border-indigo-700/50 rounded-xl p-3 mb-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <CheckSquare className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>
-                  Azioni da fare sul progetto ·{' '}
-                  <span className="font-mono imp-tabular">
-                    {completedStepsCount}/{actionSteps.length}
-                  </span>
-                </span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Azioni da Fare sul Progetto ({completedStepsCount}/{actionSteps.length})</span>
               </div>
               <div className="flex items-center gap-2">
                 {actionSteps.length > 0 && (
-                  <span className="text-xs font-mono imp-tabular font-semibold text-zinc-300">
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    stepsProgressPct === 100
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                  }`}>
                     {stepsProgressPct}% completato
                   </span>
                 )}
                 {onAddActionStep && (
                   <button
                     type="button"
-                    onClick={() => setShowAddStepInput((prev) => !prev)}
-                    className="text-xs font-semibold px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center gap-2 transition"
+                    onClick={() => setShowAddStepInput(prev => !prev)}
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 flex items-center gap-1 transition active:scale-95"
                     title="Aggiungi una nuova azione da fare su questo lavoro"
                   >
-                    <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                    <span>Aggiungi azione</span>
+                    <Plus className="w-3 h-3" />
+                    <span>+ Azione</span>
                   </button>
                 )}
               </div>
             </div>
 
+            {/* Progress Bar */}
             {actionSteps.length > 0 && (
-              <div className="w-full h-2 bg-zinc-900 rounded overflow-hidden">
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-zinc-300 transition-all duration-300"
+                  className={`h-full transition-all duration-300 ${
+                    stepsProgressPct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'
+                  }`}
                   style={{ width: `${stepsProgressPct}%` }}
                 />
               </div>
             )}
 
+            {/* Quick Add Step Input */}
             {showAddStepInput && onAddActionStep && (
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-1.5 pt-0.5">
                 <input
                   type="text"
                   value={quickStepText}
@@ -1232,7 +1191,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                     }
                   }}
                   placeholder="Scrivi nuova azione da fare e premi Invio..."
-                  className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+                  className="flex-1 bg-slate-900 border border-indigo-600/60 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 />
                 <button
                   type="button"
@@ -1242,34 +1201,35 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                       setQuickStepText('');
                     }
                   }}
-                  className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition"
                 >
                   Salva
                 </button>
               </div>
             )}
 
+            {/* Action Steps List */}
             {actionSteps.length === 0 ? (
-              <p className="text-xs text-zinc-400">
-                Nessuna sotto-azione inserita. Clicca "Aggiungi azione" per inserire i passaggi operativi.
+              <p className="text-[11px] text-slate-400 italic">
+                Nessuna sotto-azione inserita. Clicca "+ Azione" per aggiungere i passaggi operativi da spuntare.
               </p>
             ) : (
-              <div className="space-y-2 max-h-44 overflow-y-auto pr-2">
+              <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
                 {actionSteps.map((step) => (
                   <div
                     key={step.id}
                     onClick={() => onToggleActionStep && onToggleActionStep(intervention.id, step.id)}
                     className={`flex items-center justify-between gap-2 p-2 rounded-lg border text-xs cursor-pointer transition ${
                       step.completed
-                        ? 'bg-zinc-900/50 border-zinc-800 text-zinc-500 line-through'
-                        : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-100'
+                        ? 'bg-emerald-950/30 border-emerald-800/50 text-slate-400 line-through'
+                        : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/60 text-slate-100'
                     }`}
                   >
                     <div className="flex items-start gap-2 min-w-0">
                       {step.completed ? (
-                        <CheckSquare className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+                        <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                       ) : (
-                        <Square className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+                        <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                       )}
                       <span className="leading-snug break-words">{step.text}</span>
                     </div>
@@ -1280,10 +1240,10 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                           e.stopPropagation();
                           onDeleteActionStep(intervention.id, step.id);
                         }}
-                        className="text-zinc-500 hover:text-zinc-200 p-2 rounded transition shrink-0"
+                        className="text-slate-500 hover:text-rose-400 p-0.5 rounded transition shrink-0"
                         title="Elimina azione"
                       >
-                        <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     )}
                   </div>
@@ -1293,65 +1253,66 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Inbound Email Source & Follow-up History */}
+        {/* Inbound Email Source & Follow-up History (Antigravity Smart Email) */}
         {(intervention.emailSource || (intervention.emailHistory && intervention.emailHistory.length > 0)) && (
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 mb-4 text-xs space-y-2">
-            <div className="flex items-center justify-between text-zinc-200 font-semibold flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>Integrazione email in ingresso</span>
+          <div className="bg-blue-950/25 border border-blue-700/50 rounded-xl p-3 mb-3 text-xs space-y-2">
+            <div className="flex items-center justify-between text-blue-300 font-bold flex-wrap gap-1">
+              <div className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-blue-400" />
+                <span>Inbound Email Integration</span>
               </div>
               {intervention.emailSource && (
-                <span className="text-xs text-zinc-300 font-mono imp-tabular bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
+                <span className="text-[10px] text-blue-300 font-mono bg-blue-900/50 px-2 py-0.5 rounded border border-blue-700/40">
                   Data: {intervention.emailSource.receivedAt}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs flex-wrap">
-              <div className="flex items-center gap-2 text-zinc-200">
-                <FolderKanban className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                <span className="text-zinc-400 font-normal">Registrato su progetto:</span>
-                <strong className="text-zinc-100 font-semibold">
+            {/* Progetto su cui è registrato l'intervento da email */}
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-blue-900/30 border border-blue-700/50 text-[11px] flex-wrap">
+              <div className="flex items-center gap-1.5 text-blue-200">
+                <FolderKanban className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="text-blue-300 font-medium">Registrato su Progetto:</span>
+                <strong className="text-white font-bold bg-blue-950 px-2 py-0.5 rounded border border-blue-700/60 shadow-sm">
                   {intervention.projectName || intervention.emailSource?.projectName || 'Workbank'}
                 </strong>
               </div>
               {intervention.siteName && (
-                <span className="text-xs text-zinc-400 truncate">Impianto: {intervention.siteName}</span>
+                <span className="text-[10px] text-slate-400 truncate">
+                  Impianto: {intervention.siteName}
+                </span>
               )}
             </div>
 
             {intervention.emailSource && (
-              <div className="text-xs text-zinc-300">
-                <span className="text-zinc-400 font-normal">Mittente: </span>
-                <strong className="text-zinc-100 font-semibold">{intervention.emailSource.sender}</strong>
+              <div className="text-[11px] text-slate-300">
+                <span className="text-slate-400 font-medium">Ricevuto Da (Mittente): </span>
+                <strong className="text-white">{intervention.emailSource.sender}</strong>
                 {intervention.emailSource.subject && (
-                  <div className="text-zinc-400 truncate mt-2">"{intervention.emailSource.subject}"</div>
+                  <div className="text-slate-400 italic truncate mt-0.5">
+                    "{intervention.emailSource.subject}"
+                  </div>
                 )}
               </div>
             )}
 
+            {/* Follow-up email history */}
             {intervention.emailHistory && intervention.emailHistory.length > 0 && (
-              <div className="pt-2 border-t border-zinc-800 space-y-2">
-                <div className="text-xs font-semibold text-zinc-300">
-                  Storico email e follow-up ({intervention.emailHistory.length})
+              <div className="pt-2 border-t border-blue-900/40 space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                  Storico Email & Follow-up ({intervention.emailHistory.length})
                 </div>
-                <div className="space-y-2 max-h-36 overflow-y-auto pr-2">
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {intervention.emailHistory.map((item) => (
-                    <div key={item.id} className="bg-zinc-900 p-2 rounded-lg border border-zinc-800 text-xs space-y-2">
-                      <div className="flex items-center justify-between text-xs text-zinc-400 flex-wrap gap-2">
-                        <span className="font-semibold text-zinc-200">{item.sender}</span>
-                        <span className="font-mono imp-tabular text-zinc-400">{item.receivedAt}</span>
+                    <div key={item.id} className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-[11px] space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5 flex-wrap gap-1">
+                        <span className="font-semibold text-blue-300">{item.sender}</span>
+                        <span className="font-mono text-slate-400">{item.receivedAt}</span>
                       </div>
-                      <div className="text-zinc-200">{item.message}</div>
-                      <div className="pt-2 border-t border-zinc-800 flex items-center gap-2 text-xs text-zinc-400 font-normal">
-                        <FolderKanban className="w-3.5 h-3.5 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                        <span>
-                          Progetto registrato:{' '}
-                          <strong className="text-zinc-100 font-semibold">
-                            {item.projectName || intervention.projectName || 'Generale'}
-                          </strong>
-                        </span>
+                      <div className="text-slate-200">{item.message}</div>
+                      <div className="pt-1 border-t border-slate-800/80 flex items-center gap-1 text-[10px] text-blue-300/80 font-medium">
+                        <FolderKanban className="w-3 h-3 text-blue-400 shrink-0" />
+                        <span>Progetto registrato: <strong className="text-white">{item.projectName || intervention.projectName || 'Generale'}</strong></span>
                       </div>
                     </div>
                   ))}
@@ -1361,29 +1322,31 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Defect Photos Thumbnails */}
+        {/* Screenshot / Photos Thumbnails */}
         {intervention.defectPhotos && intervention.defectPhotos.length > 0 && (
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400 mb-2">
-              <ImageIcon className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-              <span>Immagini allegate ({intervention.defectPhotos.length}):</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2">
+              <ImageIcon className={`w-3.5 h-3.5 ${isPending ? 'text-rose-400' : 'text-emerald-400'}`} />
+              <span>Screenshot ({intervention.defectPhotos.length}):</span>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {intervention.defectPhotos.map((photo) => (
                 <div
                   key={photo.id}
                   onClick={() => onPreviewPhoto(photo)}
-                  className="relative group cursor-pointer w-16 h-16 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 shrink-0 transition"
+                  className={`relative group cursor-pointer w-16 h-16 rounded-lg overflow-hidden border shrink-0 transition ${
+                    isPending ? 'border-rose-800 hover:border-rose-400' : 'border-emerald-800 hover:border-emerald-400'
+                  }`}
                 >
                   <img
                     src={photo.url}
                     alt={photo.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
-                  <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <span className="text-xs text-zinc-100 font-semibold">Apri</span>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <span className="text-[10px] text-white font-semibold">View</span>
                   </div>
                 </div>
               ))}
@@ -1394,26 +1357,26 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
         {/* Report Execution Photos Thumbnails */}
         {intervention.report?.reportPhotos && intervention.report.reportPhotos.length > 0 && (
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300 mb-2">
-              <Camera className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-              <span>Foto lavoro eseguito ({intervention.report.reportPhotos.length}):</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-300 mb-2">
+              <Camera className="w-3.5 h-3.5 text-blue-400" />
+              <span>Foto Lavoro Eseguito / Report ({intervention.report.reportPhotos.length}):</span>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {intervention.report.reportPhotos.map((photo) => (
                 <div
                   key={photo.id}
                   onClick={() => onPreviewPhoto(photo)}
-                  className="relative group cursor-pointer w-16 h-16 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 shrink-0 transition"
+                  className="relative group cursor-pointer w-16 h-16 rounded-lg overflow-hidden border border-blue-600/60 hover:border-blue-400 shrink-0 transition shadow-sm"
                 >
                   <img
                     src={photo.url}
                     alt={photo.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
-                  <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <span className="text-xs text-zinc-100 font-semibold">Apri</span>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <span className="text-[10px] text-white font-semibold">View</span>
                   </div>
                 </div>
               ))}
@@ -1421,208 +1384,223 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Waiting for Parts Interim Report Section */}
+        {/* Waiting for Parts Interim Report Section (PINK TONES) */}
         {!isCompleted && isWaitingForParts && intervention.report && (
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 mb-4 space-y-2">
+          <div className="bg-pink-950/30 border border-pink-700/50 rounded-xl p-3.5 mb-3 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <Clock className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>In lavorazione — Attesa ricambi (Tecnico: {intervention.report.technicianName})</span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-pink-300">
+                <Clock className="w-4 h-4 text-pink-400 animate-pulse" />
+                <span>Working in Progress — Waiting for Parts (Tech: {intervention.report.technicianName})</span>
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300 font-mono imp-tabular">
-                <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>{intervention.report.hoursWorked} ore registrate</span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-200 border border-pink-500/30">
+                <Clock className="w-3 h-3 text-pink-400" />
+                <span>{intervention.report.hoursWorked} hours logged</span>
               </div>
             </div>
 
-            <div className="text-xs text-zinc-200">
-              <strong className="font-semibold text-zinc-100">Lavoro svolto: </strong>
+            <div className="text-xs text-slate-200">
+              <strong className="text-pink-300">Work performed: </strong>
               {intervention.report.workDone}
             </div>
 
             {intervention.report.materialsUsed && (
-              <div className="text-xs text-zinc-300">
-                <strong className="font-semibold text-zinc-100">Ricambi richiesti / Materiali: </strong>
+              <div className="text-xs text-slate-300">
+                <strong className="text-pink-400">Parts Needed / Materials: </strong>
                 {intervention.report.materialsUsed}
               </div>
             )}
 
             {intervention.report.technicalNotes && (
-              <div className="text-xs text-zinc-300">
-                <strong className="font-semibold text-zinc-100">Note tecniche: </strong>
+              <div className="text-xs text-slate-300">
+                <strong className="text-pink-400">Notes: </strong>
                 {intervention.report.technicalNotes}
               </div>
             )}
 
+            {/* Interim Report PDF & WhatsApp buttons */}
             <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => handleDownloadPDF(intervention)}
-                  className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 transition"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-900/40 transition active:scale-95"
                 >
-                  <FileDown className="w-4 h-4" strokeWidth={1.75} />
-                  <span>Scarica report parziale</span>
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>Interim PDF</span>
                 </button>
                 <button
                   onClick={() => handleSharePDF(intervention)}
-                  className="flex items-center gap-2 text-xs font-normal px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 transition"
-                  title="Condividi report parziale su WhatsApp"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow transition active:scale-95"
+                  title="Share interim report directly via WhatsApp"
                 >
-                  <MessageCircle className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                  <span>Invia su WhatsApp</span>
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Send PDF on WhatsApp</span>
                 </button>
               </div>
 
-              <span className="text-xs text-zinc-400 font-mono imp-tabular">
-                Registrato: {intervention.report.interventionDate}
+              <span className="text-[11px] text-pink-300/80">
+                Logged: {intervention.report.interventionDate}
               </span>
             </div>
           </div>
         )}
 
-        {/* Technician Report Section (If Completed) */}
+        {/* Technician Report Section (If Completed - GREEN TONES) */}
         {isCompleted && intervention.report && (
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 mb-4 space-y-2">
+          <div className="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3.5 mb-3 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <CheckCircle2 className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>Intervento completato da {intervention.report.technicianName}</span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Service Completed by {intervention.report.technicianName}</span>
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300 font-mono imp-tabular">
-                <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                <span>{intervention.report.hoursWorked} ore lavorate</span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
+                <Clock className="w-3 h-3 text-emerald-400" />
+                <span>{intervention.report.hoursWorked} hours worked</span>
               </div>
             </div>
 
-            <div className="text-xs text-zinc-200">
-              <strong className="font-semibold text-zinc-100">Lavoro eseguito: </strong>
+            <div className="text-xs text-slate-200">
+              <strong className="text-emerald-300">Work performed: </strong>
               {intervention.report.workDone}
             </div>
 
             {intervention.report.materialsUsed && (
-              <div className="text-xs text-zinc-300">
-                <strong className="font-semibold text-zinc-100">Materiali utilizzati: </strong>
+              <div className="text-xs text-slate-300">
+                <strong className="text-emerald-400">Materials: </strong>
                 {intervention.report.materialsUsed}
               </div>
             )}
 
+            {/* Download PDF & Share PDF via WhatsApp buttons inside report */}
             <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => handleDownloadPDF(intervention)}
-                  className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 transition"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition active:scale-95"
                 >
-                  <FileDown className="w-4 h-4" strokeWidth={1.75} />
-                  <span>Scarica report PDF</span>
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
                 </button>
                 <button
                   onClick={() => handleSharePDF(intervention)}
-                  className="flex items-center gap-2 text-xs font-normal px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 transition"
-                  title="Condividi report PDF su WhatsApp"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow transition active:scale-95"
+                  title="Share official PDF Report directly via WhatsApp"
                 >
-                  <MessageCircle className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                  <span>Invia su WhatsApp</span>
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Send PDF on WhatsApp</span>
                 </button>
               </div>
 
-              <span className="text-xs text-zinc-400 font-mono imp-tabular">
-                Data: {intervention.report.interventionDate}
+              <span className="text-[11px] text-emerald-300/80">
+                Date: {intervention.report.interventionDate}
               </span>
             </div>
           </div>
         )}
 
-        {/* Client Feedback Section */}
+        {/* Client Feedback Section (If Present) */}
         {intervention.clientFeedback && (
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 mb-4 space-y-2">
+          <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 mb-3 space-y-1.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                <MessageSquare className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>Accettazione cliente: {intervention.clientFeedback.clientName}</span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200">
+                <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
+                <span>Client Acceptance: {intervention.clientFeedback.clientName}</span>
               </div>
               {intervention.clientFeedback.rating && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   {[...Array(intervention.clientFeedback.rating)].map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 text-zinc-300" strokeWidth={1.75} />
+                    <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
               )}
             </div>
 
-            <p className="text-xs text-zinc-300">"{intervention.clientFeedback.notes}"</p>
+            <p className="text-xs text-slate-300 italic">
+              "{intervention.clientFeedback.notes}"
+            </p>
 
-            <div className="text-xs text-zinc-500 text-right font-mono imp-tabular">
-              Ricevuto il {new Date(intervention.clientFeedback.submittedAt).toLocaleDateString('it-IT')}
+            <div className="text-[10px] text-slate-500 text-right">
+              Received on {new Date(intervention.clientFeedback.submittedAt).toLocaleDateString('en-US')}
             </div>
           </div>
         )}
       </div>
 
       {/* Action Footer */}
-      <div className="pt-4 border-t border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+      <div className={`pt-3 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 ${
+        isCompleted 
+          ? 'border-emerald-900/40' 
+          : isWaitingForParts
+            ? 'border-pink-800/40'
+            : 'border-rose-900/40'
+      }`}>
+        
         {/* Left side: assigned technician info */}
-        <div className="text-xs text-zinc-400 flex items-center gap-2">
-          <Shield className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+        <div className="text-xs text-slate-400 flex items-center gap-1.5">
+          <Shield className={`w-3.5 h-3.5 ${
+            isCompleted ? 'text-emerald-400' : isWaitingForParts ? 'text-pink-400' : 'text-rose-400'
+          }`} />
           <span className="truncate">
-            {intervention.assignedTechnician
-              ? `Assegnato a ${intervention.assignedTechnician}`
-              : 'Nessun tecnico assegnato'}
+            {intervention.assignedTechnician ? `Assigned to ${intervention.assignedTechnician}` : 'No technician assigned'}
           </span>
         </div>
 
         {/* Right side contextual buttons */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-stretch sm:justify-end">
+          
+          {/* Action: Take charge (if waiting and is tech or admin) */}
           {isWaiting && isTechOrAdmin && (
             <button
               onClick={() => onTakeCharge(intervention.id, currentUserName)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-900/30 transition active:scale-95"
             >
-              <Wrench className="w-4 h-4" strokeWidth={1.75} />
-              <span>Prendi in carico</span>
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Take Charge</span>
             </button>
           )}
 
+          {/* Action: Fill / Edit technician report (if tech or admin) */}
           {isTechOrAdmin && (
             <button
               onClick={() => onOpenReportModal(intervention)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                isCompleted
-                  ? 'bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800'
-                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-950'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 ${
+                isCompleted 
+                  ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-700/60' 
+                  : isWaitingForParts
+                    ? 'bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-900/30'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-900/30'
               }`}
             >
-              <Wrench className="w-4 h-4" strokeWidth={1.75} />
-              <span>
-                {isCompleted
-                  ? 'Modifica report'
-                  : isWaitingForParts
-                    ? 'Aggiorna ricambi o completa'
-                    : 'Esegui e completa'}
-              </span>
+              <Wrench className="w-3.5 h-3.5" />
+              <span>{isCompleted ? 'Edit Report' : isWaitingForParts ? 'Update Parts / Complete' : 'Execute & Complete'}</span>
             </button>
           )}
 
+          {/* Action: Client response / feedback (if completed) */}
           {isCompleted && (
             <button
               onClick={() => onOpenFeedbackModal(intervention)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-normal bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition active:scale-95"
             >
-              <MessageSquare className="w-4 h-4" strokeWidth={1.75} />
-              <span>{intervention.clientFeedback ? 'Aggiorna firma' : 'Firma e feedback'}</span>
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>{intervention.clientFeedback ? 'Update Acceptance' : 'Sign & Feedback'}</span>
             </button>
           )}
 
+          {/* Download PDF button if completed */}
           {isCompleted && (
             <button
               onClick={() => handleDownloadPDF(intervention)}
-              className="p-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition"
-              title="Scarica PDF"
+              className="p-1.5 rounded-lg bg-emerald-900/30 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 transition"
+              title="Download PDF"
             >
-              <FileDown className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+              <FileDown className="w-4 h-4 text-emerald-400" />
             </button>
           )}
+
         </div>
+
       </div>
+
     </div>
   );
 });
