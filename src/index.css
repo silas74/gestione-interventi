@@ -3,24 +3,23 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   IMPECCABLE DESIGN SYSTEM TOKENS (pbakaus/impeccable)
-   Perceptual OKLCH Palette + 3-Tier Typography + Tabular Telemetry
+   IMPECCABLE DESIGN SYSTEM — 5 STRICT RULES
+   1. Spacing: Multiples of 8px only (8, 16, 24, 32)
+   2. Colors: Single neutral palette (Zinc), zero gradients, zero glow
+   3. Icons: Line icons only from lucide-react, zero emojis
+   4. Typography: Max 2 weights (400 normal, 600 semibold), no uppercase
+   5. Numbers: Undecorated tabular figures with month-over-month comparison
    ========================================================================== */
 :root {
-  --imp-canvas: oklch(0.13 0.028 262);
-  --imp-surface-1: oklch(0.21 0.032 260 / 0.64);
-  --imp-surface-2: oklch(0.25 0.035 260 / 0.76);
-  --imp-surface-inset: oklch(0.16 0.025 262 / 0.62);
-  --imp-text-primary: oklch(0.98 0.005 255);
-  --imp-text-secondary: oklch(0.84 0.016 255);
-  --imp-text-muted: oklch(0.68 0.022 255);
-  --imp-accent-primary: oklch(0.62 0.19 255);
-  --imp-status-urgent: oklch(0.63 0.24 22);
-  --imp-status-progress: oklch(0.78 0.17 75);
-  --imp-status-resolved: oklch(0.72 0.18 160);
-  --imp-status-empty: oklch(0.68 0.21 345);
-  --imp-border-specular: oklch(1 0 0 / 0.16);
-  --imp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --imp-canvas: #09090b;
+  --imp-surface-1: #18181b;
+  --imp-surface-2: #27272a;
+  --imp-surface-inset: #121215;
+  --imp-border: #27272a;
+  --imp-border-strong: #3f3f46;
+  --imp-text-primary: #fafafa;
+  --imp-text-secondary: #a1a1aa;
+  --imp-text-muted: #71717a;
 }
 
 @layer base {
@@ -30,9 +29,9 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   body {
-    @apply bg-slate-950 text-slate-100 antialiased font-sans selection:bg-blue-600 selection:text-white;
-    background-color: var(--imp-canvas, #040814);
-    color: var(--imp-text-primary, #f8fafc);
+    @apply bg-zinc-950 text-zinc-100 antialiased font-sans font-normal selection:bg-zinc-700 selection:text-zinc-100;
+    background-color: var(--imp-canvas);
+    color: var(--imp-text-primary);
     letter-spacing: -0.006em;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -41,28 +40,40 @@
   }
   h1, h2, h3, .imp-display {
     font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
-    letter-spacing: -0.025em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-transform: none;
   }
   code, pre, .font-mono, .imp-tabular {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
     font-variant-numeric: tabular-nums;
   }
+  /* Enforce Rule 4: Max 2 font weights (400 normal, 600 semibold) & no uppercase */
+  .font-medium {
+    font-weight: 400 !important;
+  }
+  .font-bold, .font-extrabold, .font-black, strong, b {
+    font-weight: 600 !important;
+  }
+  .uppercase {
+    text-transform: none !important;
+  }
 }
 
-/* Custom scrollbars */
+/* Custom scrollbars — Neutral Zinc */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #09090b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 9999px;
+  background: #27272a;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3f3f46;
 }
 
 /* Hide scrollbar utility */
@@ -74,217 +85,94 @@
   scrollbar-width: none;
 }
 
-/* Urgent flashing Red <-> Yellow animations */
-@keyframes flash-red-yellow {
+/* Urgent indicators — Neutral high-contrast border pulse, no glow, no gradient */
+@keyframes pulse-neutral-border {
   0%, 100% {
-    background-color: #dc2626; /* red-600 */
-    border-color: #ef4444; /* red-500 */
-    color: #ffffff;
-    box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);
+    border-color: #e4e4e7;
   }
   50% {
-    background-color: #eab308; /* yellow-500 */
-    border-color: #facc15; /* yellow-400 */
-    color: #0f172a; /* high contrast dark text */
-    box-shadow: 0 0 16px rgba(234, 179, 8, 0.75);
-  }
-}
-
-@keyframes flash-card-border {
-  0%, 100% {
-    border-color: #ef4444;
-    box-shadow: 0 0 24px rgba(239, 68, 68, 0.45);
-  }
-  50% {
-    border-color: #eab308;
-    box-shadow: 0 0 24px rgba(234, 179, 8, 0.45);
-  }
-}
-
-@keyframes flash-siren-icon {
-  0%, 100% {
-    transform: rotate(-10deg) scale(1.05);
-    color: #ffffff;
-  }
-  50% {
-    transform: rotate(10deg) scale(1.2);
-    color: #0f172a;
+    border-color: #52525b;
   }
 }
 
 .animate-flash-urgent {
-  animation: flash-red-yellow 0.9s infinite ease-in-out;
+  background-color: #27272a;
+  border-color: #a1a1aa;
+  color: #fafafa;
+  box-shadow: none;
 }
 
 .animate-flash-card-urgent {
-  animation: flash-card-border 0.9s infinite ease-in-out;
+  animation: pulse-neutral-border 1.6s infinite ease-in-out;
+  box-shadow: none;
 }
 
 .animate-flash-siren {
-  animation: flash-siren-icon 0.9s infinite ease-in-out;
+  color: #fafafa;
 }
 
 /* ==========================================================================
-   LIQUID GLASS EFFECT (inspired by kevinbism/liquid-glass-effect)
-   Layered backdrop-filter refraction, specular inner rims & ambient light
+   NEUTRAL SURFACES (Zero Gradients, Zero Glow)
    ========================================================================== */
-
-@keyframes liquid-orb-float {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  33% {
-    transform: translate3d(25px, -20px, 0) scale(1.06);
-  }
-  66% {
-    transform: translate3d(-20px, 15px, 0) scale(0.96);
-  }
-}
 
 .liquid-ambient-bg {
   position: relative;
-  background-color: #040814;
-  background-image:
-    radial-gradient(at 12% 10%, rgba(59, 130, 246, 0.18) 0px, transparent 48%),
-    radial-gradient(at 88% 14%, rgba(99, 102, 241, 0.18) 0px, transparent 45%),
-    radial-gradient(at 50% 52%, rgba(236, 72, 153, 0.10) 0px, transparent 55%),
-    radial-gradient(at 18% 88%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
-    radial-gradient(at 85% 85%, rgba(245, 158, 11, 0.12) 0px, transparent 50%);
-  background-attachment: fixed;
+  background-color: #09090b;
+  background-image: none;
 }
 
-/* Core Liquid Glass Surface */
 .liquid-glass {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 41, 59, 0.62) 0%,
-    rgba(15, 23, 42, 0.48) 50%,
-    rgba(15, 23, 42, 0.68) 100%
-  );
-  backdrop-filter: blur(20px) saturate(185%);
-  -webkit-backdrop-filter: blur(20px) saturate(185%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.26),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.05),
-    0 12px 32px -6px rgba(0, 0, 0, 0.55);
+  background-color: #18181b;
+  background-image: none;
+  border: 1px solid #27272a;
+  box-shadow: none;
 }
 
 .liquid-glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(
-    125deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.02) 38%,
-    transparent 60%
-  );
+  display: none;
 }
 
-/* Sticky Header Liquid Glass */
 .liquid-glass-header {
-  background: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.78) 0%,
-    rgba(15, 23, 42, 0.62) 100%
-  );
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 10px 30px -5px rgba(0, 0, 0, 0.6);
+  background-color: #09090b;
+  background-image: none;
+  border-bottom: 1px solid #27272a;
+  box-shadow: none;
 }
 
-/* Liquid Glass Cards with Status Refraction Tints */
 .liquid-glass-card {
   position: relative;
-  backdrop-filter: blur(22px) saturate(190%);
-  -webkit-backdrop-filter: blur(22px) saturate(190%);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.28),
-    inset 1px 0 1px 0 rgba(255, 255, 255, 0.10),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.06),
-    0 16px 36px -8px rgba(0, 0, 0, 0.6);
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+  background-color: #18181b;
+  background-image: none;
+  border: 1px solid #27272a;
+  box-shadow: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .liquid-glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.38),
-    inset 1px 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 20px 42px -8px rgba(0, 0, 0, 0.72);
+  border-color: #3f3f46;
+  box-shadow: none;
 }
 
-.liquid-glass-card-amber {
-  background: linear-gradient(
-    145deg,
-    oklch(0.32 0.09 70 / 0.42) 0%,
-    oklch(0.20 0.032 260 / 0.72) 48%,
-    oklch(0.16 0.028 262 / 0.84) 100%
-  );
-  border-color: oklch(0.78 0.17 75 / 0.42);
-}
-
-.liquid-glass-card-rose {
-  background: linear-gradient(
-    145deg,
-    oklch(0.30 0.11 20 / 0.42) 0%,
-    oklch(0.20 0.032 260 / 0.72) 48%,
-    oklch(0.16 0.028 262 / 0.84) 100%
-  );
-  border-color: oklch(0.63 0.24 22 / 0.42);
-}
-
-.liquid-glass-card-pink {
-  background: linear-gradient(
-    145deg,
-    oklch(0.32 0.12 345 / 0.44) 0%,
-    oklch(0.20 0.032 260 / 0.72) 48%,
-    oklch(0.16 0.028 262 / 0.84) 100%
-  );
-  border-color: oklch(0.68 0.21 345 / 0.46);
-}
-
+.liquid-glass-card-amber,
+.liquid-glass-card-rose,
+.liquid-glass-card-pink,
 .liquid-glass-card-emerald {
-  background: linear-gradient(
-    145deg,
-    oklch(0.30 0.09 160 / 0.42) 0%,
-    oklch(0.20 0.032 260 / 0.72) 48%,
-    oklch(0.16 0.028 262 / 0.84) 100%
-  );
-  border-color: oklch(0.72 0.18 160 / 0.42);
+  background-color: #18181b;
+  background-image: none;
+  border-color: #27272a;
+  box-shadow: none;
 }
 
-/* Liquid Glass Interactive Button / Pill Shine */
 .liquid-glass-btn {
   position: relative;
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.2),
-    0 6px 16px -3px rgba(0, 0, 0, 0.4);
+  background-image: none;
+  box-shadow: none;
 }
 
-/* Inner Sub-Panels inside Cards */
 .liquid-glass-inset {
-  background: linear-gradient(
-    135deg,
-    rgba(15, 23, 42, 0.58) 0%,
-    rgba(2, 6, 23, 0.45) 100%
-  );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.10),
-    0 4px 12px rgba(0, 0, 0, 0.25);
+  background-color: #121215;
+  background-image: none;
+  border: 1px solid #27272a;
+  box-shadow: none;
 }
-
-
