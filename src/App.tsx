@@ -77,11 +77,11 @@ export function App() {
     // Online / Offline tracking
     const handleOnline = () => {
       setIsOnline(true);
-      showToast('Connessione attiva');
+      showToast('🟢 Online: Connection active');
     };
     const handleOffline = () => {
       setIsOnline(false);
-      showToast('Modalità locale: le modifiche vengono salvate sul dispositivo');
+      showToast('📡 Offline Mode: All actions saved locally');
     };
 
     window.addEventListener('online', handleOnline);
@@ -207,8 +207,8 @@ export function App() {
     }
     showToast(
       targetCategory === 'project_work'
-        ? `Lavoro ${newReq.code} creato per ${newReq.projectName || 'il progetto'}`
-        : `Richiesta ${newReq.code} creata per ${newReq.projectName || 'il progetto'}`
+        ? `📋 Lavoro/Azione ${newReq.code} creato per ${newReq.projectName || 'il progetto'}!`
+        : `🛠️ Richiesta ${newReq.code} creata per ${newReq.projectName || 'il progetto'}!`
     );
   };
 
@@ -262,7 +262,7 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Nuova azione aggiunta a ${item.code}`);
+    showToast(`➕ Nuova azione aggiunta a ${item.code}`);
   }, [interventions]);
 
   const handleDeleteActionStep = useCallback(async (interventionId: string, stepId: string) => {
@@ -309,7 +309,7 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Registro attività aggiornato su ${item.code}`);
+    showToast(`📡 Tracking aggiornato su ${item.code}!`);
   }, [interventions]);
 
   const handleMarkReplyReceived = useCallback(async (interventionId: string, trackingId?: string) => {
@@ -342,7 +342,7 @@ export function App() {
 
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Risposta registrata come ricevuta per ${item.code}`);
+    showToast(`✅ Risposta registrata come ricevuta per ${item.code}!`);
   }, [interventions]);
 
   const handleDeleteTrackingEntry = useCallback(async (interventionId: string, trackingId: string) => {
@@ -398,11 +398,11 @@ export function App() {
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
 
     if (report.statusOutcome === 'waiting_for_parts' || (report.statusOutcome as string) === 'in_attesa_ricambi') {
-      showToast(`Report salvato: ${item.code} impostato come in attesa ricambi`);
+      showToast(`Report saved: ${item.code} marked as Working in Progress (Waiting for parts) 🌸`);
     } else if (isResolved) {
-      showToast(`Report salvato e intervento completato per ${item.code}`);
+      showToast(`Report saved and ticket completed for ${item.code}! 🟢`);
     } else {
-      showToast(`Report parziale salvato per ${item.code}`);
+      showToast(`Report saved: ${item.code} marked as Working in Progress (Partial) 🟡`);
     }
   };
 
@@ -458,20 +458,20 @@ export function App() {
     };
     await saveIntervention(updated);
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
-    showToast(`Aggiornato: ${updated.code}`);
+    showToast(`✅ Aggiornato: ${updated.code}`);
   }, [interventions]);
 
   // Project Summary PDF & WhatsApp (Feature #2)
   const handleDownloadProjectSummaryPDF = async () => {
     const { downloadProjectSummaryPDF } = await import('./lib/pdfGenerator');
-    const projTitle = activeProjectObj ? activeProjectObj.name : 'Tutti i progetti';
+    const projTitle = activeProjectObj ? activeProjectObj.name : 'Tutti i Progetti';
     downloadProjectSummaryPDF(projTitle, filteredInterventions);
-    showToast(`Riepilogo PDF generato per "${projTitle}"`);
+    showToast(`📊 Riepilogo PDF generato per "${projTitle}"!`);
   };
 
   const handleShareProjectSummaryWhatsApp = async () => {
     const { shareProjectSummaryViaWhatsApp } = await import('./lib/pdfGenerator');
-    const projTitle = activeProjectObj ? activeProjectObj.name : 'Tutti i progetti';
+    const projTitle = activeProjectObj ? activeProjectObj.name : 'Tutti i Progetti';
     shareProjectSummaryViaWhatsApp(projTitle, filteredInterventions);
   };
 
@@ -547,7 +547,7 @@ export function App() {
       if (proj && activeProjectId !== 'all' && activeProjectId !== proj.id) {
         setActiveProjectId(proj.id);
       }
-      showToast(`Creato nuovo intervento [${code}] registrato sul progetto "${proj?.name || 'Generale'}"`);
+      showToast(`✉️ Creato nuovo intervento [${code}] registrato sul progetto "${proj?.name || 'Generale'}"!`);
     } else if (action === 'follow_up' && targetInterventionId) {
       const item = interventions.find(i => i.id === targetInterventionId);
       if (!item) return;
@@ -581,7 +581,7 @@ export function App() {
 
       await saveIntervention(updated);
       setInterventions(prev => prev.map(i => i.id === targetInterventionId ? updated : i));
-      showToast(`Follow-up registrato su [${item.code}] (Progetto: ${item.projectName || 'Generale'})`);
+      showToast(`🌸 Follow-up registrato su [${item.code}] (Progetto: ${item.projectName || 'Generale'})!`);
     } else if (action === 'close' && targetInterventionId) {
       const item = interventions.find(i => i.id === targetInterventionId);
       if (!item) return;
@@ -631,7 +631,7 @@ export function App() {
 
       await saveIntervention(updated);
       setInterventions(prev => prev.map(i => i.id === targetInterventionId ? updated : i));
-      showToast(`Intervento [${item.code}] chiuso da email (Progetto: ${item.projectName || 'Generale'})`);
+      showToast(`🟢 Intervento [${item.code}] chiuso da email (Progetto: ${item.projectName || 'Generale'})!`);
     }
   };
 
@@ -858,36 +858,83 @@ export function App() {
     showToast(`Exported ${result.count} tickets (${result.totalHours.toFixed(1)} hrs total) to Excel!`);
   };
 
-  // Neutral status styles for Project Pills (using O(1) lookup from projectStatsMap):
+  // Status colors for Project Pills (using O(1) lookup from projectStatsMap):
   const getProjectStatusStyle = (projectId: string, isSelected: boolean) => {
     const stats = projectStatsMap.get(projectId);
     const count = stats?.count || 0;
 
-    let label = 'Da fare';
+    // 1. Rosa se non c'è nulla (0 ticket)
     if (count === 0) {
-      label = 'Nessuna attività';
-    } else if (stats?.allResolved) {
-      label = 'Completato';
-    } else if (stats?.hasInProgress) {
-      label = 'In lavorazione';
+      return {
+        count: 0,
+        label: 'Empty (No tickets)',
+        dotColor: 'bg-pink-400',
+        dotPulse: false,
+        btnClass: isSelected
+          ? 'bg-pink-600 text-white border-pink-400 shadow-md shadow-pink-600/30 ring-2 ring-pink-400/40'
+          : 'bg-pink-950/25 border-pink-500/40 text-pink-300 hover:bg-pink-900/40 hover:border-pink-400',
+        badgeClass: isSelected ? 'bg-pink-900 text-white' : 'bg-pink-950/80 text-pink-300 border border-pink-700/50'
+      };
     }
 
+    // 2. Verde se è tutto risolto
+    if (stats?.allResolved) {
+      return {
+        count,
+        label: 'All Resolved',
+        dotColor: 'bg-emerald-400',
+        dotPulse: false,
+        btnClass: isSelected
+          ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/40'
+          : 'bg-emerald-950/25 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40 hover:border-emerald-400',
+        badgeClass: isSelected ? 'bg-emerald-800 text-white' : 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/50'
+      };
+    }
+
+    // 3. Giallo se è in lavorazione
+    if (stats?.hasInProgress) {
+      return {
+        count,
+        label: 'In Progress (Active Work)',
+        dotColor: 'bg-amber-400',
+        dotPulse: true,
+        btnClass: isSelected
+          ? 'bg-amber-500 text-slate-950 font-bold border-amber-300 shadow-md shadow-amber-500/30 ring-2 ring-amber-300/40'
+          : 'bg-amber-950/25 border-amber-500/40 text-amber-300 hover:bg-amber-900/40 hover:border-amber-400',
+        badgeClass: isSelected ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-950/80 text-amber-300 border border-amber-700/50'
+      };
+    }
+
+    // 4. Rosso se ci sono difetti/interventi non ancora risolti
     return {
       count,
-      label,
+      label: 'Open / Unresolved',
+      dotColor: 'bg-rose-500',
+      dotPulse: true,
       btnClass: isSelected
-        ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold'
-        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-700 hover:text-zinc-100 font-normal',
-      countClass: isSelected ? 'text-zinc-950 font-semibold' : 'text-zinc-400 font-semibold',
+        ? 'bg-rose-600 text-white border-rose-400 shadow-md shadow-rose-600/30 ring-2 ring-rose-400/40'
+        : 'bg-rose-950/25 border-rose-500/40 text-rose-300 hover:bg-rose-900/40 hover:border-rose-400',
+      badgeClass: isSelected ? 'bg-rose-800 text-white' : 'bg-rose-950/80 text-rose-300 border border-rose-700/50'
     };
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col selection:bg-zinc-700 selection:text-zinc-100">
+    <div className="min-h-screen liquid-ambient-bg text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+      {/* Hidden SVG Refraction Filter for Liquid Glass Effect (kevinbism/liquid-glass-effect) */}
+      <svg className="hidden" aria-hidden="true">
+        <defs>
+          <filter id="liquid-glass-refraction" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.012" numOctaves="2" seed="7" result="noise" />
+            <feGaussianBlur in="noise" stdDeviation="1.5" result="smoothNoise" />
+            <feDisplacementMap in="SourceGraphic" in2="smoothNoise" scale="14" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
+      
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 text-zinc-100 px-4 py-2 rounded-lg border border-zinc-700 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+        <div className="fixed bottom-5 right-5 z-50 liquid-glass bg-blue-600/80 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-blue-300/40 flex items-center gap-2 animate-bounce">
+          <CheckCircle2 className="w-4 h-4" />
           <span className="text-xs font-semibold">{toastMessage}</span>
         </div>
       )}
@@ -907,64 +954,77 @@ export function App() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Main View Switcher: Lavori e azioni progetto vs Interventi e guasti */}
-        <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-            {/* Tab 1: Lavori e azioni progetto */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
+
+        {/* ================= MAIN VIEW SWITCHER: 1. LAVORI & AZIONI PROGETTO vs 2. INTERVENTI & GUASTI ================= */}
+        <div className="mb-4 sm:mb-5 liquid-glass rounded-2xl p-2 sm:p-2.5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+            {/* TAB 1: LAVORI & AZIONI PROGETTO */}
             <button
               onClick={() => setActiveCategoryTab('project_work')}
-              className={`flex items-center justify-between sm:justify-start gap-4 p-4 rounded-lg text-xs sm:text-sm transition border ${
+              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border liquid-glass-btn ${
                 activeCategoryTab === 'project_work'
-                  ? 'bg-zinc-800 text-zinc-100 border-zinc-700 font-semibold'
-                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200 hover:bg-zinc-900 font-normal'
+                  ? 'bg-gradient-to-r from-indigo-600/85 to-violet-600/85 text-white border-indigo-300/60 shadow-lg shadow-indigo-900/40'
+                  : 'bg-slate-950/55 text-slate-300 border-white/10 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <ClipboardList className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
+                <ClipboardList className="w-4 h-4 shrink-0" />
                 <div className="text-left leading-tight min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="truncate">Lavori e azioni progetto</span>
-                    <span className="font-mono imp-tabular text-xs font-semibold text-zinc-300">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="truncate">Lavori & Azioni Progetto</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                      activeCategoryTab === 'project_work'
+                        ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-300/30'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}>
                       {categoryTabCounts.worksTotal}
                     </span>
                     {categoryTabCounts.worksOpen > 0 && (
-                      <span className="text-xs font-normal text-zinc-400">
-                        ({categoryTabCounts.worksOpen} da fare)
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
+                        {categoryTabCounts.worksOpen} da fare
                       </span>
                     )}
                   </div>
-                  <span className="hidden lg:block text-xs font-normal text-zinc-400 mt-2">
+                  <span className={`hidden lg:block text-[10px] font-normal ${
+                    activeCategoryTab === 'project_work' ? 'text-indigo-100' : 'text-slate-400'
+                  }`}>
                     Lavori pianificati, attività di cantiere e checklist azioni sui progetti
                   </span>
                 </div>
               </div>
             </button>
 
-            {/* Tab 2: Interventi e guasti */}
+            {/* TAB 2: INTERVENTI & GUASTI */}
             <button
               onClick={() => setActiveCategoryTab('intervention')}
-              className={`flex items-center justify-between sm:justify-start gap-4 p-4 rounded-lg text-xs sm:text-sm transition border ${
+              className={`flex items-center justify-between sm:justify-start gap-2.5 px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border liquid-glass-btn ${
                 activeCategoryTab === 'intervention'
-                  ? 'bg-zinc-800 text-zinc-100 border-zinc-700 font-semibold'
-                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200 hover:bg-zinc-900 font-normal'
+                  ? 'bg-gradient-to-r from-blue-600/85 to-blue-500/85 text-white border-blue-300/60 shadow-lg shadow-blue-900/40'
+                  : 'bg-slate-950/55 text-slate-300 border-white/10 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Wrench className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
+                <Wrench className="w-4 h-4 shrink-0" />
                 <div className="text-left leading-tight min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="truncate">Interventi e guasti</span>
-                    <span className="font-mono imp-tabular text-xs font-semibold text-zinc-300">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="truncate">Interventi & Guasti</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                      activeCategoryTab === 'intervention'
+                        ? 'bg-blue-950/80 text-blue-200 border border-blue-300/30'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}>
                       {categoryTabCounts.interventionsTotal}
                     </span>
                     {categoryTabCounts.interventionsOpen > 0 && (
-                      <span className="text-xs font-normal text-zinc-400">
-                        ({categoryTabCounts.interventionsOpen} aperti)
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
+                        {categoryTabCounts.interventionsOpen} aperti
                       </span>
                     )}
                   </div>
-                  <span className="hidden lg:block text-xs font-normal text-zinc-400 mt-2">
+                  <span className={`hidden lg:block text-[10px] font-normal ${
+                    activeCategoryTab === 'intervention' ? 'text-blue-100' : 'text-slate-400'
+                  }`}>
                     Assistenza tecnica, chiamate guasto e riparazioni
                   </span>
                 </div>
@@ -975,46 +1035,49 @@ export function App() {
           {/* Quick CTA for Active Tab */}
           <button
             onClick={() => setIsNewModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-950 transition shrink-0"
+            className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border ${
+              activeCategoryTab === 'project_work'
+                ? 'bg-indigo-600/85 hover:bg-indigo-500 border-indigo-300/40 shadow-indigo-900/40'
+                : 'bg-blue-600/85 hover:bg-blue-500 border-blue-300/40 shadow-blue-900/40'
+            }`}
           >
-            <PlusCircle className="w-4 h-4" strokeWidth={1.75} />
-            <span>{activeCategoryTab === 'project_work' ? 'Nuovo lavoro o azione' : 'Nuovo intervento'}</span>
+            <PlusCircle className="w-4 h-4" />
+            <span>{activeCategoryTab === 'project_work' ? '+ Nuovo Lavoro / Azione' : '+ Nuovo Intervento'}</span>
           </button>
         </div>
-
+        
         {/* Project Selector Bar */}
-        <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div className="mb-4 sm:mb-6 liquid-glass rounded-2xl p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <FolderKanban className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+              <FolderKanban className="w-5 h-5 text-blue-400" />
               <div>
-                <h2 className="text-sm font-semibold text-zinc-100">Progetti e cantieri attivi</h2>
-                <p className="text-xs font-normal text-zinc-400">
-                  Seleziona un progetto per filtrare lavori, azioni e interventi dedicati
-                </p>
+                <h2 className="text-sm font-bold text-white">Project Defect & Service Classification</h2>
+                <p className="text-[11px] text-slate-300">Select a project to view only its dedicated defects and service tasks</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
+              {/* Feature #2: 1-Click Project Summary PDF & WhatsApp */}
               {filteredInterventions.length > 0 && (
                 <>
                   <button
                     type="button"
                     onClick={handleDownloadProjectSummaryPDF}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
-                    title="Scarica tabella PDF con lo stato aggiornato del progetto selezionato"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/90 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow transition active:scale-95 liquid-glass-btn border border-amber-200/50"
+                    title="Scarica tabella PDF con lo stato aggiornato del progetto selezionato (per riunioni)"
                   >
-                    <FileDown className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                    <span>PDF stato progetto</span>
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>📊 PDF Stato Progetto</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleShareProjectSummaryWhatsApp}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/85 hover:bg-emerald-500 text-white text-xs font-bold shadow transition active:scale-95 liquid-glass-btn border border-emerald-300/40"
                     title="Invia riepilogo testuale del progetto su WhatsApp"
                   >
-                    <MessageCircle className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                    <span>Riepilogo WhatsApp</span>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>💬 Riepilogo WA</span>
                   </button>
                 </>
               )}
@@ -1026,21 +1089,21 @@ export function App() {
                       setOpenProjectCreateDirectly(true);
                       setIsProjectsModalOpen(true);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition"
-                    title="Crea un nuovo progetto"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/85 hover:bg-blue-500 text-white text-xs font-semibold shadow transition active:scale-95 liquid-glass-btn border border-blue-300/40"
+                    title="Create a new Project"
                   >
-                    <PlusCircle className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                    <span>Nuovo progetto</span>
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>+ Add New Project</span>
                   </button>
                   <button
                     onClick={() => {
                       setOpenProjectCreateDirectly(false);
                       setIsProjectsModalOpen(true);
                     }}
-                    className="text-xs text-zinc-300 hover:text-zinc-100 font-normal px-4 py-2 rounded-lg border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 transition"
-                    title="Gestisci tutti i progetti"
+                    className="text-xs text-slate-200 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-white/15 bg-slate-800/60 hover:bg-slate-700/70 transition liquid-glass-btn"
+                    title="Manage all projects"
                   >
-                    <span>Gestisci</span>
+                    <span>Manage</span>
                   </button>
                 </>
               )}
@@ -1048,17 +1111,17 @@ export function App() {
           </div>
 
           {/* Project Pills Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setActiveProjectId('all')}
-              className={`px-4 py-2 rounded-lg text-xs whitespace-nowrap transition flex items-center gap-2 border ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 liquid-glass-btn border ${
                 activeProjectId === 'all'
-                  ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold'
-                  : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:text-zinc-100 hover:bg-zinc-800 font-normal'
+                  ? 'bg-blue-600/90 text-white border-blue-300/50 shadow-md shadow-blue-600/30'
+                  : 'bg-slate-800/65 text-slate-300 border-white/10 hover:text-white hover:bg-slate-700/75'
               }`}
             >
-              <Layers className="w-4 h-4" strokeWidth={1.75} />
-              <span>Tutti i progetti</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>All Projects</span>
             </button>
 
             {visibleProjects.map((p) => {
@@ -1070,11 +1133,12 @@ export function App() {
                 <button
                   key={p.id}
                   onClick={() => setActiveProjectId(p.id)}
-                  title={`${p.name} — Stato: ${style.label} (${count} voci)`}
-                  className={`px-4 py-2 rounded-lg text-xs whitespace-nowrap transition flex items-center gap-2 border ${style.btnClass}`}
+                  title={`${p.name} — Status: ${style.label} (${count} tickets)`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 border liquid-glass-btn ${style.btnClass}`}
                 >
+                  <span className={`w-2 h-2 rounded-full ${style.dotColor} ${style.dotPulse ? 'animate-pulse' : ''}`}></span>
                   <span>{p.name}</span>
-                  <span className={`font-mono imp-tabular text-xs ${style.countClass}`}>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${style.badgeClass}`}>
                     {count}
                   </span>
                 </button>
@@ -1087,45 +1151,66 @@ export function App() {
                   setOpenProjectCreateDirectly(true);
                   setIsProjectsModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-lg text-xs font-normal whitespace-nowrap transition flex items-center gap-2 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 border-dashed shrink-0"
-                title="Crea un nuovo progetto"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 border-dashed active:scale-95 shrink-0"
+                title="Create a new Project"
               >
-                <PlusCircle className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>Aggiungi progetto</span>
+                <PlusCircle className="w-3.5 h-3.5 text-blue-400" />
+                <span>+ New Project</span>
               </button>
             )}
           </div>
 
-          {/* Action bar under project pills */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 mt-2 border-t border-zinc-800">
-            <div className="text-xs font-normal text-zinc-400">
-              {activeProjectObj ? (
-                <span>
-                  <strong className="font-semibold text-zinc-100">{activeProjectObj.name}</strong> ({activeProjectObj.code}) —{' '}
-                  {activeProjectObj.description}
-                  {activeProjectObj.siteAddress ? ` · Sede: ${activeProjectObj.siteAddress}` : ''}
-                </span>
-              ) : (
-                <span>Visualizzazione globale di tutti i progetti assegnati</span>
-              )}
+          {/* Status Color Legend + "+ Aggiungi Lavoro / Azione" button right under the project pills */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 mt-2.5 border-t border-white/10">
+            <div className="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Project Status:</span>
+              <span className="flex items-center gap-1.5 bg-rose-950/35 px-2 py-0.5 rounded-md border border-rose-500/30">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span className="text-rose-300">Open / Not Resolved</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-amber-950/35 px-2 py-0.5 rounded-md border border-amber-500/30">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span className="text-amber-300">In Progress</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-emerald-950/35 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="text-emerald-300">All Resolved</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-pink-950/35 px-2 py-0.5 rounded-md border border-pink-500/30">
+                <span className="w-2 h-2 rounded-full bg-pink-400"></span>
+                <span className="text-pink-300">Empty (No Tasks)</span>
+              </span>
             </div>
 
             {/* + Aggiungi Lavoro / Azione button directly under Project pills */}
             <button
               type="button"
               onClick={() => setIsNewModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition shrink-0"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border border-rose-300/40"
             >
-              <PlusCircle className="w-4 h-4" strokeWidth={1.75} />
-              <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi lavoro / azione' : '+ Aggiungi intervento'}</span>
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : '+ Aggiungi Intervento'}</span>
             </button>
           </div>
+
+          {/* Project Focus Header info */}
+          {activeProjectObj && (
+            <div className="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-200 gap-2">
+              <div>
+                <span className="font-bold text-white text-sm">{activeProjectObj.name}</span>
+                <span className="text-slate-300 ml-2">({activeProjectObj.code}) — {activeProjectObj.description}</span>
+              </div>
+              <div className="text-[11px] text-slate-300">
+                {activeProjectObj.siteAddress && <span>Facility: {activeProjectObj.siteAddress}</span>}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stats Summary */}
         <StatsCards interventions={filteredInterventions} />
 
-        {/* Filter and Search Bar */}
+        {/* Filter and Search Bar with Red / Pink / Green / Waiting Reply quick switch */}
         <FilterBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -1142,59 +1227,63 @@ export function App() {
 
         {/* Loading state */}
         {loading && (
-          <div className="py-16 text-center text-zinc-400 text-sm font-normal">
-            Caricamento attività...
+          <div className="py-20 text-center text-slate-400 text-sm">
+            Loading service tasks...
           </div>
         )}
 
         {/* Empty state */}
         {!loading && filteredInterventions.length === 0 && (
-          <div className="py-16 text-center border border-dashed border-zinc-800 rounded-lg bg-zinc-900 p-8">
-            <Inbox className="w-8 h-8 text-zinc-500 mx-auto mb-4" strokeWidth={1.75} />
-            <h3 className="text-base font-semibold text-zinc-200">Nessuna attività trovata per questo filtro</h3>
-            <p className="text-xs font-normal text-zinc-400 max-w-sm mx-auto mt-2 mb-4">
-              Non ci sono richieste o lavori corrispondenti ai criteri selezionati.
+          <div className="py-16 text-center border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30 p-8">
+            <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-slate-300">No service tasks found for this filter</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+              There are no service requests matching the selected criteria.
             </p>
             <button
               onClick={() => setIsNewModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition"
             >
-              <PlusCircle className="w-4 h-4" strokeWidth={1.75} />
-              <span>Crea nuova attività o intervento</span>
+              <PlusCircle className="w-4 h-4" />
+              <span>Create New Defect / Service Ticket</span>
             </button>
           </div>
         )}
 
-        {/* Section 1: Da fare / In attesa */}
+        {/* ================= SECTION 1: 🔴 OPEN & TO DO SERVICE TASKS (RED TONES) ================= */}
         {!loading && showTodoSection && (
-          <section className="mb-8">
-            <div className="flex items-center justify-between p-4 mb-4 rounded-lg bg-zinc-900 border border-zinc-800">
-              <div className="flex items-center gap-4">
-                <AlertCircle className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
+          <section className="mb-10">
+            {/* Red Section Header */}
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-slate-900 border border-rose-800/50 shadow-lg shadow-rose-950/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+                  <AlertCircle className="w-4 h-4 animate-pulse" />
+                </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                  <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
                     <span>
                       {statusFilter === 'attesa_risposta'
-                        ? 'In attesa di risposta (email, WhatsApp o cliente)'
+                        ? '⏳ IN ATTESA DI RISPOSTA (EMAIL / WHATSAPP / CLIENTE)'
                         : activeCategoryTab === 'project_work'
-                          ? 'Lavori e azioni da fare sul progetto'
-                          : 'Interventi da fare'}
+                          ? 'LAVORI & AZIONI DA FARE SUL PROGETTO'
+                          : 'TO DO & OPEN INTERVENTIONS'}
                     </span>
-                    <span className="font-mono imp-tabular text-xs font-semibold text-zinc-400">
-                      · {todoSectionItems.length}
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-sm">
+                      {todoSectionItems.length}
                     </span>
                   </h3>
-                  <p className="text-xs font-normal text-zinc-400 mt-2">
+                  <p className="text-[11px] text-rose-300/80">
                     {statusFilter === 'attesa_risposta'
-                      ? 'Lavori e interventi in cui si attende risposta da cliente, direzione lavori o fornitore'
+                      ? 'Lavori e interventi in cui stai aspettando risposta da cliente, direzione lavori o fornitore'
                       : activeCategoryTab === 'project_work'
                         ? 'Attività di progetto, modifiche e azioni pianificate da iniziare'
-                        : 'Interventi pianificati in attesa di presa in carico'}
+                        : 'Scheduled work, awaiting technician dispatch'}
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Red Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {todoSectionItems.map((intervention) => (
                 <InterventionCard
@@ -1220,32 +1309,32 @@ export function App() {
           </section>
         )}
 
-        {/* Section 2: In corso / Attesa ricambi */}
+        {/* ================= SECTION 2: 🌸 IN PROGRESS & WAITING FOR PARTS (PINK TONES) ================= */}
         {!loading && showInProgressSection && (
-          <section className="mb-8">
-            <div className="flex items-center justify-between p-4 mb-4 rounded-lg bg-zinc-900 border border-zinc-800">
-              <div className="flex items-center gap-4">
-                <Clock className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
+          <section className="mb-10">
+            {/* Pink Section Header */}
+            <div className="flex items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-pink-950/70 via-slate-900 to-slate-900 border border-pink-700/50 shadow-lg shadow-pink-950/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 shrink-0">
+                  <Clock className="w-4 h-4 animate-pulse" />
+                </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                    <span>
-                      {activeCategoryTab === 'project_work'
-                        ? 'Lavori e azioni in corso'
-                        : 'Interventi in corso e attesa ricambi'}
-                    </span>
-                    <span className="font-mono imp-tabular text-xs font-semibold text-zinc-400">
-                      · {inProgressInterventions.length}
+                  <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI IN CORSO' : 'IN PROGRESS & WAITING FOR PARTS'}</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-600 text-white shadow-sm">
+                      {inProgressInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-xs font-normal text-zinc-400 mt-2">
+                  <p className="text-[11px] text-pink-300/80">
                     {activeCategoryTab === 'project_work'
                       ? 'Lavori di progetto avviati, attività in esecuzione e follow-up attivi'
-                      : 'Interventi attivi in cantiere, ispezioni e ordini in attesa ricambi'}
+                      : 'Active on-site tasks, inspections and orders awaiting spare parts'}
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Pink Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {inProgressInterventions.map((intervention) => (
                 <InterventionCard
@@ -1271,71 +1360,70 @@ export function App() {
           </section>
         )}
 
-        {/* Section 3: Completati */}
+        {/* ================= SECTION 3: 🟢 COMPLETED & CLOSED SERVICE TASKS (GREEN TONES) ================= */}
         {!loading && showCompletedSection && (
-          <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-4 rounded-lg bg-zinc-900 border border-zinc-800 gap-4">
-              <div className="flex items-center gap-4">
-                <CheckCircle2 className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
+          <section className="mb-10">
+            {/* Green Section Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-800/50 shadow-lg shadow-emerald-950/20 gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                    <span>
-                      {activeCategoryTab === 'project_work'
-                        ? 'Lavori e azioni progetto completati'
-                        : 'Interventi completati'}
-                    </span>
-                    <span className="font-mono imp-tabular text-xs font-semibold text-zinc-400">
-                      · {completedInterventions.length}
+                  <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>{activeCategoryTab === 'project_work' ? 'LAVORI & AZIONI PROGETTO COMPLETATI' : 'COMPLETED INTERVENTIONS'}</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-extrabold shadow-sm">
+                      {completedInterventions.length}
                     </span>
                   </h3>
-                  <p className="text-xs font-normal text-zinc-400 mt-2">
-                    Attività concluse con ore registrate, report PDF e accettazione cliente
-                  </p>
+                  <p className="text-[11px] text-emerald-300/80">Finished tasks with logged hours, signed PDF report and client feedback</p>
                 </div>
               </div>
 
               <button
                 onClick={handleExportExcel}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-normal transition self-start sm:self-center"
-                title="Esporta ore lavorate e report completati in formato Excel"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 text-xs font-semibold shadow transition active:scale-95 self-start sm:self-center"
+                title="Export logged hours and completed reports to Excel / CSV"
               >
-                <FileSpreadsheet className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                <span>Esporta ore (Excel)</span>
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Export Hours (Excel)</span>
               </button>
             </div>
 
+            {/* Green Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {completedInterventions.map((intervention) => (
-                <InterventionCard
-                  key={intervention.id}
-                  intervention={intervention}
-                  currentRole={currentUser.role}
-                  currentUserName={currentUser.name}
-                  onTakeCharge={handleTakeCharge}
-                  onOpenReportModal={handleOpenReportModal}
-                  onOpenFeedbackModal={handleOpenFeedbackModal}
-                  onPreviewPhoto={handlePreviewPhoto}
-                  onDelete={handleDelete}
-                  onToggleActionStep={handleToggleActionStep}
-                  onAddActionStep={handleAddActionStep}
-                  onDeleteActionStep={handleDeleteActionStep}
-                  onAddTrackingEntry={handleAddTrackingEntry}
-                  onMarkReplyReceived={handleMarkReplyReceived}
-                  onDeleteTrackingEntry={handleDeleteTrackingEntry}
-                  onQuickUpdate={handleQuickUpdateIntervention}
-                />
-              ))}
+                  <InterventionCard
+                    key={intervention.id}
+                    intervention={intervention}
+                    currentRole={currentUser.role}
+                    currentUserName={currentUser.name}
+                    onTakeCharge={handleTakeCharge}
+                    onOpenReportModal={handleOpenReportModal}
+                    onOpenFeedbackModal={handleOpenFeedbackModal}
+                    onPreviewPhoto={handlePreviewPhoto}
+                    onDelete={handleDelete}
+                    onToggleActionStep={handleToggleActionStep}
+                    onAddActionStep={handleAddActionStep}
+                    onDeleteActionStep={handleDeleteActionStep}
+                    onAddTrackingEntry={handleAddTrackingEntry}
+                    onMarkReplyReceived={handleMarkReplyReceived}
+                    onDeleteTrackingEntry={handleDeleteTrackingEntry}
+                    onQuickUpdate={handleQuickUpdateIntervention}
+                  />
+                ))}
             </div>
           </section>
         )}
+
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800 py-4 px-4 text-center text-xs font-normal text-zinc-500">
-        Gestione interventi &copy; {new Date().getFullYear()} — Amministrato da Costantino
+      <footer className="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500">
+        Field Service Management &copy; {new Date().getFullYear()} — Administered by Costantino
       </footer>
 
-      {/* Lazy-Loaded Modals */}
+      {/* Lazy-Loaded Modals (mounted only when active) */}
       <Suspense fallback={null}>
         {isNewModalOpen && (
           <NewRequestModal
@@ -1347,15 +1435,11 @@ export function App() {
             projects={visibleProjects}
             defaultProjectId={activeProjectId !== 'all' ? activeProjectId : undefined}
             defaultRecordType={activeCategoryTab}
-            onAddNewProject={
-              isAdmin
-                ? () => {
-                    setIsNewModalOpen(false);
-                    setOpenProjectCreateDirectly(true);
-                    setIsProjectsModalOpen(true);
-                  }
-                : undefined
-            }
+            onAddNewProject={isAdmin ? () => {
+              setIsNewModalOpen(false);
+              setOpenProjectCreateDirectly(true);
+              setIsProjectsModalOpen(true);
+            } : undefined}
           />
         )}
 
@@ -1380,7 +1464,10 @@ export function App() {
         )}
 
         {previewPhoto && (
-          <ImagePreviewModal photo={previewPhoto} onClose={() => setPreviewPhoto(null)} />
+          <ImagePreviewModal
+            photo={previewPhoto}
+            onClose={() => setPreviewPhoto(null)}
+          />
         )}
 
         {isAdmin && isAdminModalOpen && (
@@ -1412,7 +1499,7 @@ export function App() {
           <PwaInstallModal
             isOpen={isInstallModalOpen}
             onClose={() => setIsInstallModalOpen(false)}
-            onInstalledSuccess={() => showToast('Applicazione installata correttamente')}
+            onInstalledSuccess={() => showToast('🎉 App successfully installed to your Home Screen!')}
           />
         )}
 
@@ -1427,7 +1514,7 @@ export function App() {
               setInterventions(newInterventions);
               setProjects(newProjects);
               setUsers(newUsers);
-              showToast('Archivio dati ripristinato correttamente dal file JSON');
+              showToast('✅ Database restored successfully from JSON backup!');
             }}
           />
         )}
@@ -1442,6 +1529,7 @@ export function App() {
           />
         )}
       </Suspense>
+
     </div>
   );
 }
