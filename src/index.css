@@ -2,17 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   IMPECCABLE DESIGN SYSTEM TOKENS (pbakaus/impeccable)
+   Perceptual OKLCH Palette + 3-Tier Typography + Tabular Telemetry
+   ========================================================================== */
+:root {
+  --imp-canvas: oklch(0.13 0.028 262);
+  --imp-surface-1: oklch(0.21 0.032 260 / 0.64);
+  --imp-surface-2: oklch(0.25 0.035 260 / 0.76);
+  --imp-surface-inset: oklch(0.16 0.025 262 / 0.62);
+  --imp-text-primary: oklch(0.98 0.005 255);
+  --imp-text-secondary: oklch(0.84 0.016 255);
+  --imp-text-muted: oklch(0.68 0.022 255);
+  --imp-accent-primary: oklch(0.62 0.19 255);
+  --imp-status-urgent: oklch(0.63 0.24 22);
+  --imp-status-progress: oklch(0.78 0.17 75);
+  --imp-status-resolved: oklch(0.72 0.18 160);
+  --imp-status-empty: oklch(0.68 0.21 345);
+  --imp-border-specular: oklch(1 0 0 / 0.16);
+  --imp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   body {
-    @apply bg-slate-950 text-slate-100 antialiased selection:bg-blue-600 selection:text-white;
+    @apply bg-slate-950 text-slate-100 antialiased font-sans selection:bg-blue-600 selection:text-white;
+    background-color: var(--imp-canvas, #040814);
+    color: var(--imp-text-primary, #f8fafc);
+    letter-spacing: -0.006em;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+  }
+  h1, h2, h3, .imp-display {
+    font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+    letter-spacing: -0.025em;
+  }
+  code, pre, .font-mono, .imp-tabular {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -192,41 +225,41 @@
 .liquid-glass-card-amber {
   background: linear-gradient(
     145deg,
-    rgba(120, 53, 15, 0.34) 0%,
-    rgba(15, 23, 42, 0.68) 45%,
-    rgba(15, 23, 42, 0.80) 100%
+    oklch(0.32 0.09 70 / 0.42) 0%,
+    oklch(0.20 0.032 260 / 0.72) 48%,
+    oklch(0.16 0.028 262 / 0.84) 100%
   );
-  border-color: rgba(251, 191, 36, 0.38);
+  border-color: oklch(0.78 0.17 75 / 0.42);
 }
 
 .liquid-glass-card-rose {
   background: linear-gradient(
     145deg,
-    rgba(136, 19, 55, 0.34) 0%,
-    rgba(15, 23, 42, 0.68) 45%,
-    rgba(15, 23, 42, 0.80) 100%
+    oklch(0.30 0.11 20 / 0.42) 0%,
+    oklch(0.20 0.032 260 / 0.72) 48%,
+    oklch(0.16 0.028 262 / 0.84) 100%
   );
-  border-color: rgba(244, 63, 94, 0.38);
+  border-color: oklch(0.63 0.24 22 / 0.42);
 }
 
 .liquid-glass-card-pink {
   background: linear-gradient(
     145deg,
-    rgba(131, 24, 67, 0.36) 0%,
-    rgba(15, 23, 42, 0.68) 45%,
-    rgba(15, 23, 42, 0.80) 100%
+    oklch(0.32 0.12 345 / 0.44) 0%,
+    oklch(0.20 0.032 260 / 0.72) 48%,
+    oklch(0.16 0.028 262 / 0.84) 100%
   );
-  border-color: rgba(236, 72, 153, 0.42);
+  border-color: oklch(0.68 0.21 345 / 0.46);
 }
 
 .liquid-glass-card-emerald {
   background: linear-gradient(
     145deg,
-    rgba(6, 78, 59, 0.34) 0%,
-    rgba(15, 23, 42, 0.68) 45%,
-    rgba(15, 23, 42, 0.80) 100%
+    oklch(0.30 0.09 160 / 0.42) 0%,
+    oklch(0.20 0.032 260 / 0.72) 48%,
+    oklch(0.16 0.028 262 / 0.84) 100%
   );
-  border-color: rgba(16, 185, 129, 0.38);
+  border-color: oklch(0.72 0.18 160 / 0.42);
 }
 
 /* Liquid Glass Interactive Button / Pill Shine */
