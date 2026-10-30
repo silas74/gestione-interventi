@@ -1,71 +1,40 @@
----
-schema: impeccable/v1
-project: gestione-interventi
-theme: dark-liquid-glass
-colors:
-  canvas: "oklch(0.13 0.028 262)"
-  surface-1: "oklch(0.21 0.032 260 / 0.64)"
-  surface-2: "oklch(0.25 0.035 260 / 0.76)"
-  surface-inset: "oklch(0.16 0.025 262 / 0.62)"
-  text-primary: "oklch(0.98 0.005 255)"
-  text-secondary: "oklch(0.82 0.018 255)"
-  text-muted: "oklch(0.66 0.022 255)"
-  accent-primary: "oklch(0.62 0.19 255)"
-  status-urgent: "oklch(0.63 0.24 22)"
-  status-progress: "oklch(0.78 0.17 75)"
-  status-resolved: "oklch(0.72 0.18 160)"
-  status-empty: "oklch(0.68 0.21 345)"
-  border-specular: "oklch(1 0 0 / 0.16)"
-typography:
-  font-display: "'Outfit', system-ui, -apple-system, sans-serif"
-  font-sans: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
-  font-mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace"
-  scale:
-    display-lg: { size: "1.5rem", lineHeight: "1.2", tracking: "-0.025em", weight: "800" }
-    heading-md: { size: "1.05rem", lineHeight: "1.3", tracking: "-0.02em", weight: "700" }
-    body-sm: { size: "0.875rem", lineHeight: "1.5", tracking: "-0.005em", weight: "400" }
-    caption-xs: { size: "0.75rem", lineHeight: "1.4", tracking: "0.01em", weight: "600" }
-    code-xs: { size: "0.75rem", lineHeight: "1.35", tracking: "0em", weight: "600" }
-rounded:
-  sm: "0.5rem"
-  md: "0.75rem"
-  lg: "1rem"
-  xl: "1.25rem"
-  pill: "9999px"
-components:
-  card-default:
-    background: "{colors.surface-1}"
-    border: "1px solid {colors.border-specular}"
-    radius: "{rounded.lg}"
-  button-primary:
-    background: "{colors.accent-primary}"
-    color: "{colors.text-primary}"
-    radius: "{rounded.md}"
----
+# Design System Specification — Field Service Management (Impeccable UI)
 
-# DESIGN.md — Impeccable Design System Specification
+This design system enforces the 5 strict **Impeccable** rules across the entire application:
 
-> Standardized machine- and human-readable visual system (`pbakaus/impeccable`) combined with **Liquid Glass** optical refraction.
+## 1. Spaziature: Multipli di 8, sempre le stesse
+All layout margins, paddings, and gaps strictly follow an **8px spatial grid**:
+- `8px` (`0.5rem`): `p-2`, `px-2`, `py-2`, `gap-2`, `mb-2`, `mt-2`, `space-y-2`
+- `16px` (`1rem`): `p-4`, `px-4`, `py-4`, `gap-4`, `mb-4`, `mt-4`, `space-y-4`
+- `24px` (`1.5rem`): `p-6`, `px-6`, `py-6`, `gap-6`, `mb-6`, `mt-6`, `space-y-6`
+- `32px` (`2rem`): `p-8`, `px-8`, `py-8`, `gap-8`, `mb-8`, `mt-8`
+- Non-multiple values (`p-1.5`, `p-2.5`, `p-3`, `p-3.5`, `gap-1.5`, `gap-2.5`, `gap-3`, `mb-3`, etc.) are prohibited.
 
-## 1. Visual Direction & Spatial Thesis
-This interface serves field engineers and project directors managing high-stakes electrical & MEP infrastructure. It combines **industrial telemetry precision** with **Apple-inspired Liquid Glass depth**:
-- Specular top-edge highlights (`inset 0 1px 1px oklch(1 0 0 / 0.28)`) separate interactive layers without heavy opaque borders.
-- Ambient background orbs provide subtle optical refraction behind translucent cards while preserving strict WCAG AA+ text contrast.
+## 2. Colori: Una sola palette neutra, niente gradienti e niente glow
+- **Single Neutral Palette (`Zinc`)**:
+  - Canvas background: `#09090b` (`zinc-950`)
+  - Primary card surface: `#18181b` (`zinc-900`)
+  - Interactive / inset surface: `#27272a` (`zinc-800`)
+  - Hairline borders: `#27272a` (`border-zinc-800`) and `#3f3f46` (`border-zinc-700`)
+  - Primary text: `#fafafa` (`text-zinc-100`)
+  - Secondary text: `#a1a1aa` (`text-zinc-400`)
+  - Muted text: `#71717a` (`text-zinc-500`)
+- **Zero Gradients**: No `linear-gradient`, `radial-gradient`, or `bg-gradient-to-*`.
+- **Zero Glow**: No colored drop shadows (`shadow-*-500/*`), neon borders, or ambient light blobs.
 
-## 2. Three-Tier Typography Architecture (`/impeccable typeset`)
-1. **Display & Section Titles (`Outfit`)**: Geometric, high-authority headings with tight letter-spacing (`-0.025em`).
-2. **UI & Technical Narrative (`Plus Jakarta Sans`)**: Clean, open-aperture sans-serif optimized for rapid scanning on phones and tablets.
-3. **Telemetry, Codes & Counters (`JetBrains Mono`)**: Mandatory `tabular-nums` for ticket codes (`LAV-PANVAC-2026-005`, `LAV-GEMB-2026-001`), waiting-days badges (`⏳ In attesa da Xg`), dates, and hours worked.
+## 3. Emoticon: Sostituite con icone a linea dalla stessa libreria
+- Zero Unicode emojis in UI labels, buttons, badges, or forms.
+- All icons come exclusively from **`lucide-react`** with a consistent line stroke (`strokeWidth={1.75}`).
 
-## 3. Perceptual OKLCH Color System (`/impeccable colorize`)
-Every semantic status uses perceptually calibrated `oklch()` lightness and chroma so badges and card tints remain balanced across dark glass surfaces:
-- **Open / Unresolved (Rose)**: `oklch(0.63 0.24 22)`
-- **In Progress / Awaiting Reply (Amber)**: `oklch(0.78 0.17 75)`
-- **Completed / Approved (Emerald)**: `oklch(0.72 0.18 160)`
-- **Empty Project (Pink)**: `oklch(0.68 0.21 345)`
+## 4. Testi: Al massimo due pesi per font. Non usare il maiuscolo
+- **Maximum 2 Font Weights**:
+  - `400` (`font-normal`) for body copy, descriptions, inputs, and secondary labels.
+  - `600` (`font-semibold`) for headings, key metrics, and active controls.
+  - Weights `500` (`font-medium`), `700` (`font-bold`), `800` (`font-extrabold`), and `900` (`font-black`) are not used.
+- **No Uppercase**:
+  - `uppercase` utility classes are forbidden.
+  - All labels, badges, and section headers use natural sentence case.
 
-## 4. Corner Radius & Elevation Lock (`/impeccable polish`)
-- **Outer Containers & Cards**: `rounded-2xl` (`1rem`)
-- **Interactive Buttons & Inputs**: `rounded-xl` (`0.75rem`)
-- **Status Badges & Telemetry Chips**: `rounded-lg` (`0.5rem`) or `rounded-full` for pill counters
-- **Tactile Physics**: Interactive elements respond with `cubic-bezier(0.22, 1, 0.36, 1)` hover lift and `active:scale-95` physical push feedback.
+## 5. Numeri: Senza decorazioni, con il confronto rispetto al mese prima
+- KPI numbers and counters are displayed cleanly in tabular monospace (`JetBrains Mono`, `tabular-nums`) without decorative pill wrappers or colored icon boxes.
+- Every primary metric includes its direct comparison against the previous month (`rispetto al mese prima`).
