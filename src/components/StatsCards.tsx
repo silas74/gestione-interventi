@@ -52,7 +52,7 @@ export const StatsCards: React.FC<StatsCardsProps> = React.memo(({ interventions
             <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-white">{total}</div>
+        <div className="mt-1 sm:mt-2 font-mono imp-tabular text-xl sm:text-2xl font-bold text-white">{total}</div>
         <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">All in system</p>
       </div>
 
@@ -64,7 +64,7 @@ export const StatsCards: React.FC<StatsCardsProps> = React.memo(({ interventions
             <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-rose-400">{inAttesa}</div>
+        <div className="mt-1 sm:mt-2 font-mono imp-tabular text-xl sm:text-2xl font-bold text-rose-400">{inAttesa}</div>
         <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">Pending dispatch</p>
       </div>
 
@@ -76,7 +76,7 @@ export const StatsCards: React.FC<StatsCardsProps> = React.memo(({ interventions
             <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-blue-400">{inCorso}</div>
+        <div className="mt-1 sm:mt-2 font-mono imp-tabular text-xl sm:text-2xl font-bold text-blue-400">{inCorso}</div>
         <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">Active on-site</p>
       </div>
 
@@ -88,7 +88,7 @@ export const StatsCards: React.FC<StatsCardsProps> = React.memo(({ interventions
             <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-emerald-400">{completati}</div>
+        <div className="mt-1 sm:mt-2 font-mono imp-tabular text-xl sm:text-2xl font-bold text-emerald-400">{completati}</div>
         <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">Closed with PDF</p>
       </div>
 
@@ -100,8 +100,8 @@ export const StatsCards: React.FC<StatsCardsProps> = React.memo(({ interventions
             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
-        <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-blue-200">
-          {totalHours.toFixed(1)} <span className="text-xs sm:text-sm font-normal text-blue-400">hours</span>
+        <div className="mt-1 sm:mt-2 font-mono imp-tabular text-xl sm:text-2xl font-bold text-blue-200">
+          {totalHours.toFixed(1)} <span className="font-sans text-xs sm:text-sm font-normal text-blue-400">hours</span>
         </div>
         <p className="text-[10px] sm:text-[11px] text-blue-400/80 mt-0.5">Logged on-site</p>
       </div>
