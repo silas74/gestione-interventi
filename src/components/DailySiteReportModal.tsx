@@ -928,7 +928,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                     type="button"
                     onClick={onOpenAiSettings}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                    title="Impostazioni AI (DeepSeek API / Ollama Locale)"
+                    title="Impostazioni AI (DeepSeek API)"
                   >
                     <Settings className="w-3.5 h-3.5 text-indigo-400" />
                   </button>
@@ -945,7 +945,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                     onClick={onOpenAiSettings}
                     className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shrink-0"
                   >
-                    Configura DeepSeek / Ollama
+                    Configura DeepSeek API
                   </button>
                 )}
               </div>
