@@ -32,7 +32,7 @@ import {
   ChevronUp,
   PenTool,
 } from 'lucide-react';
-import { DailySiteReport, DefectPhoto, Project, InterventionRequest, PdfLanguage } from '../types';
+import { DailySiteReport, DefectPhoto, PhotoStage, Project, InterventionRequest, PdfLanguage } from '../types';
 import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
 import { downloadDailySiteReportPDF, shareDailySiteReportViaWhatsApp } from '../lib/pdfGenerator';
 import { formatRawNotesWithAi, translateDailyReportFieldsWithAi } from '../lib/aiService';
@@ -218,6 +218,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   // In-App Live Camera State (prevents mobile browser from leaving the page or reloading!)
   const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false);
   const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+  const [nextPhotoStage, setNextPhotoStage] = useState<PhotoStage>('normal');
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
@@ -554,10 +555,17 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
         );
         processed.push({
           ...photo,
+          stage: nextPhotoStage,
           caption: areaOrFloor.trim() ? `${areaOrFloor.trim()}` : '',
         });
       }
       setPhotos((prev) => [...prev, ...processed]);
+      // If user just took a 'before' (PRIMA) photo, automatically pre-select 'after' (DOPO) for the next shot!
+      if (nextPhotoStage === 'before') {
+        setNextPhotoStage('after');
+      } else if (nextPhotoStage === 'after') {
+        setNextPhotoStage('normal');
+      }
       setActiveTab('photos');
     } catch (err) {
       console.error('Error processing photos', err);
@@ -604,6 +612,12 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   const handleUpdatePhotoCaption = (photoId: string, caption: string) => {
     setPhotos((prev) =>
       prev.map((p) => (p.id === photoId ? { ...p, caption } : p))
+    );
+  };
+
+  const handleUpdatePhotoStage = (photoId: string, stage: PhotoStage) => {
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photoId ? { ...p, stage } : p))
     );
   };
 
@@ -1309,6 +1323,48 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                   </div>
                 </div>
 
+                {/* Quick Selector for Next Photo Stage: Standard | PRIMA | DOPO */}
+                <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold text-slate-300">
+                    Modalità prossima foto:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setNextPhotoStage('normal')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition ${
+                        nextPhotoStage === 'normal'
+                          ? 'bg-blue-600 text-white border-blue-400 shadow'
+                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      📷 Standard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNextPhotoStage('before')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition ${
+                        nextPhotoStage === 'before'
+                          ? 'bg-rose-600 text-white border-rose-400 shadow'
+                          : 'bg-slate-950 text-rose-300/80 border-rose-900/50 hover:text-rose-200'
+                      }`}
+                    >
+                      🔴 PRIMA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNextPhotoStage('after')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition ${
+                        nextPhotoStage === 'after'
+                          ? 'bg-emerald-600 text-white border-emerald-400 shadow'
+                          : 'bg-slate-950 text-emerald-300/80 border-emerald-900/50 hover:text-emerald-200'
+                      }`}
+                    >
+                      🟢 DOPO
+                    </button>
+                  </div>
+                </div>
+
                 {/* Big Thumb-Friendly Camera & Gallery Buttons for Phone */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   <button
@@ -1403,57 +1459,128 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                   </div>
                 )}
 
+                {photos.some((p) => p.stage === 'before' || p.stage === 'after') && (
+                  <div className="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-950/50 via-slate-900 to-emerald-950/50 border border-emerald-500/40 flex items-center justify-between gap-2 text-xs">
+                    <span className="font-bold text-slate-200">
+                      ✨ Confronto <strong className="text-rose-400">PRIMA ({photos.filter((p) => p.stage === 'before').length})</strong> ➔ <strong className="text-emerald-400">DOPO ({photos.filter((p) => p.stage === 'after').length})</strong> attivo
+                    </span>
+                    <span className="text-[11px] text-emerald-300 font-semibold">
+                      Affiancate nel PDF!
+                    </span>
+                  </div>
+                )}
+
                 {photos.length === 0 ? (
                   <div className="p-6 rounded-xl border border-dashed border-slate-700 text-center text-xs text-slate-400">
                     Nessuna foto allegata. Tocca <strong>"📷 Scatta Foto"</strong> o <strong>"🖼️ Galleria"</strong> per documentare i lavori di oggi.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {photos.map((photo, idx) => (
-                      <div
-                        key={photo.id}
-                        className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 flex flex-col"
-                      >
-                        <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
-                          <img
-                            src={photo.url}
-                            alt={photo.name}
-                            className="max-w-full max-h-full w-auto h-auto object-contain"
-                          />
-                          <span className="absolute top-1.5 left-1.5 bg-black/75 text-[10px] font-mono font-bold text-white px-2 py-0.5 rounded border border-white/20">
-                            Foto #{idx + 1}
-                          </span>
+                    {photos.map((photo, idx) => {
+                      const stage = photo.stage || 'normal';
+                      const borderClass =
+                        stage === 'before'
+                          ? 'border-rose-500 ring-1 ring-rose-500/40'
+                          : stage === 'after'
+                          ? 'border-emerald-500 ring-1 ring-emerald-500/40'
+                          : 'border-slate-700';
 
-                          <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setAnnotatingPhoto(photo)}
-                              className="px-2.5 py-1 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-extrabold shadow flex items-center gap-1"
+                      return (
+                        <div
+                          key={photo.id}
+                          className={`rounded-xl overflow-hidden border ${borderClass} bg-slate-900 flex flex-col transition`}
+                        >
+                          <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
+                            <img
+                              src={photo.url}
+                              alt={photo.name}
+                              className="max-w-full max-h-full w-auto h-auto object-contain"
+                            />
+                            <span
+                              className={`absolute top-1.5 left-1.5 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded shadow border ${
+                                stage === 'before'
+                                  ? 'bg-rose-600 text-white border-rose-300'
+                                  : stage === 'after'
+                                  ? 'bg-emerald-600 text-white border-emerald-300'
+                                  : 'bg-black/75 text-white border-white/20'
+                              }`}
                             >
-                              <Pencil className="w-3 h-3" />
-                              <span>Segna</span>
-                            </button>
+                              {stage === 'before'
+                                ? `🔴 PRIMA (Foto #${idx + 1})`
+                                : stage === 'after'
+                                ? `🟢 DOPO (Foto #${idx + 1})`
+                                : `Foto #${idx + 1}`}
+                            </span>
 
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePhoto(photo.id)}
-                              className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setAnnotatingPhoto(photo)}
+                                className="px-2.5 py-1 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-extrabold shadow flex items-center gap-1"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                <span>Segna</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePhoto(photo.id)}
+                                className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 3-Button Stage Selector on Each Photo: Standard | PRIMA | DOPO */}
+                          <div className="p-2 space-y-1.5 bg-slate-900">
+                            <div className="grid grid-cols-3 gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdatePhotoStage(photo.id, 'normal')}
+                                className={`py-1 px-1.5 rounded-lg text-[10px] font-extrabold border transition ${
+                                  stage === 'normal'
+                                    ? 'bg-slate-700 text-white border-slate-500'
+                                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                                }`}
+                              >
+                                📷 Standard
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdatePhotoStage(photo.id, 'before')}
+                                className={`py-1 px-1.5 rounded-lg text-[10px] font-extrabold border transition ${
+                                  stage === 'before'
+                                    ? 'bg-rose-600 text-white border-rose-400 shadow'
+                                    : 'bg-slate-950 text-rose-300/80 border-slate-800 hover:border-rose-500/50'
+                                }`}
+                              >
+                                🔴 PRIMA
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdatePhotoStage(photo.id, 'after')}
+                                className={`py-1 px-1.5 rounded-lg text-[10px] font-extrabold border transition ${
+                                  stage === 'after'
+                                    ? 'bg-emerald-600 text-white border-emerald-400 shadow'
+                                    : 'bg-slate-950 text-emerald-300/80 border-slate-800 hover:border-emerald-500/50'
+                                }`}
+                              >
+                                🟢 DOPO
+                              </button>
+                            </div>
+
+                            <input
+                              type="text"
+                              value={photo.caption || ''}
+                              onChange={(e) => handleUpdatePhotoCaption(photo.id, e.target.value)}
+                              placeholder={`Didascalia foto #${idx + 1} (es. Quadro cablato)...`}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                            />
                           </div>
                         </div>
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            value={photo.caption || ''}
-                            onChange={(e) => handleUpdatePhotoCaption(photo.id, e.target.value)}
-                            placeholder={`Didascalia foto #${idx + 1} (es. Quadro cablato)...`}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
