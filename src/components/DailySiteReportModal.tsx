@@ -120,54 +120,75 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     existingReport?.projectId ||
     (defaultProjectId && defaultProjectId !== 'all' ? defaultProjectId : 'proj-awash-bank');
 
-  const [projectId, setProjectId] = useState<string>(initialProjId);
+  // Load saved draft if creating a new report (protects against mobile OS page reload after camera capture)
+  const savedDraft = React.useMemo(() => {
+    if (existingReport) return null;
+    try {
+      const raw = localStorage.getItem('interventi_daily_report_draft_v2');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [existingReport]);
+
+  const [projectId, setProjectId] = useState<string>(
+    existingReport?.projectId || savedDraft?.projectId || initialProjId
+  );
   const [date, setDate] = useState<string>(
-    existingReport?.date || new Date().toISOString().split('T')[0]
+    existingReport?.date || savedDraft?.date || new Date().toISOString().split('T')[0]
   );
   const [technicianName, setTechnicianName] = useState<string>(
-    existingReport?.technicianName || currentUserName || 'Pierluigi'
+    existingReport?.technicianName || savedDraft?.technicianName || currentUserName || 'Pierluigi'
   );
   const [arrivalTime, setArrivalTime] = useState<string>(
-    existingReport?.arrivalTime || '08:30'
+    existingReport?.arrivalTime || savedDraft?.arrivalTime || '08:30'
   );
   const [departureTime, setDepartureTime] = useState<string>(
-    existingReport?.departureTime || '17:30'
+    existingReport?.departureTime || savedDraft?.departureTime || '17:30'
   );
   const [breakMinutes, setBreakMinutes] = useState<number>(
-    existingReport?.breakMinutes !== undefined ? existingReport.breakMinutes : 0
+    existingReport?.breakMinutes !== undefined
+      ? existingReport.breakMinutes
+      : savedDraft?.breakMinutes !== undefined
+      ? savedDraft.breakMinutes
+      : 0
   );
   const [hoursWorked, setHoursWorked] = useState<number>(
-    existingReport?.hoursWorked !== undefined ? existingReport.hoursWorked : 9
+    existingReport?.hoursWorked !== undefined
+      ? existingReport.hoursWorked
+      : savedDraft?.hoursWorked !== undefined
+      ? savedDraft.hoursWorked
+      : 9
   );
   const [areaOrFloor, setAreaOrFloor] = useState<string>(
-    existingReport?.areaOrFloor || ''
+    existingReport?.areaOrFloor || savedDraft?.areaOrFloor || ''
   );
   const [workDone, setWorkDone] = useState<string>(
-    existingReport?.workDone || ''
+    existingReport?.workDone || savedDraft?.workDone || ''
   );
   const [materialsUsed, setMaterialsUsed] = useState<string>(
-    existingReport?.materialsUsed || ''
+    existingReport?.materialsUsed || savedDraft?.materialsUsed || ''
   );
   const [missingMaterials, setMissingMaterials] = useState<string>(
-    existingReport?.missingMaterials || ''
+    existingReport?.missingMaterials || savedDraft?.missingMaterials || ''
   );
   const [issuesFound, setIssuesFound] = useState<string>(
-    existingReport?.issuesFound || ''
+    existingReport?.issuesFound || savedDraft?.issuesFound || ''
   );
   const [nextDayPlan, setNextDayPlan] = useState<string>(
-    existingReport?.nextDayPlan || ''
+    existingReport?.nextDayPlan || savedDraft?.nextDayPlan || ''
   );
   const [photos, setPhotos] = useState<DefectPhoto[]>(
-    existingReport?.photos || []
+    existingReport?.photos || savedDraft?.photos || []
   );
   const [technicianSignature, setTechnicianSignature] = useState<string>(
-    existingReport?.technicianSignature || ''
+    existingReport?.technicianSignature || savedDraft?.technicianSignature || ''
   );
   const [clientSignerName, setClientSignerName] = useState<string>(
-    existingReport?.clientSignerName || ''
+    existingReport?.clientSignerName || savedDraft?.clientSignerName || ''
   );
   const [clientSignature, setClientSignature] = useState<string>(
-    existingReport?.clientSignature || ''
+    existingReport?.clientSignature || savedDraft?.clientSignature || ''
   );
 
   // Feature 3: Automatic Timestamp + Zone Watermark on photos
@@ -176,25 +197,168 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   const [annotatingPhoto, setAnnotatingPhoto] = useState<DefectPhoto | null>(null);
   // Feature 4: Checked project actions done today
   const [checkedTaskIds, setCheckedTaskIds] = useState<string[]>(
-    existingReport?.completedActionIds || []
+    existingReport?.completedActionIds || savedDraft?.checkedTaskIds || []
   );
   // Feature 5: PDF Language ('it' | 'en')
-  const [pdfLang, setPdfLang] = useState<PdfLanguage>('it');
+  const [pdfLang, setPdfLang] = useState<PdfLanguage>(savedDraft?.pdfLang || 'it');
 
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isRunningAi, setIsRunningAi] = useState(false);
   const [aiErrorMsg, setAiErrorMsg] = useState<string | null>(null);
 
-  // Clean Mobile-First Tab & Collapsible Drawer State
-  const [activeTab, setActiveTab] = useState<'main' | 'photos' | 'notes' | 'signatures'>('main');
+  // Clean Mobile-First Tab & Collapsible Drawer State (restores 'photos' tab after mobile camera reload!)
+  const [activeTab, setActiveTab] = useState<'main' | 'photos' | 'notes' | 'signatures'>(
+    savedDraft?.activeTab || 'main'
+  );
   const [isChecklistOpen, setIsChecklistOpen] = useState<boolean>(false);
   const [checklistCategoryFilter, setChecklistCategoryFilter] = useState<string>('ALL');
   const [showTechInput, setShowTechInput] = useState<boolean>(false);
 
+  // In-App Live Camera State (prevents mobile browser from leaving the page or reloading!)
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Persist draft & activeTab continuously so mobile OS camera reloads never lose state or tab
+  useEffect(() => {
+    if (existingReport) return;
+    try {
+      const draftPayload = {
+        activeTab,
+        projectId,
+        date,
+        technicianName,
+        arrivalTime,
+        departureTime,
+        breakMinutes,
+        hoursWorked,
+        areaOrFloor,
+        workDone,
+        materialsUsed,
+        missingMaterials,
+        issuesFound,
+        nextDayPlan,
+        photos,
+        checkedTaskIds,
+        pdfLang,
+      };
+      localStorage.setItem('interventi_daily_report_draft_v2', JSON.stringify(draftPayload));
+    } catch {
+      // ignore quota errors
+    }
+  }, [
+    existingReport,
+    activeTab,
+    projectId,
+    date,
+    technicianName,
+    arrivalTime,
+    departureTime,
+    breakMinutes,
+    hoursWorked,
+    areaOrFloor,
+    workDone,
+    materialsUsed,
+    missingMaterials,
+    issuesFound,
+    nextDayPlan,
+    photos,
+    checkedTaskIds,
+    pdfLang,
+  ]);
+
+  const stopLiveCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsLiveCameraOpen(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  const startLiveCamera = async (facing: 'environment' | 'user' = cameraFacingMode) => {
+    setActiveTab('photos');
+    try {
+      localStorage.setItem('interventi_daily_modal_open_v1', 'true');
+    } catch {}
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      // Fallback to native file input camera
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      });
+      mediaStreamRef.current = stream;
+      setCameraFacingMode(facing);
+      setIsLiveCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 60);
+    } catch {
+      // If camera permission denied or unavailable in webview, fallback to native input
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const handleCaptureLiveFrame = async () => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (blob) {
+          await handleAddPhotos([blob], 'fotocamera');
+          setActiveTab('photos');
+        }
+      },
+      'image/jpeg',
+      0.9
+    );
+  };
+
+  const clearDraftAndClose = () => {
+    stopLiveCamera();
+    try {
+      localStorage.removeItem('interventi_daily_report_draft_v2');
+      localStorage.removeItem('interventi_daily_modal_open_v1');
+    } catch {}
+    onClose();
+  };
 
   // Feature A: Structure raw notes into a technical report using DeepSeek / Local Ollama
   const handleFormatNotesWithAi = async (targetLang: PdfLanguage) => {
@@ -394,6 +558,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
         });
       }
       setPhotos((prev) => [...prev, ...processed]);
+      setActiveTab('photos');
     } catch (err) {
       console.error('Error processing photos', err);
       alert('Errore durante il caricamento delle foto.');
@@ -403,6 +568,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setActiveTab('photos');
     if (e.target.files && e.target.files.length > 0) {
       handleAddPhotos(Array.from(e.target.files), 'cantiere');
       e.target.value = '';
@@ -535,12 +701,13 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!workDone.trim()) {
+      setActiveTab('main');
       alert('Inserisci le cose fatte oggi in cantiere prima di salvare.');
       return;
     }
     const reportObj = buildReportObject();
     onSave(reportObj, checkedTaskIds, missingMaterials.trim() || undefined);
-    onClose();
+    clearDraftAndClose();
   };
 
   const hasExtraNotes = Boolean(
@@ -619,13 +786,31 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={clearDraftAndClose}
               className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
+
+        {/* Always-Mounted Hidden File/Camera Inputs so mobile browsers never lose the DOM node */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
 
         {/* Clean 4-Tab Mobile Navigation Bar */}
         <div className="grid grid-cols-4 gap-1 p-1.5 bg-slate-950/90 border-b border-slate-800 shrink-0">
@@ -1126,34 +1311,24 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
 
                 {/* Big Thumb-Friendly Camera & Gallery Buttons for Phone */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
+                    onClick={() => startLiveCamera('environment')}
                     className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-extrabold shadow-lg transition active:scale-95"
                   >
                     <Camera className="w-4 h-4" />
                     <span>📷 Scatta Foto</span>
                   </button>
 
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      setActiveTab('photos');
+                      try {
+                        localStorage.setItem('interventi_daily_modal_open_v1', 'true');
+                      } catch {}
+                      fileInputRef.current?.click();
+                    }}
                     className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 text-xs sm:text-sm font-bold transition active:scale-95"
                   >
                     <Upload className="w-4 h-4 text-blue-400" />
@@ -1169,6 +1344,58 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                     <span>Incolla Foto</span>
                   </button>
                 </div>
+
+                {/* In-App Live Camera Viewfinder (stays inside Tab 2. Foto without leaving the browser!) */}
+                {isLiveCameraOpen && (
+                  <div className="p-3 rounded-2xl bg-black border-2 border-indigo-500 space-y-3 shadow-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-indigo-300 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                        <span>Fotocamera Cantiere Attiva (Foto salvate qui: {photos.length})</span>
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startLiveCamera(cameraFacingMode === 'environment' ? 'user' : 'environment')
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 text-[11px] font-bold border border-slate-700"
+                        >
+                          🔄 Ruota
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopLiveCamera}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-extrabold"
+                        >
+                          ✓ Fatto
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleCaptureLiveFrame}
+                        disabled={isProcessingPhotos}
+                        className="flex-1 py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95 transition"
+                      >
+                        <Camera className="w-5 h-5 text-indigo-600" />
+                        <span>📸 SCATTA FOTO ORA</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {isProcessingPhotos && (
                   <div className="text-center py-2 text-xs text-blue-400 animate-pulse">
@@ -1353,7 +1580,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
             <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={clearDraftAndClose}
                 className="hidden sm:inline-flex px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 transition"
               >
                 Annulla
