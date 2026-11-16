@@ -32,6 +32,8 @@ const PwaInstallModal = lazy(() => import('./components/PwaInstallModal').then(m
 const BackupRestoreModal = lazy(() => import('./components/BackupRestoreModal').then(m => ({ default: m.BackupRestoreModal })));
 const SmartEmailModal = lazy(() => import('./components/SmartEmailModal').then(m => ({ default: m.SmartEmailModal })));
 const DailySiteReportModal = lazy(() => import('./components/DailySiteReportModal').then(m => ({ default: m.DailySiteReportModal })));
+const AiSettingsModal = lazy(() => import('./components/AiSettingsModal').then(m => ({ default: m.AiSettingsModal })));
+const CommissioningHandoverModal = lazy(() => import('./components/CommissioningHandoverModal').then(m => ({ default: m.CommissioningHandoverModal })));
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
@@ -66,6 +68,8 @@ export function App() {
   const [isSmartEmailModalOpen, setIsSmartEmailModalOpen] = useState(false);
   const [isDailyReportModalOpen, setIsDailyReportModalOpen] = useState(false);
   const [editingDailyReport, setEditingDailyReport] = useState<DailySiteReport | null>(null);
+  const [isAiSettingsModalOpen, setIsAiSettingsModalOpen] = useState(false);
+  const [isCommissioningModalOpen, setIsCommissioningModalOpen] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -1088,6 +1092,7 @@ export function App() {
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
         onOpenSmartEmailModal={() => setIsSmartEmailModalOpen(true)}
+        onOpenAiSettingsModal={() => setIsAiSettingsModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -1378,6 +1383,8 @@ export function App() {
           onToggleShoppingItem={handleToggleShoppingItem}
           onDeleteShoppingItem={handleDeleteShoppingItem}
           onPreviewPhoto={handlePreviewPhoto}
+          onOpenCommissioningModal={() => setIsCommissioningModalOpen(true)}
+          onOpenAiSettingsModal={() => setIsAiSettingsModalOpen(true)}
         />
 
         {/* Stats Summary */}
@@ -1717,6 +1724,26 @@ export function App() {
             projectInterventions={interventions}
             totalExistingCount={dailySiteReports.length}
             onSave={handleSaveDailySiteReport}
+            onOpenAiSettings={() => setIsAiSettingsModalOpen(true)}
+          />
+        )}
+
+        {isAiSettingsModalOpen && (
+          <AiSettingsModal
+            isOpen={isAiSettingsModalOpen}
+            onClose={() => setIsAiSettingsModalOpen(false)}
+          />
+        )}
+
+        {isCommissioningModalOpen && (
+          <CommissioningHandoverModal
+            isOpen={isCommissioningModalOpen}
+            onClose={() => setIsCommissioningModalOpen(false)}
+            projectName={(activeProjectObj || projects.find(p => p.id === 'proj-awash-bank') || projects[0])?.name || 'Awash Bank — Addis Ababa'}
+            dailyReports={filteredDailySiteReports.length > 0 ? filteredDailySiteReports : dailySiteReports}
+            projectTasks={filteredInterventions.length > 0 ? filteredInterventions : interventions}
+            currentUserName={currentUser.name}
+            onOpenAiSettings={() => setIsAiSettingsModalOpen(true)}
           />
         )}
       </Suspense>
