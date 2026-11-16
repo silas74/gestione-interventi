@@ -863,11 +863,11 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
                     key={photo.id}
                     className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 shadow-md flex flex-col"
                   >
-                    <div className="relative group aspect-video">
+                    <div className="relative group aspect-video bg-slate-950 flex items-center justify-center">
                       <img
                         src={photo.url}
                         alt={photo.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                        className="max-w-full max-h-full w-auto h-auto object-contain group-hover:scale-105 transition"
                       />
                       
                       {/* Index badge */}
