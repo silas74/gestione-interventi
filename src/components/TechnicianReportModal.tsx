@@ -458,15 +458,35 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                <span>Zona / Piano Cantiere</span>
+                <span>Zona / Piano / Impianto in Cantiere (opz.)</span>
               </label>
               <input
                 type="text"
                 value={areaOrFloor}
                 onChange={(e) => setAreaOrFloor(e.target.value)}
-                placeholder="Es. Parking Area / Piano 2..."
+                placeholder="Parking area LPR, Parking area CO, Solar system, CCTV, Main Power..."
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {['Parking area LPR', 'Parking area CO', 'Solar system', 'CCTV', 'Main Power'].map((z) => (
+                  <button
+                    key={z}
+                    type="button"
+                    onClick={() =>
+                      setAreaOrFloor((prev) =>
+                        prev.trim()
+                          ? prev.includes(z)
+                            ? prev
+                            : `${prev.trim()} | ${z}`
+                          : z
+                      )
+                    }
+                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-blue-600/30 text-slate-300 hover:text-blue-200 border border-slate-700 transition"
+                  >
+                    + {z}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
