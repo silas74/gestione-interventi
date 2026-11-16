@@ -44,7 +44,7 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
     existingReport?.endTime || '17:30'
   );
   const [breakMinutes, setBreakMinutes] = useState<number>(
-    existingReport?.breakMinutes !== undefined ? existingReport.breakMinutes : 60
+    existingReport?.breakMinutes !== undefined ? existingReport.breakMinutes : 0
   );
   const [areaOrFloor, setAreaOrFloor] = useState(
     existingReport?.areaOrFloor || ''
