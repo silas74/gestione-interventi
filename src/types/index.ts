@@ -67,6 +67,19 @@ export interface TechnicianReport {
   reportPhotos?: DefectPhoto[]; // Photos attached directly to report (uploaded or pasted)
 }
 
+export type PdfLanguage = 'it' | 'en';
+
+export interface SiteShoppingItem {
+  id: string;
+  projectId: string;
+  projectName: string;
+  text: string;
+  zone?: string;
+  urgent?: boolean;
+  bought: boolean;
+  createdAt: string;
+}
+
 export interface DailySiteReport {
   id: string;
   code: string;                 // es. DAY-AWASH-001
@@ -78,11 +91,13 @@ export interface DailySiteReport {
   departureTime: string;        // Ora di partenza dal cantiere (HH:mm)
   breakMinutes: number;         // Pausa in minuti (es. 0, 30, 60)
   hoursWorked: number;          // Ore nette lavorate
-  areaOrFloor?: string;         // Zona / Piano / Edificio (es. "Parking Area - CO System")
+  areaOrFloor?: string;         // Zona / Piano / Edificio (es. "Parking area CO")
   workDone: string;             // Descrizione lavori svolti nella giornata
   materialsUsed?: string;       // Materiali / apparecchiature installate oggi
+  missingMaterials?: string;    // Materiali mancanti / da comprare per domani in cantiere
   issuesFound?: string;         // Problemi riscontrati / blocchi / note tecniche
   nextDayPlan?: string;         // Cosa fare domani in cantiere
+  completedActionIds?: string[]; // ID delle azioni progetto spuntate in questa giornata
   photos: DefectPhoto[];        // Foto scattate nella giornata con didascalia
   technicianSignature?: string; // Firma digitale tecnico
   clientSignerName?: string;    // Nome referente cantiere (es. Dodic / Site Engineer)
