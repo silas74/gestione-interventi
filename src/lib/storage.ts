@@ -2,7 +2,7 @@ import { InterventionRequest, UserAccount, Project, DailySiteReport, SiteShoppin
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
-const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v10_gemb';
+const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v11_awash_full';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
@@ -24,9 +24,9 @@ const INITIAL_PROJECTS: Project[] = [
     id: 'proj-awash-bank',
     code: 'AWASH',
     name: 'Awash Bank',
-    description: 'Impianto rilevamento CO Parking Area, sistemi Urmet e impianti tecnologici',
+    description: 'CCTV (57 Telecamere, 4 NVR, VMS, AcuSeek, SmartWall 8 Monitor), Solar System (2x Inverter Sungrow SH125CX 250 kW + 100 kWh Batterie), Parking System (LPR, Modbus, 4 Barriere), Rilevamento CO & Urmet',
     clientName: 'Awash Bank / Dodic',
-    siteAddress: 'Awash Bank Building — Parking Area & Floors',
+    siteAddress: 'Awash Bank Building — Addis Ababa (Parking Area, Solar, CCTV & Main Power)',
     createdAt: '2026-10-21T09:00:00Z'
   },
   {
@@ -817,6 +817,263 @@ const AWASH_BANK_INITIAL_WORKS: InterventionRequest[] = [
       {
         id: 'act-awash-002-3',
         text: 'Installazione e messa in funzione sistema Urmet',
+        completed: false
+      }
+    ]
+  },
+  {
+    id: 'lav-awash-003',
+    code: 'LAV-AWASH-2026-003',
+    recordType: 'project_work',
+    projectId: 'proj-awash-bank',
+    projectName: 'Awash Bank',
+    title: 'CCTV — Configurazione, Messa in Servizio e Collaudo (57 Telecamere, 4 Switch, 4 NVR RAID, VMS, AcuSeek & SmartWall 8 Monitor)',
+    siteName: 'Awash Bank — CCTV & Control Room',
+    siteAddress: 'Awash Bank Building — Addis Ababa',
+    clientName: 'Awash Bank',
+    clientContact: '',
+    description: 'Configurazione completa, messa in servizio e collaudo impianto CCTV Awash Bank: 57 telecamere (incluso 2 speed dome con auto-tracking), 4 switch di rete, 4 NVR con 32 dischi in RAID, server e PC operatore, sicurezza e VPN banca, VMS con licenze, AcuSeek e Facial & Body, decoder e SmartWall su 8 monitor, NAS + backup Acronis, collaudo diurno/notturno e formazione operatori.',
+    desiredAccessDate: '2026-11-16',
+    desiredAccessTime: '08:30',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Zona: CCTV — 15 fasi operative da completare e certificare con verbale di collaudo.',
+    status: 'pending',
+    createdAt: '2026-11-16T08:30:00Z',
+    updatedAt: '2026-11-16T08:30:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Pianificate le 15 fasi operative per la configurazione, messa in servizio e collaudo dell\'impianto CCTV (57 telecamere, 4 switch, 4 NVR con 32 dischi RAID, VMS, AcuSeek, SmartWall 8 monitor e NAS Acronis).',
+    followUpChannel: 'on_site',
+    lastActionDate: '2026-11-16',
+    nextActionToDo: 'Eseguire verifica preliminare con il cliente (montaggi, test rame/fibra, PoE e accessi) e inventario apparati / piano IP.',
+    supplyStatus: 'delivered',
+    actionSteps: [
+      {
+        id: 'act-awash-003-1',
+        text: 'Verifica preliminare con il cliente: montaggi, test rame e fibra, alimentazione, PoE e accessi',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-2',
+        text: 'Inventario degli apparati, piano IP e configurazione dei 4 switch',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-3',
+        text: 'Programmazione base delle 57 telecamere al banco',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-4',
+        text: 'Configurazione dei 4 NVR, verifica dei 32 dischi, configurazione RAID e registrazione',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-5',
+        text: 'Verifica e regolazione delle 57 telecamere sul posto',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-6',
+        text: 'Preparazione del server e del PC operatore',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-7',
+        text: 'Configurazione della sicurezza, sincronizzazione oraria, log e accesso tramite VPN della banca',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-8',
+        text: 'Configurazione VMS, attivazione licenze, viste, utenti e permessi',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-9',
+        text: 'Configurazione e prove AcuSeek e Facial and Body',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-10',
+        text: 'Configurazione preset, pattugliamenti e auto-tracking delle 2 speed dome',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-11',
+        text: 'Configurazione decoder, SmartWall e layout sugli 8 monitor',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-12',
+        text: 'Configurazione NAS, backup e Acronis',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-13',
+        text: 'Collaudo diurno e notturno: registrazione, riproduzione, ricerca, esportazione, ripartenza dopo riavvio e verifica della stabilità',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-14',
+        text: 'Correzioni e ripetizione delle prove, se necessarie',
+        completed: false
+      },
+      {
+        id: 'act-awash-003-15',
+        text: 'Verbale di collaudo, documentazione finale, consegna dei backup e formazione degli operatori',
+        completed: false
+      }
+    ]
+  },
+  {
+    id: 'lav-awash-004',
+    code: 'LAV-AWASH-2026-004',
+    recordType: 'project_work',
+    projectId: 'proj-awash-bank',
+    projectName: 'Awash Bank',
+    title: 'Solar System — Collegamento, Configurazione e Collaudo 2 Inverter Sungrow SH125CX (250 kW) + 2 Pacchi Batterie (100 kWh)',
+    siteName: 'Awash Bank — Solar System & Power Room',
+    siteAddress: 'Awash Bank Building — Addis Ababa',
+    clientName: 'Awash Bank',
+    clientContact: '',
+    description: 'Awash solare: collegamento, configurazione e collaudo di 2 inverter Sungrow SH125CX da 125 kW ciascuno (totale 250 kW) e 2 pacchi batterie da 50 kWh ciascuno (totale 100 kWh), inclusa integrazione con generatore e quadro ELV.',
+    desiredAccessDate: '2026-11-16',
+    desiredAccessTime: '08:30',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Zona: Solar system — 2x Inverter Sungrow SH125CX (250 kW tot.) + 2x Batterie 50 kWh (100 kWh tot.).',
+    status: 'pending',
+    createdAt: '2026-11-16T08:35:00Z',
+    updatedAt: '2026-11-16T08:35:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Pianificato programma di collegamento, configurazione e collaudo dei 2 inverter Sungrow SH125CX (250 kW totali) e dei 2 pacchi batterie da 50 kWh (100 kWh totali).',
+    followUpChannel: 'on_site',
+    lastActionDate: '2026-11-16',
+    nextActionToDo: 'Verifica degli schemi, delle stringhe e della compatibilità delle batterie, seguita dalle terminazioni DC, AC, terra e batterie.',
+    supplyStatus: 'delivered',
+    actionSteps: [
+      {
+        id: 'act-awash-004-1',
+        text: 'Verifica degli schemi, delle stringhe e della compatibilità delle batterie',
+        completed: false
+      },
+      {
+        id: 'act-awash-004-2',
+        text: 'Terminazioni e collegamenti finali delle linee DC, AC, di terra e delle batterie',
+        completed: false
+      },
+      {
+        id: 'act-awash-004-3',
+        text: 'Collegamento del contatore, dei trasformatori di corrente, del logger e delle comunicazioni',
+        completed: false
+      },
+      {
+        id: 'act-awash-004-4',
+        text: 'Configurazione dei due inverter Sungrow SH125CX (2x 125 kW = 250 kW), delle batterie (2x 50 kWh = 100 kWh) e del monitoraggio',
+        completed: false
+      },
+      {
+        id: 'act-awash-004-5',
+        text: 'Integrazione con il generatore e il quadro ELV, con verifica dei segnali',
+        completed: false
+      },
+      {
+        id: 'act-awash-004-6',
+        text: 'Collaudo sotto carico, prove di carica e scarica e regolazioni finali',
+        completed: false
+      },
+      {
+        id: 'act-awash-004-7',
+        text: 'Rapporto di collaudo e consegna dell\'impianto Solar System',
+        completed: false
+      }
+    ]
+  },
+  {
+    id: 'lav-awash-005',
+    code: 'LAV-AWASH-2026-005',
+    recordType: 'project_work',
+    projectId: 'proj-awash-bank',
+    projectName: 'Awash Bank',
+    title: 'Parking System (LPR & Varchi) — Controller Modbus, 2 Telecamere LPR, 4 Barriere, Controllo Accessi & VMS Guardiola',
+    siteName: 'Awash Bank — Parking Area LPR',
+    siteAddress: 'Awash Bank Building — Addis Ababa',
+    clientName: 'Awash Bank',
+    clientContact: '',
+    description: 'Configurazione e collaudo completo Parking System Awash Bank: mappatura I/O controller Modbus per i 2 varchi, rete/telecamere/NVR, taratura 2 telecamere LPR ingresso/uscita (giorno/notte), liste targhe, sequenze e consensi delle 4 barriere, radar/fotocellule/semaforo, 2 terminali controllo accessi, conteggio veicoli e posti disponibili, VMS guardiola e collaudo ripristino post-blackout.',
+    desiredAccessDate: '2026-11-16',
+    desiredAccessTime: '08:30',
+    priority: 'high',
+    defectPhotos: [],
+    notes: 'Zona: Parking area LPR — 2 varchi, 4 barriere, 2 telecamere LPR, controller Modbus e VMS guardiola.',
+    status: 'pending',
+    createdAt: '2026-11-16T08:40:00Z',
+    updatedAt: '2026-11-16T08:40:00Z',
+    assignedTechnician: 'Costantino',
+    whatIDidSummary: 'Pianificate le 12 fasi operative di configurazione, taratura LPR, logica barriere/Modbus e collaudo del Parking System per i due varchi.',
+    followUpChannel: 'on_site',
+    lastActionDate: '2026-11-16',
+    nextActionToDo: 'Verificare schemi, alimentazioni, rete e cablaggi già completati e mappare gli ingressi/uscite del controller Modbus per i due varchi.',
+    supplyStatus: 'delivered',
+    actionSteps: [
+      {
+        id: 'act-awash-005-1',
+        text: 'Verificare schemi, alimentazioni, rete e cablaggi già completati',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-2',
+        text: 'Mappare gli ingressi e le uscite del controller Modbus per i due varchi',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-3',
+        text: 'Configurare la rete, le telecamere e l\'NVR. Verificare registrazione e ricerca degli eventi',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-4',
+        text: 'Tarare le 2 telecamere LPR in ingresso e in uscita. Provare la lettura delle targhe di giorno e di notte',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-5',
+        text: 'Caricare la lista delle targhe autorizzate e verificare il comportamento con targhe non autorizzate o non lette',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-6',
+        text: 'Programmare le sequenze di apertura e chiusura delle 4 barriere, le temporizzazioni e i consensi tra le barriere di ogni varco',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-7',
+        text: 'Configurare radar, fotocellule e semaforo. Verificare il comportamento con un veicolo fermo nel varco',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-8',
+        text: 'Integrare i 2 terminali di controllo accessi e provare i comandi manuali dalla guardiola',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-9',
+        text: 'Configurare il conteggio dei veicoli in ingresso e in uscita e verificare i posti disponibili',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-10',
+        text: 'Configurare il VMS per la guardiola: viste, utenti, eventi e ricerca targhe',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-11',
+        text: 'Collaudare entrambi i varchi: accesso automatico e manuale, veicoli in coda e ripristino dopo un\'interruzione elettrica o di rete',
+        completed: false
+      },
+      {
+        id: 'act-awash-005-12',
+        text: 'Salvare le configurazioni, consegnare il verbale di collaudo e formare gli operatori',
         completed: false
       }
     ]
