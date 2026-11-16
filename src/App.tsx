@@ -490,21 +490,49 @@ export function App() {
     const updated = saveDailySiteReport(report);
     setDailySiteReports(updated);
 
-    // Feature 4: Mark checked project tasks as completed & log tracking entry
+    // Feature 4: Mark checked project tasks / actionSteps as completed & update progress
     if (completedTaskIds && completedTaskIds.length > 0) {
-      for (const taskId of completedTaskIds) {
-        const target = interventions.find(i => i.id === taskId);
-        if (target && target.status !== 'completed' && target.status !== 'completato') {
-          const updatedTask: InterventionRequest = {
-            ...target,
-            status: 'completed',
-            lastActionDate: report.date,
-            whatIDidSummary: `Completato nel Report Giornaliero ${report.code} (${report.date}): ${report.workDone}`,
-            updatedAt: new Date().toISOString(),
-          };
-          await saveIntervention(updatedTask);
-          setInterventions(prev => prev.map(i => (i.id === taskId ? updatedTask : i)));
+      const byTask = new Map<string, Set<string>>();
+      for (const rawId of completedTaskIds) {
+        if (rawId.includes('::')) {
+          const [tId, sId] = rawId.split('::');
+          if (!byTask.has(tId)) byTask.set(tId, new Set());
+          byTask.get(tId)!.add(sId);
+        } else {
+          if (!byTask.has(rawId)) byTask.set(rawId, new Set());
+          byTask.get(rawId)!.add('MAIN');
         }
+      }
+
+      for (const [taskId, stepSet] of byTask.entries()) {
+        const target = interventions.find(i => i.id === taskId);
+        if (!target) continue;
+
+        const nowIso = new Date().toISOString();
+        const existingSteps = target.actionSteps || [];
+        let updatedSteps = existingSteps;
+        if (existingSteps.length > 0) {
+          updatedSteps = existingSteps.map(s =>
+            stepSet.has(s.id) || stepSet.has('MAIN')
+              ? { ...s, completed: true, completedAt: s.completedAt || nowIso }
+              : s
+          );
+        }
+
+        const allDone =
+          stepSet.has('MAIN') ||
+          (updatedSteps.length > 0 && updatedSteps.every(s => s.completed));
+
+        const updatedTask: InterventionRequest = {
+          ...target,
+          actionSteps: updatedSteps,
+          status: allDone ? 'completed' : 'in_progress',
+          lastActionDate: report.date,
+          whatIDidSummary: `[${report.date}] ${report.workDone}`,
+          updatedAt: nowIso,
+        };
+        await saveIntervention(updatedTask);
+        setInterventions(prev => prev.map(i => (i.id === taskId ? updatedTask : i)));
       }
     }
 
