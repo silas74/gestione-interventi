@@ -1,14 +1,39 @@
 import { DefectPhoto } from '../types';
 
 /**
+ * Draws a clean timestamp + project/zone watermark ribbon at the bottom of a canvas
+ */
+function drawWatermarkRibbon(ctx: CanvasRenderingContext2D, width: number, height: number, text: string) {
+  if (!text.trim()) return;
+  const fontSize = Math.max(14, Math.round(Math.min(width, height) * 0.028));
+  const paddingX = Math.round(fontSize * 0.8);
+  const ribbonHeight = Math.round(fontSize * 2.1);
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+  ctx.fillRect(0, height - ribbonHeight, width, ribbonHeight);
+
+  // Subtle top border line on the ribbon
+  ctx.fillStyle = 'rgba(250, 204, 21, 0.85)';
+  ctx.fillRect(0, height - ribbonHeight, width, 2);
+
+  ctx.font = `bold ${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+  ctx.fillStyle = '#fef08a'; // yellow-200
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, paddingX, height - ribbonHeight / 2 + 1, width - paddingX * 2);
+  ctx.restore();
+}
+
+/**
  * Compresses an image file/blob to a max dimension (default 1280px) and JPEG quality (0.82)
- * to keep localStorage small and allow multiple photos without hitting browser quota.
+ * while preserving 100% of the original aspect ratio, and optionally stamps a watermark.
  */
 export async function compressAndProcessImage(
-  file: File | Blob, 
+  file: File | Blob,
   customName?: string,
   maxDimension: number = 1280,
-  quality: number = 0.82
+  quality: number = 0.82,
+  watermarkText?: string
 ): Promise<DefectPhoto> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -41,7 +66,6 @@ export async function compressAndProcessImage(
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          // Fallback if canvas context fails
           resolve({
             id: 'photo_' + Math.random().toString(36).substring(2, 9),
             url: dataUrl,
@@ -52,6 +76,11 @@ export async function compressAndProcessImage(
         }
 
         ctx.drawImage(img, 0, 0, width, height);
+
+        if (watermarkText && watermarkText.trim()) {
+          drawWatermarkRibbon(ctx, width, height, watermarkText.trim());
+        }
+
         const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
 
         resolve({
@@ -64,6 +93,30 @@ export async function compressAndProcessImage(
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Applies a timestamp + project/zone watermark ribbon onto an existing photo dataUrl
+ */
+export async function applyWatermarkToDataUrl(dataUrl: string, watermarkText: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error('Cannot load image for watermark'));
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, img.width, img.height);
+      drawWatermarkRibbon(ctx, img.width, img.height, watermarkText);
+      resolve(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.src = dataUrl;
   });
 }
 
