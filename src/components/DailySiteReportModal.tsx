@@ -60,6 +60,31 @@ export function calculateNetHours(arrival: string, departure: string, breakMins:
   return Math.round((netMinutes / 60) * 100) / 100;
 }
 
+export function formatHoursAndMinutes(
+  hoursDecimal: number,
+  arrival?: string,
+  departure?: string,
+  breakMins = 0
+): string {
+  if (arrival && departure) {
+    const [arrH, arrM] = arrival.split(':').map(Number);
+    const [depH, depM] = departure.split(':').map(Number);
+    if (!isNaN(arrH) && !isNaN(arrM) && !isNaN(depH) && !isNaN(depM)) {
+      let startM = arrH * 60 + arrM;
+      let endM = depH * 60 + depM;
+      if (endM < startM) endM += 24 * 60;
+      const netM = Math.max(0, endM - startM - (Number(breakMins) || 0));
+      const h = Math.floor(netM / 60);
+      const m = netM % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+  }
+  const totalMins = Math.round((Number(hoursDecimal) || 0) * 60);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   isOpen,
   onClose,
@@ -90,10 +115,10 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     existingReport?.departureTime || '17:30'
   );
   const [breakMinutes, setBreakMinutes] = useState<number>(
-    existingReport?.breakMinutes !== undefined ? existingReport.breakMinutes : 60
+    existingReport?.breakMinutes !== undefined ? existingReport.breakMinutes : 0
   );
   const [hoursWorked, setHoursWorked] = useState<number>(
-    existingReport?.hoursWorked !== undefined ? existingReport.hoursWorked : 8
+    existingReport?.hoursWorked !== undefined ? existingReport.hoursWorked : 9
   );
   const [areaOrFloor, setAreaOrFloor] = useState<string>(
     existingReport?.areaOrFloor || ''
@@ -457,13 +482,18 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
 
               {/* Totale Ore Lavorate */}
               <div className="bg-blue-950/40 p-2.5 rounded-xl border border-blue-500/50">
-                <label className="block text-[11px] font-bold text-blue-300 mb-1">
-                  ⏱️ Ore Nette Cantiere
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-blue-300">
+                    ⏱️ Durata Cantiere
+                  </label>
+                  <span className="text-[11px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-400/40">
+                    {formatHoursAndMinutes(hoursWorked, arrivalTime, departureTime, breakMinutes)}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <input
                     type="number"
-                    step="0.25"
+                    step="0.01"
                     min="0"
                     max="24"
                     required
