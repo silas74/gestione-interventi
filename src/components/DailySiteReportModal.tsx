@@ -28,6 +28,9 @@ import {
   Sparkles,
   RefreshCw,
   Settings,
+  ChevronDown,
+  ChevronUp,
+  PenTool,
 } from 'lucide-react';
 import { DailySiteReport, DefectPhoto, Project, InterventionRequest, PdfLanguage } from '../types';
 import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
@@ -182,6 +185,13 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isRunningAi, setIsRunningAi] = useState(false);
   const [aiErrorMsg, setAiErrorMsg] = useState<string | null>(null);
+
+  // Clean Mobile-First Tab & Collapsible Drawer State
+  const [activeTab, setActiveTab] = useState<'main' | 'photos' | 'notes' | 'signatures'>('main');
+  const [isChecklistOpen, setIsChecklistOpen] = useState<boolean>(false);
+  const [checklistCategoryFilter, setChecklistCategoryFilter] = useState<string>('ALL');
+  const [showTechInput, setShowTechInput] = useState<boolean>(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -533,726 +543,827 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     onClose();
   };
 
+  const hasExtraNotes = Boolean(
+    materialsUsed.trim() || missingMaterials.trim() || issuesFound.trim() || nextDayPlan.trim()
+  );
+  const hasSignatures = Boolean(technicianSignature || clientSignature);
+
+  const filteredProjectTasks = openProjectTasks.filter((t) => {
+    if (checklistCategoryFilter === 'ALL') return true;
+    const text = `${t.code} ${t.title}`.toLowerCase();
+    if (checklistCategoryFilter === 'CCTV') return text.includes('cctv') || text.includes('telecamer') || text.includes('003');
+    if (checklistCategoryFilter === 'SOLAR') return text.includes('solar') || text.includes('sungrow') || text.includes('004');
+    if (checklistCategoryFilter === 'PARKING') return text.includes('parking') || text.includes('lpr') || text.includes('co') || text.includes('005') || text.includes('001');
+    return true;
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 gap-2 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-              <Calendar className="w-5 h-5" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[93vh] sm:max-w-2xl bg-slate-900 sm:border sm:border-slate-700 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        {/* Clean Compact Header */}
+        <div className="flex items-center justify-between px-3.5 sm:px-5 py-2.5 sm:py-3 border-b border-slate-800 bg-gradient-to-r from-emerald-950/90 via-slate-900 to-slate-950 gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <Calendar className="w-4 h-4" />
             </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2 flex-wrap">
-                <span>Report Giornaliero di Cantiere</span>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5 truncate">
+                <span className="truncate">Report Giornaliero</span>
                 {existingReport && (
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-600/50">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-600/50 shrink-0">
                     {existingReport.code}
                   </span>
                 )}
               </h3>
-              <p className="text-xs text-slate-300">
-                Orario arrivo/uscita, lavori svolti, foto annotate con timbro e PDF Italiano/Inglese
+              <p className="text-[11px] text-slate-400 truncate hidden sm:block">
+                Orari cantiere, attività svolte, foto con timbro e PDF IT/EN
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Feature 1: Riprendi da Ieri */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Compact Riprendi da Ieri */}
             {previousProjectReport && (
               <button
                 type="button"
                 onClick={handleCopyFromYesterday}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold transition active:scale-95"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-[11px] font-bold transition active:scale-95"
                 title={`Copia Zona e Programma dal report del ${previousProjectReport.date}`}
               >
                 <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                <span>🔄 Riprendi da Ieri ({previousProjectReport.date})</span>
+                <span className="hidden xs:inline">Ieri</span>
               </button>
             )}
+
+            {/* Compact IT / EN Switcher */}
+            <div className="flex items-center bg-slate-950 p-0.5 rounded-xl border border-slate-700">
+              <button
+                type="button"
+                onClick={() => setPdfLang('it')}
+                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition ${
+                  pdfLang === 'it' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇮🇹 IT
+              </button>
+              <button
+                type="button"
+                onClick={() => setPdfLang('en')}
+                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition ${
+                  pdfLang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇬🇧 EN
+              </button>
+            </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
+        {/* Clean 4-Tab Mobile Navigation Bar */}
+        <div className="grid grid-cols-4 gap-1 p-1.5 bg-slate-950/90 border-b border-slate-800 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('main')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition ${
+              activeTab === 'main'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">1. Lavori</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('photos')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition relative ${
+              activeTab === 'photos'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">2. Foto</span>
+            {photos.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-white/20 text-white">
+                {photos.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('notes')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition relative ${
+              activeTab === 'notes'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">3. Note</span>
+            {hasExtraNotes && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('signatures')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition relative ${
+              activeTab === 'signatures'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <PenTool className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">4. Firme</span>
+            {hasSignatures && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            )}
+          </button>
+        </div>
+
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-          {/* Row 1: Progetto, Data Giornata, Tecnico */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                Progetto / Cantiere *
-              </label>
-              <select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold text-yellow-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.code})
-                  </option>
-                ))}
-              </select>
-            </div>
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3.5">
+            {/* ==================== TAB 1: ORARI, ZONA & LAVORI FATTI OGGI ==================== */}
+            {activeTab === 'main' && (
+              <>
+                {/* Compact Row: Progetto & Data + Tecnico Pill */}
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                        Progetto / Cantiere
+                      </label>
+                      <select
+                        value={projectId}
+                        onChange={(e) => setProjectId(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold text-yellow-300 focus:outline-none focus:border-emerald-500"
+                      >
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                📅 Data Giornata *
-              </label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                        📅 Data Giornata
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs sm:text-sm text-white font-semibold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                👷 Tecnico in Cantiere *
-              </label>
-              <input
-                type="text"
-                required
-                value={technicianName}
-                onChange={(e) => setTechnicianName(e.target.value)}
-                placeholder="Es. Pierluigi / Costantino"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-
-          {/* Row 2: ORARIO DI ARRIVO E PARTENZA DAL CANTIERE + PAUSA + ORE TOTALI */}
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-600/50 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs font-extrabold text-emerald-300 flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-emerald-400" />
-                <span>ORARIO DI ARRIVO E PARTENZA DAL CANTIERE</span>
-              </span>
-              <span className="text-[11px] text-slate-300">
-                Usa i pulsanti <strong className="text-white">"📍 Ora"</strong> e <strong className="text-white">"🏁 Ora"</strong> in cantiere
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Ora Arrivo */}
-              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-emerald-700/50">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
-                    <LogIn className="w-3 h-3 text-emerald-400" />
-                    <span>Ora Arrivo *</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setArrivalTime(getCurrentTimeHHMM())}
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white transition active:scale-95"
-                    title="Imposta l'orario attuale come ora di arrivo"
-                  >
-                    📍 Ora
-                  </button>
-                </div>
-                <input
-                  type="time"
-                  required
-                  value={arrivalTime}
-                  onChange={(e) => setArrivalTime(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-emerald-400"
-                />
-              </div>
-
-              {/* Ora Partenza */}
-              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-amber-700/50">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
-                    <LogOut className="w-3 h-3 text-amber-400" />
-                    <span>Ora Partenza *</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setDepartureTime(getCurrentTimeHHMM())}
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition active:scale-95"
-                    title="Imposta l'orario attuale come ora di uscita dal cantiere"
-                  >
-                    🏁 Ora
-                  </button>
-                </div>
-                <input
-                  type="time"
-                  required
-                  value={departureTime}
-                  onChange={(e) => setDepartureTime(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              {/* Pausa pranzo */}
-              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                  ☕ Pausa (minuti)
-                </label>
-                <select
-                  value={breakMinutes}
-                  onChange={(e) => setBreakMinutes(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-blue-400"
-                >
-                  <option value={0}>0 min (Nessuna)</option>
-                  <option value={30}>30 min</option>
-                  <option value={45}>45 min</option>
-                  <option value={60}>60 min (1 ora)</option>
-                  <option value={90}>90 min (1.5 ore)</option>
-                </select>
-              </div>
-
-              {/* Totale Ore Lavorate */}
-              <div className="bg-blue-950/40 p-2.5 rounded-xl border border-blue-500/50">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-blue-300">
-                    ⏱️ Durata Cantiere
-                  </label>
-                  <span className="text-[11px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-400/40">
-                    {formatHoursAndMinutes(hoursWorked, arrivalTime, departureTime, breakMinutes)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="24"
-                    required
-                    value={hoursWorked}
-                    onChange={(e) => setHoursWorked(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-slate-900 border border-blue-500/60 rounded-lg px-2 py-1.5 text-sm font-mono font-extrabold text-yellow-300 focus:outline-none"
-                  />
-                  <span className="text-xs font-bold text-blue-300">ore</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 3: Zona / Piano / Impianto in Cantiere */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-blue-400" />
-              <span>Zona / Piano / Impianto in Cantiere (opz.)</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5 mb-1">
-              {AWASH_QUICK_ZONES.map((z) => (
-                <button
-                  key={z}
-                  type="button"
-                  onClick={() =>
-                    setAreaOrFloor((prev) =>
-                      prev.trim()
-                        ? prev.includes(z)
-                          ? prev
-                          : `${prev.trim()} | ${z}`
-                        : z
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-blue-600/30 text-slate-200 hover:text-blue-200 border border-slate-700 transition"
-                >
-                  + {z}
-                </button>
-              ))}
-            </div>
-            <input
-              type="text"
-              value={areaOrFloor}
-              onChange={(e) => setAreaOrFloor(e.target.value)}
-              placeholder="Es. Parking area LPR, Parking area CO, Solar system, CCTV, Main Power..."
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Feature 4: Spunta le Azioni / Step del Progetto fatte oggi (CCTV, Solar System, Parking System, CO...) */}
-          {openProjectTasks.length > 0 && (
-            <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-700/50 space-y-2.5">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-xs font-extrabold text-indigo-300 flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-indigo-400" />
-                  <span>
-                    ✅ Spunta le Attività di {selectedProjObj?.name} fatte oggi (le scrive da solo nel report e aggiorna l'avanzamento):
-                  </span>
-                </span>
-                {checkedTaskIds.length > 0 && (
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    {checkedTaskIds.length} selezionate oggi
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                {openProjectTasks.map((task) => {
-                  const steps = task.actionSteps || [];
-                  const openSteps = steps.filter((s) => !s.completed);
-                  const doneCount = steps.filter((s) => s.completed).length;
-
-                  return (
-                    <div
-                      key={task.id}
-                      className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5"
+                  {/* Compact Technician bar (click to edit if needed) */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs">
+                    <span className="text-slate-400">
+                      👷 Tecnico: <strong className="text-slate-200">{technicianName}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowTechInput((prev) => !prev)}
+                      className="text-[11px] text-emerald-400 hover:underline font-semibold"
                     >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="text-xs font-bold text-yellow-300 flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-700/50">
-                            {task.code}
-                          </span>
-                          <span>{task.title}</span>
-                        </div>
-                        {steps.length > 0 && (
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {doneCount}/{steps.length} completati
+                      {showTechInput ? 'Chiudi' : 'Modifica nome'}
+                    </button>
+                  </div>
+
+                  {showTechInput && (
+                    <input
+                      type="text"
+                      required
+                      value={technicianName}
+                      onChange={(e) => setTechnicianName(e.target.value)}
+                      placeholder="Nome Tecnico..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                </div>
+
+                {/* Compact Card: Arrivo, Partenza & Durata Cantiere */}
+                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-950/35 via-slate-900 to-slate-950 border border-emerald-600/40 space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Ora Arrivo */}
+                    <div className="bg-slate-950/90 p-2.5 rounded-xl border border-emerald-700/50">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                          <LogIn className="w-3 h-3 text-emerald-400" />
+                          <span>Arrivo</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setArrivalTime(getCurrentTimeHHMM())}
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition active:scale-95"
+                        >
+                          📍 Ora
+                        </button>
+                      </div>
+                      <input
+                        type="time"
+                        required
+                        value={arrivalTime}
+                        onChange={(e) => setArrivalTime(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    {/* Ora Partenza */}
+                    <div className="bg-slate-950/90 p-2.5 rounded-xl border border-amber-700/50">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                          <LogOut className="w-3 h-3 text-amber-400" />
+                          <span>Uscita</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setDepartureTime(getCurrentTimeHHMM())}
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition active:scale-95"
+                        >
+                          🏁 Ora
+                        </button>
+                      </div>
+                      <input
+                        type="time"
+                        required
+                        value={departureTime}
+                        onChange={(e) => setDepartureTime(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Single Inline Summary Bar for Pausa + Totale Durata */}
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-blue-300">⏱️ Totale:</span>
+                      <span className="text-xs sm:text-sm font-mono font-extrabold px-2 py-0.5 rounded-lg bg-yellow-500/20 text-yellow-300 border border-yellow-400/40">
+                        {formatHoursAndMinutes(hoursWorked, arrivalTime, departureTime, breakMinutes)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-slate-400">☕ Pausa:</span>
+                      <select
+                        value={breakMinutes}
+                        onChange={(e) => setBreakMinutes(Number(e.target.value))}
+                        className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white focus:outline-none focus:border-blue-400"
+                      >
+                        <option value={0}>0 min</option>
+                        <option value={30}>30 min</option>
+                        <option value={45}>45 min</option>
+                        <option value={60}>60 min</option>
+                        <option value={90}>90 min</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Zona / Impianto Quick Pills */}
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                  <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Zona / Impianto in Cantiere</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AWASH_QUICK_ZONES.map((z) => {
+                      const isSelected = areaOrFloor.includes(z);
+                      return (
+                        <button
+                          key={z}
+                          type="button"
+                          onClick={() =>
+                            setAreaOrFloor((prev) => {
+                              if (!prev.trim()) return z;
+                              if (prev.includes(z)) {
+                                return prev
+                                  .split('|')
+                                  .map((s) => s.trim())
+                                  .filter((s) => s && s !== z)
+                                  .join(' | ');
+                              }
+                              return `${prev.trim()} | ${z}`;
+                            })
+                          }
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
+                              : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-blue-400'
+                          }`}
+                        >
+                          {isSelected ? `✓ ${z}` : `+ ${z}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    type="text"
+                    value={areaOrFloor}
+                    onChange={(e) => setAreaOrFloor(e.target.value)}
+                    placeholder="Es. Parking area LPR, Solar system, CCTV..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Collapsible Drawer: Checklist Attività Progetto (Closed by default on phone for clean UI!) */}
+                {openProjectTasks.length > 0 && (
+                  <div className="rounded-xl bg-indigo-950/25 border border-indigo-700/50 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsChecklistOpen((prev) => !prev)}
+                      className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-indigo-950/40 transition"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckSquare className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <span className="text-xs font-extrabold text-indigo-200 truncate">
+                          Scegli da Checklist {selectedProjObj?.name}
+                        </span>
+                        {checkedTaskIds.length > 0 && (
+                          <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 shrink-0">
+                            {checkedTaskIds.length} scelte
                           </span>
                         )}
                       </div>
+                      {isChecklistOpen ? (
+                        <ChevronUp className="w-4 h-4 text-indigo-300 shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-indigo-300 shrink-0" />
+                      )}
+                    </button>
 
-                      {openSteps.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-1 pt-1">
-                          {openSteps.map((step) => {
-                            const compositeId = `${task.id}::${step.id}`;
-                            const isChecked = checkedTaskIds.includes(compositeId);
+                    {isChecklistOpen && (
+                      <div className="p-3 pt-1 border-t border-indigo-800/40 space-y-2.5">
+                        {/* Quick filter pills for Awash systems */}
+                        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                          {[
+                            { id: 'ALL', label: 'Tutti' },
+                            { id: 'CCTV', label: '📹 CCTV' },
+                            { id: 'SOLAR', label: '☀️ Solar' },
+                            { id: 'PARKING', label: '🚗 Parking LPR/CO' },
+                          ].map((f) => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => setChecklistCategoryFilter(f.id)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                                checklistCategoryFilter === f.id
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                              }`}
+                            >
+                              {f.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                          {filteredProjectTasks.map((task) => {
+                            const steps = task.actionSteps || [];
+                            const openSteps = steps.filter((s) => !s.completed);
+                            const doneCount = steps.filter((s) => s.completed).length;
+
                             return (
                               <div
-                                key={step.id}
-                                onClick={() =>
-                                  handleToggleProjectStepToday(task, step.id, step.text)
-                                }
-                                className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
-                                  isChecked
-                                    ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-200 font-semibold'
-                                    : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-200'
-                                }`}
+                                key={task.id}
+                                className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-1.5"
                               >
-                                {isChecked ? (
-                                  <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs font-bold text-yellow-300 leading-snug">
+                                    {task.title}
+                                  </span>
+                                  {steps.length > 0 && (
+                                    <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                                      {doneCount}/{steps.length}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {openSteps.length > 0 ? (
+                                  <div className="grid grid-cols-1 gap-1 pt-1">
+                                    {openSteps.map((step) => {
+                                      const compositeId = `${task.id}::${step.id}`;
+                                      const isChecked = checkedTaskIds.includes(compositeId);
+                                      return (
+                                        <div
+                                          key={step.id}
+                                          onClick={() =>
+                                            handleToggleProjectStepToday(task, step.id, step.text)
+                                          }
+                                          className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
+                                            isChecked
+                                              ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-200 font-semibold'
+                                              : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-200'
+                                          }`}
+                                        >
+                                          {isChecked ? (
+                                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                          ) : (
+                                            <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                                          )}
+                                          <span className="leading-snug">{step.text}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 ) : (
-                                  <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                                  <div
+                                    onClick={() =>
+                                      handleToggleProjectStepToday(task, 'MAIN', task.title)
+                                    }
+                                    className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
+                                      checkedTaskIds.includes(`${task.id}::MAIN`)
+                                        ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-200 font-semibold'
+                                        : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-200'
+                                    }`}
+                                  >
+                                    {checkedTaskIds.includes(`${task.id}::MAIN`) ? (
+                                      <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                    ) : (
+                                      <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                                    )}
+                                    <span>Segna intera attività come eseguita oggi</span>
+                                  </div>
                                 )}
-                                <span className="leading-snug">{step.text}</span>
                               </div>
                             );
                           })}
                         </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Cose Fatte Oggi + Clean Mobile Action Toolbar */}
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-extrabold text-yellow-300 flex items-center gap-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-yellow-400" />
+                      <span>Cose Fatte Oggi in Cantiere *</span>
+                    </label>
+
+                    {onOpenAiSettings && (
+                      <button
+                        type="button"
+                        onClick={onOpenAiSettings}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-semibold"
+                        title="Impostazioni DeepSeek AI & Quota Rimasta"
+                      >
+                        <Settings className="w-3 h-3 text-indigo-400" />
+                        <span>AI Config</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Clean 3-button Mobile Action Row: Voce | Formatta AI | Traduci EN */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={toggleVoiceDictation}
+                      className={`flex items-center justify-center gap-1 py-2 px-2 rounded-xl text-xs font-bold transition active:scale-95 ${
+                        isRecordingVoice
+                          ? 'bg-rose-600 text-white animate-pulse shadow-md'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700'
+                      }`}
+                    >
+                      {isRecordingVoice ? (
+                        <MicOff className="w-3.5 h-3.5 text-white shrink-0" />
                       ) : (
-                        <div
-                          onClick={() =>
-                            handleToggleProjectStepToday(task, 'MAIN', task.title)
-                          }
-                          className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
-                            checkedTaskIds.includes(`${task.id}::MAIN`)
-                              ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-200 font-semibold'
-                              : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-200'
-                          }`}
+                        <Mic className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      )}
+                      <span className="truncate">{isRecordingVoice ? 'Stop' : '🎤 Detta'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isRunningAi}
+                      onClick={() => handleFormatNotesWithAi('it')}
+                      className="flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-400/50 text-xs font-bold transition active:scale-95 disabled:opacity-50"
+                    >
+                      {isRunningAi ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-300 shrink-0" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-300 shrink-0" />
+                      )}
+                      <span className="truncate">✨ Formatta AI</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isRunningAi}
+                      onClick={() => handleTranslateReportWithAi('en')}
+                      className="flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 border border-blue-400/50 text-xs font-bold transition active:scale-95 disabled:opacity-50"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span className="truncate">🇬🇧 Traduci EN</span>
+                    </button>
+                  </div>
+
+                  {aiErrorMsg && (
+                    <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-xs text-rose-200 flex items-center justify-between gap-2">
+                      <span>{aiErrorMsg}</span>
+                      {onOpenAiSettings && (
+                        <button
+                          type="button"
+                          onClick={onOpenAiSettings}
+                          className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shrink-0"
                         >
-                          {checkedTaskIds.includes(`${task.id}::MAIN`) ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                          ) : (
-                            <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                          )}
-                          <span>Segna intera attività come eseguita oggi</span>
-                        </div>
+                          API Key
+                        </button>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Row 4: Cose fatte oggi in cantiere + AI Action Bar (Feature A & Feature B) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <label className="block text-xs font-bold text-yellow-300 flex items-center gap-1.5">
-                <Wrench className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Cose Fatte Oggi in Cantiere (Lavori Eseguiti) *</span>
-              </label>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {/* Voice Dictation */}
-                <button
-                  type="button"
-                  onClick={toggleVoiceDictation}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition active:scale-95 ${
-                    isRecordingVoice
-                      ? 'bg-rose-600 text-white animate-pulse shadow-md'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                  }`}
-                >
-                  {isRecordingVoice ? (
-                    <MicOff className="w-3.5 h-3.5 text-white" />
-                  ) : (
-                    <Mic className="w-3.5 h-3.5 text-blue-400" />
                   )}
-                  <span>{isRecordingVoice ? 'In ascolto...' : '🎤 Detta a Voce'}</span>
-                </button>
 
-                {/* Feature A: Format raw notes into structured technical report (IT) */}
-                <button
-                  type="button"
-                  disabled={isRunningAi}
-                  onClick={() => handleFormatNotesWithAi('it')}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-400/50 text-xs font-bold transition active:scale-95 disabled:opacity-50"
-                  title="Trasforma i tuoi appunti veloci in una relazione tecnica strutturata (Lavori, Materiali, Problemi e Programma Domani)"
-                >
-                  {isRunningAi ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-300" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                  )}
-                  <span>✨ Formatta Appunti (AI)</span>
-                </button>
-
-                {/* Feature B: Translate to Technical English for Addis Client */}
-                <button
-                  type="button"
-                  disabled={isRunningAi}
-                  onClick={() => handleTranslateReportWithAi('en')}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 border border-blue-400/50 text-xs font-bold transition active:scale-95 disabled:opacity-50"
-                  title="Traduci automaticamente Lavori, Note, Programma e Didascalie Foto in Inglese Tecnico per il PDF EN"
-                >
-                  <Globe className="w-3.5 h-3.5 text-blue-400" />
-                  <span>🇬🇧 Traduci in Inglese (AI)</span>
-                </button>
-
-                {onOpenAiSettings && (
-                  <button
-                    type="button"
-                    onClick={onOpenAiSettings}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                    title="Impostazioni AI (DeepSeek API)"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-indigo-400" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {aiErrorMsg && (
-              <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-xs text-rose-200 flex items-center justify-between gap-2">
-                <span>{aiErrorMsg}</span>
-                {onOpenAiSettings && (
-                  <button
-                    type="button"
-                    onClick={onOpenAiSettings}
-                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shrink-0"
-                  >
-                    Configura DeepSeek API
-                  </button>
-                )}
-              </div>
+                  <textarea
+                    required
+                    rows={5}
+                    value={workDone}
+                    onChange={(e) => setWorkDone(e.target.value)}
+                    placeholder="Scrivi o detta a voce i lavori fatti oggi (anche appunti veloci) e premi '✨ Formatta AI' o '🇬🇧 Traduci EN'..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                  />
+                </div>
+              </>
             )}
 
-            <textarea
-              required
-              rows={4}
-              value={workDone}
-              onChange={(e) => setWorkDone(e.target.value)}
-              placeholder="Scrivi o detta a voce anche solo appunti veloci (es. 'configurato 20 telecamere, 2 non prendevano PoE sullo switch 3, domani finisco NVR') e premi '✨ Formatta Appunti (AI)' o '🇬🇧 Traduci in Inglese (AI)'!"
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed"
-            />
-          </div>
-
-          {/* Row 5: Materiali Usati + Materiali Mancanti (Feature 6) + Problemi + Programma Domani */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-sky-300 mb-1 flex items-center gap-1">
-                <Package className="w-3.5 h-3.5 text-sky-400" />
-                <span>Materiali Installati / Usati Oggi</span>
-              </label>
-              <textarea
-                rows={2}
-                value={materialsUsed}
-                onChange={(e) => setMaterialsUsed(e.target.value)}
-                placeholder="Es. 4x Sensori CO, 50m cavo schermato, morsetti..."
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
-              />
-            </div>
-
-            {/* Feature 6: Materiali Mancanti / Da Comprare Domani */}
-            <div>
-              <label className="block text-xs font-bold text-rose-300 mb-1 flex items-center gap-1">
-                <ShoppingCart className="w-3.5 h-3.5 text-rose-400" />
-                <span>🛒 Materiali Mancanti / Da Comprare per Cantiere</span>
-              </label>
-              <textarea
-                rows={2}
-                value={missingMaterials}
-                onChange={(e) => setMissingMaterials(e.target.value)}
-                placeholder="Es. Mancano 2 alimentatori 24V, tasselli M8, 20m cavo cat6..."
-                className="w-full bg-slate-800/90 border border-rose-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-amber-300 mb-1 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                <span>Problemi / Note Cantiere</span>
-              </label>
-              <textarea
-                rows={2}
-                value={issuesFound}
-                onChange={(e) => setIssuesFound(e.target.value)}
-                placeholder="Es. Mancanza tensione su quadro P2, tubazione ostruita..."
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1">
-                <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Programma per Domani (verrà ripreso domani!)</span>
-              </label>
-              <textarea
-                rows={2}
-                value={nextDayPlan}
-                onChange={(e) => setNextDayPlan(e.target.value)}
-                placeholder="Es. Completare cablaggio zona Nord e avvio test LPR..."
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
-              />
-            </div>
-          </div>
-
-          {/* Row 6: FOTO DEL GIORNO CON TIMBRO AUTOMATICO E DISEGNO/ANNOTAZIONE */}
-          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-blue-500/40 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-                  <Camera className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
-                    <span>📸 Foto del Lavoro Fatto Oggi in Cantiere</span>
-                    <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      {photos.length} foto
-                    </span>
-                  </h4>
-                  <label className="flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer mt-0.5">
-                    <input
-                      type="checkbox"
-                      checked={autoStampWatermark}
-                      onChange={(e) => setAutoStampWatermark(e.target.checked)}
-                      className="rounded accent-emerald-500"
-                    />
-                    <span>🕒 Imprimi automaticamente Timbro Data + Ora + Zona sulle foto caricate</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {/* Camera direct capture */}
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition active:scale-95"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Scatta Foto</span>
-                </button>
-
-                {/* File upload */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 text-xs font-semibold transition active:scale-95"
-                >
-                  <Upload className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Galleria / File</span>
-                </button>
-
-                {/* Paste Ctrl+V */}
-                <button
-                  type="button"
-                  onClick={handlePasteFromClipboardBtn}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
-                >
-                  <Clipboard className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Incolla</span>
-                </button>
-              </div>
-            </div>
-
-            {isProcessingPhotos && (
-              <div className="text-center py-2 text-xs text-blue-400 animate-pulse">
-                Compressione, mantenimento proporzioni e timbro orario in corso...
-              </div>
-            )}
-
-            {photos.length === 0 ? (
-              <div className="p-4 rounded-xl border border-dashed border-slate-700 text-center text-xs text-slate-400">
-                Nessuna foto allegata per oggi. Premi <strong>"Scatta Foto"</strong> o <strong>"Galleria / File"</strong> per documentare i lavori eseguiti in cantiere.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-                {photos.map((photo, idx) => (
-                  <div
-                    key={photo.id}
-                    className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 flex flex-col"
-                  >
-                    <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
-                      <img
-                        src={photo.url}
-                        alt={photo.name}
-                        className="max-w-full max-h-full w-auto h-auto object-contain"
-                      />
-                      <span className="absolute top-1.5 left-1.5 bg-black/75 text-[10px] font-mono font-bold text-white px-2 py-0.5 rounded border border-white/20">
-                        Foto #{idx + 1}
-                      </span>
-
-                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
-                        {/* Feature 2: Annotate / Draw on photo */}
-                        <button
-                          type="button"
-                          onClick={() => setAnnotatingPhoto(photo)}
-                          className="px-2 py-1 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-[10px] font-extrabold shadow flex items-center gap-1"
-                          title="Disegna cerchi, frecce o testo sulla foto"
-                        >
-                          <Pencil className="w-3 h-3" />
-                          <span>Segna</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePhoto(photo.id)}
-                          className="p-1 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow"
-                          title="Rimuovi foto"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-2">
+            {/* ==================== TAB 2: FOTO DI CANTIERE ==================== */}
+            {activeTab === 'photos' && (
+              <div className="bg-slate-950/70 p-3.5 rounded-xl border border-blue-500/40 space-y-3.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-blue-400" />
+                      <span>Foto del Lavoro ({photos.length})</span>
+                    </h4>
+                    <label className="flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer mt-1">
                       <input
-                        type="text"
-                        value={photo.caption || ''}
-                        onChange={(e) => handleUpdatePhotoCaption(photo.id, e.target.value)}
-                        placeholder={`Didascalia foto #${idx + 1} (es. Quadro cablato)...`}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                        type="checkbox"
+                        checked={autoStampWatermark}
+                        onChange={(e) => setAutoStampWatermark(e.target.checked)}
+                        className="rounded accent-emerald-500"
                       />
-                    </div>
+                      <span>🕒 Timbro automatico Data + Ora + Zona sulle foto</span>
+                    </label>
                   </div>
-                ))}
+                </div>
+
+                {/* Big Thumb-Friendly Camera & Gallery Buttons for Phone */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-extrabold shadow-lg transition active:scale-95"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>📷 Scatta Foto</span>
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 text-xs sm:text-sm font-bold transition active:scale-95"
+                  >
+                    <Upload className="w-4 h-4 text-blue-400" />
+                    <span>🖼️ Galleria</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePasteFromClipboardBtn}
+                    className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
+                  >
+                    <Clipboard className="w-4 h-4 text-emerald-400" />
+                    <span>Incolla Foto</span>
+                  </button>
+                </div>
+
+                {isProcessingPhotos && (
+                  <div className="text-center py-2 text-xs text-blue-400 animate-pulse">
+                    Elaborazione foto e timbro orario in corso...
+                  </div>
+                )}
+
+                {photos.length === 0 ? (
+                  <div className="p-6 rounded-xl border border-dashed border-slate-700 text-center text-xs text-slate-400">
+                    Nessuna foto allegata. Tocca <strong>"📷 Scatta Foto"</strong> o <strong>"🖼️ Galleria"</strong> per documentare i lavori di oggi.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {photos.map((photo, idx) => (
+                      <div
+                        key={photo.id}
+                        className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 flex flex-col"
+                      >
+                        <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
+                          <img
+                            src={photo.url}
+                            alt={photo.name}
+                            className="max-w-full max-h-full w-auto h-auto object-contain"
+                          />
+                          <span className="absolute top-1.5 left-1.5 bg-black/75 text-[10px] font-mono font-bold text-white px-2 py-0.5 rounded border border-white/20">
+                            Foto #{idx + 1}
+                          </span>
+
+                          <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setAnnotatingPhoto(photo)}
+                              className="px-2.5 py-1 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-extrabold shadow flex items-center gap-1"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span>Segna</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(photo.id)}
+                              className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <input
+                            type="text"
+                            value={photo.caption || ''}
+                            onChange={(e) => handleUpdatePhotoCaption(photo.id, e.target.value)}
+                            placeholder={`Didascalia foto #${idx + 1} (es. Quadro cablato)...`}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ==================== TAB 3: MATERIALI, DA COMPRARE, PROBLEMI & DOMANI ==================== */}
+            {activeTab === 'notes' && (
+              <div className="space-y-3">
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                  <label className="block text-xs font-bold text-sky-300 mb-1.5 flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-sky-400" />
+                    <span>Materiali / Apparati Installati Oggi (opz.)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={materialsUsed}
+                    onChange={(e) => setMaterialsUsed(e.target.value)}
+                    placeholder="Es. 4x Telecamere IP, 2x Switch PoE, 50m cavo Cat6..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-rose-500/30">
+                  <label className="block text-xs font-bold text-rose-300 mb-1.5 flex items-center gap-1.5">
+                    <ShoppingCart className="w-4 h-4 text-rose-400" />
+                    <span>🛒 Materiali Mancanti / Da Comprare (opz.)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={missingMaterials}
+                    onChange={(e) => setMissingMaterials(e.target.value)}
+                    placeholder="Es. Mancano 20 connettori RJ45 schermati, tasselli M8..."
+                    className="w-full bg-slate-900 border border-rose-500/40 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-400"
+                  />
+                </div>
+
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                  <label className="block text-xs font-bold text-amber-300 mb-1.5 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>Problemi Riscontrati / Note Tecniche (opz.)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={issuesFound}
+                    onChange={(e) => setIssuesFound(e.target.value)}
+                    placeholder="Es. Assenza tensione su quadro P2, passaggio cavi ostruito..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                  <label className="block text-xs font-bold text-emerald-300 mb-1.5 flex items-center gap-1.5">
+                    <ArrowRight className="w-4 h-4 text-emerald-400" />
+                    <span>Programma per Domani (opz.)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={nextDayPlan}
+                    onChange={(e) => setNextDayPlan(e.target.value)}
+                    placeholder="Es. Completare taratura telecamere LPR e prove NVR..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ==================== TAB 4: FIRME DIGITALI ==================== */}
+            {activeTab === 'signatures' && (
+              <div className="space-y-3.5 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                  <SignaturePad
+                    label="Firma Tecnico (Pierluigi / Costantino)"
+                    initialSignature={technicianSignature}
+                    onChange={setTechnicianSignature}
+                  />
+                </div>
+                <div className="pt-2 border-t border-slate-800 space-y-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      Nome Referente Cantiere / Cliente (opz.)
+                    </label>
+                    <input
+                      type="text"
+                      value={clientSignerName}
+                      onChange={(e) => setClientSignerName(e.target.value)}
+                      placeholder="Es. Ing. Dodic / Site Manager Awash..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+                  <SignaturePad
+                    label="Firma Referente Cantiere (opz.)"
+                    initialSignature={clientSignature}
+                    onChange={setClientSignature}
+                  />
+                </div>
               </div>
             )}
           </div>
 
-          {/* Row 7: Firme Digitali (Tecnico + Referente Cantiere opz.) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
-            <div>
-              <SignaturePad
-                label="Firma Tecnico (Pierluigi / Costantino)"
-                initialSignature={technicianSignature}
-                onChange={setTechnicianSignature}
-              />
-            </div>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                  Referente Cantiere / Cliente per presa visione (opz.)
-                </label>
-                <input
-                  type="text"
-                  value={clientSignerName}
-                  onChange={(e) => setClientSignerName(e.target.value)}
-                  placeholder="Es. Ing. Dodic / Site Manager Awash..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"
-                />
-              </div>
-              <SignaturePad
-                label="Firma Referente Cantiere (opz.)"
-                initialSignature={clientSignature}
-                onChange={setClientSignature}
-              />
-            </div>
-          </div>
-
-          {/* Footer Actions with PDF Language Switcher (Feature 5) */}
-          <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Feature 5: Language Toggle */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-700">
-                <Globe className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-1" />
-                <button
-                  type="button"
-                  onClick={() => setPdfLang('it')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
-                    pdfLang === 'it'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  🇮🇹 PDF IT
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPdfLang('en')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
-                    pdfLang === 'en'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  🇬🇧 PDF EN
-                </button>
-              </div>
-
+          {/* Clean Sticky Bottom Bar (Mobile-First) */}
+          <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 border-t border-slate-800 bg-slate-950/95 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => downloadDailySiteReportPDF(buildReportObject(), pdfLang)}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition active:scale-95"
+                title="Scarica PDF"
               >
-                <FileDown className="w-4 h-4 text-blue-400" />
-                <span>Scarica PDF ({pdfLang.toUpperCase()})</span>
+                <FileDown className="w-4 h-4 text-blue-400 shrink-0" />
+                <span>PDF {pdfLang.toUpperCase()}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => shareDailySiteReportViaWhatsApp(buildReportObject(), pdfLang)}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-600/50 transition"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-600/50 transition active:scale-95"
+                title="Condividi su WhatsApp"
               >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>WhatsApp ({pdfLang.toUpperCase()})</span>
+                <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="hidden xs:inline">WhatsApp</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="hidden sm:inline-flex px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 transition"
               >
                 Annulla
               </button>
               <button
                 type="submit"
-                className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/40 transition active:scale-95"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/40 transition active:scale-95"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Salva Report Giornaliero</span>
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Salva Report</span>
               </button>
             </div>
           </div>
