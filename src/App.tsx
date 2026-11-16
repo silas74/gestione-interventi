@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { 
-  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory, ProjectTrackingEntry 
+  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory, ProjectTrackingEntry, DailySiteReport 
 } from './types';
 import { 
   fetchInterventions, saveIntervention, deleteIntervention,
   fetchProjects, saveProject, deleteProject,
   fetchUsers, saveUser, deleteUser,
-  getCurrentSession, setCurrentSession, clearCurrentSession
+  getCurrentSession, setCurrentSession, clearCurrentSession,
+  fetchDailySiteReports, saveDailySiteReport, deleteDailySiteReport
 } from './lib/storage';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
 import { StatsCards } from './components/StatsCards';
 import { FilterBar } from './components/FilterBar';
 import { InterventionCard } from './components/InterventionCard';
+import { DailySiteReportsSection } from './components/DailySiteReportsSection';
 import { subscribePwaInstall, canInstallPwa } from './lib/pwa';
-import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock, Wrench, ClipboardList, FileDown, MessageCircle } from 'lucide-react';
+import { FolderKanban, PlusCircle, Inbox, CheckCircle2, AlertCircle, Layers, FileSpreadsheet, Clock, Wrench, ClipboardList, FileDown, MessageCircle, Calendar } from 'lucide-react';
 import { exportInterventionsToExcel } from './lib/excelExport';
 import { verifySessionToken } from './lib/authSecurity';
 
@@ -28,12 +30,14 @@ const ProjectManagementModal = lazy(() => import('./components/ProjectManagement
 const PwaInstallModal = lazy(() => import('./components/PwaInstallModal').then(m => ({ default: m.PwaInstallModal })));
 const BackupRestoreModal = lazy(() => import('./components/BackupRestoreModal').then(m => ({ default: m.BackupRestoreModal })));
 const SmartEmailModal = lazy(() => import('./components/SmartEmailModal').then(m => ({ default: m.SmartEmailModal })));
+const DailySiteReportModal = lazy(() => import('./components/DailySiteReportModal').then(m => ({ default: m.DailySiteReportModal })));
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getCurrentSession());
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [interventions, setInterventions] = useState<InterventionRequest[]>([]);
+  const [dailySiteReports, setDailySiteReports] = useState<DailySiteReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Main View Tab: 'project_work' (Lavori & Azioni Progetto) | 'intervention' (Interventi & Guasti)
@@ -58,6 +62,8 @@ export function App() {
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isSmartEmailModalOpen, setIsSmartEmailModalOpen] = useState(false);
+  const [isDailyReportModalOpen, setIsDailyReportModalOpen] = useState(false);
+  const [editingDailyReport, setEditingDailyReport] = useState<DailySiteReport | null>(null);
   const [canInstall, setCanInstall] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -105,10 +111,12 @@ export function App() {
       const loadedUsers = fetchUsers();
       const loadedProjects = fetchProjects();
       const loadedInterventions = await fetchInterventions();
+      const loadedDailyReports = fetchDailySiteReports();
 
       setUsers(loadedUsers);
       setProjects(loadedProjects);
       setInterventions(loadedInterventions);
+      setDailySiteReports(loadedDailyReports);
 
       const awashProj = loadedProjects.find(
         p =>
@@ -386,11 +394,19 @@ export function App() {
     const isResolved = report.statusOutcome === 'resolved' || (report.statusOutcome as string) === 'risolto';
     const newStatus: InterventionStatus = isResolved ? 'completed' : 'in_progress';
 
+    const prevDaily = item.dailyReports || [];
+    const existingDayIdx = prevDaily.findIndex(d => d.interventionDate === report.interventionDate);
+    const updatedDaily =
+      existingDayIdx >= 0
+        ? prevDaily.map((d, idx) => (idx === existingDayIdx ? report : d))
+        : [report, ...prevDaily];
+
     const updated: InterventionRequest = {
       ...item,
       status: newStatus,
       assignedTechnician: report.technicianName,
       report,
+      dailyReports: updatedDaily,
       updatedAt: new Date().toISOString()
     };
 
@@ -460,6 +476,24 @@ export function App() {
     setInterventions(prev => prev.map(i => i.id === interventionId ? updated : i));
     showToast(`✅ Aggiornato: ${updated.code}`);
   }, [interventions]);
+
+  // Daily Site Reports handlers (Addis / Awash Bank & Projects)
+  const handleSaveDailySiteReport = useCallback((report: DailySiteReport) => {
+    const updated = saveDailySiteReport(report);
+    setDailySiteReports(updated);
+    showToast(`📅 Report giornaliero ${report.code} (${report.date} — ${report.arrivalTime}-${report.departureTime}) salvato!`);
+  }, []);
+
+  const handleDeleteDailySiteReport = useCallback((id: string) => {
+    const updated = deleteDailySiteReport(id);
+    setDailySiteReports(updated);
+    showToast('Report giornaliero eliminato.');
+  }, []);
+
+  const filteredDailySiteReports = useMemo(() => {
+    if (activeProjectId === 'all') return dailySiteReports;
+    return dailySiteReports.filter(r => r.projectId === activeProjectId);
+  }, [dailySiteReports, activeProjectId]);
 
   // Project Summary PDF & WhatsApp (Feature #2)
   const handleDownloadProjectSummaryPDF = async () => {
@@ -1182,15 +1216,29 @@ export function App() {
               </span>
             </div>
 
-            {/* + Aggiungi Lavoro / Azione button directly under Project pills */}
-            <button
-              type="button"
-              onClick={() => setIsNewModalOpen(true)}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border border-rose-300/40"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : '+ Aggiungi Intervento'}</span>
-            </button>
+            {/* + Aggiungi Lavoro / Azione + Report Giornaliero Cantiere buttons directly under Project pills */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingDailyReport(null);
+                  setIsDailyReportModalOpen(true);
+                }}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border border-emerald-300/40"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>+ Report Giornaliero Cantiere (Oggi)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsNewModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition active:scale-95 shrink-0 liquid-glass-btn border border-rose-300/40"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>{activeCategoryTab === 'project_work' ? '+ Aggiungi Lavoro / Azione' : '+ Aggiungi Intervento'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Project Focus Header info */}
@@ -1206,6 +1254,24 @@ export function App() {
             </div>
           )}
         </div>
+
+        {/* 📅 DIARIO GIORNALIERO DI CANTIERE (ARRIVO, PARTENZA, LAVORI FATTI E FOTO) */}
+        <DailySiteReportsSection
+          reports={filteredDailySiteReports}
+          activeProject={activeProjectObj}
+          currentUserName={currentUser.name}
+          onOpenNewReportModal={() => {
+            setEditingDailyReport(null);
+            setIsDailyReportModalOpen(true);
+          }}
+          onOpenEditReportModal={(rep) => {
+            setEditingDailyReport(rep);
+            setIsDailyReportModalOpen(true);
+          }}
+          onQuickSaveReport={handleSaveDailySiteReport}
+          onDeleteReport={handleDeleteDailySiteReport}
+          onPreviewPhoto={handlePreviewPhoto}
+        />
 
         {/* Stats Summary */}
         <StatsCards interventions={filteredInterventions} />
@@ -1526,6 +1592,22 @@ export function App() {
             interventions={interventions}
             projects={projects}
             onExecuteEmailAction={handleExecuteEmailAction}
+          />
+        )}
+
+        {isDailyReportModalOpen && (
+          <DailySiteReportModal
+            isOpen={isDailyReportModalOpen}
+            onClose={() => {
+              setIsDailyReportModalOpen(false);
+              setEditingDailyReport(null);
+            }}
+            projects={visibleProjects.length > 0 ? visibleProjects : projects}
+            defaultProjectId={activeProjectId}
+            currentUserName={currentUser.name}
+            existingReport={editingDailyReport}
+            totalExistingCount={dailySiteReports.length}
+            onSave={handleSaveDailySiteReport}
           />
         )}
       </Suspense>
