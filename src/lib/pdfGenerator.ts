@@ -425,9 +425,11 @@ export async function shareInterventionPDFViaWhatsApp(intervention: Intervention
 
 // ============================================================================
 // DAILY SITE REPORT PDF GENERATOR (FOR ADDIS ABABA / AWASH BANK DAILY LOGS)
+// Supports both Italian ('it') and English ('en') for local clients in Addis
 // ============================================================================
 
-export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
+export function generateDailySiteReportPDF(report: DailySiteReport, lang: 'it' | 'en' = 'it'): jsPDF {
+  const isEn = lang === 'en';
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -443,13 +445,21 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
   doc.setTextColor(250, 204, 21); // yellow-400
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text(`DAILY SITE REPORT — ${report.projectName.toUpperCase()}`, 14, 17);
+  doc.text(
+    isEn
+      ? `DAILY SITE REPORT — ${report.projectName.toUpperCase()}`
+      : `REPORT GIORNALIERO CANTIERE — ${report.projectName.toUpperCase()}`,
+    14,
+    17
+  );
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   doc.setTextColor(203, 213, 225);
   doc.text(
-    `Report Code: ${report.code}   |   Data: ${report.date}   |   Tecnico: ${report.technicianName}   |   Foto: ${(report.photos || []).length}`,
+    isEn
+      ? `Report Code: ${report.code}   |   Date: ${report.date}   |   Engineer: ${report.technicianName}   |   Photos: ${(report.photos || []).length}`
+      : `Codice: ${report.code}   |   Data: ${report.date}   |   Tecnico: ${report.technicianName}   |   Foto: ${(report.photos || []).length}`,
     14,
     27
   );
@@ -470,7 +480,12 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
   };
 
   // Section 1: ORARIO DI ARRIVO, PARTENZA E ORE CANTIERE
-  currentY = drawSectionHeader('1. ORARIO DI ARRIVO E PARTENZA CANTIERE (SITE ATTENDANCE)', currentY);
+  currentY = drawSectionHeader(
+    isEn
+      ? '1. SITE ATTENDANCE & WORKING HOURS (ARRIVAL & DEPARTURE)'
+      : '1. ORARIO DI ARRIVO E PARTENZA CANTIERE (SITE ATTENDANCE)',
+    currentY
+  );
 
   // Highlighted Attendance Box
   doc.setFillColor(236, 253, 245);
@@ -481,17 +496,25 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(6, 95, 70);
-  doc.text(`DATA: ${report.date}`, 18, currentY + 3.5);
-  doc.text(`ARRIVO IN CANTIERE: ${report.arrivalTime || '--:--'}`, 68, currentY + 3.5);
-  doc.text(`USCITA CANTIERE: ${report.departureTime || '--:--'}`, 132, currentY + 3.5);
+  doc.text(`${isEn ? 'DATE' : 'DATA'}: ${report.date}`, 18, currentY + 3.5);
+  doc.text(
+    `${isEn ? 'ARRIVAL TIME' : 'ARRIVO IN CANTIERE'}: ${report.arrivalTime || '--:--'}`,
+    68,
+    currentY + 3.5
+  );
+  doc.text(
+    `${isEn ? 'DEPARTURE TIME' : 'USCITA CANTIERE'}: ${report.departureTime || '--:--'}`,
+    132,
+    currentY + 3.5
+  );
 
   doc.setFontSize(9.5);
   doc.setTextColor(15, 23, 42);
-  doc.text(`Tecnico: ${report.technicianName}`, 18, currentY + 11);
-  doc.text(`Pausa: ${report.breakMinutes || 0} min`, 68, currentY + 11);
+  doc.text(`${isEn ? 'Engineer' : 'Tecnico'}: ${report.technicianName}`, 18, currentY + 11);
+  doc.text(`${isEn ? 'Break' : 'Pausa'}: ${report.breakMinutes || 0} min`, 68, currentY + 11);
   doc.setFont('helvetica', 'bold');
   const durStr = formatReportDuration(report.hoursWorked, report.arrivalTime, report.departureTime, report.breakMinutes);
-  doc.text(`DURATA NETTA LAVORO: ${durStr}`, 132, currentY + 11);
+  doc.text(`${isEn ? 'NET WORK DURATION' : 'DURATA NETTA LAVORO'}: ${durStr}`, 132, currentY + 11);
 
   currentY += 22;
 
@@ -499,14 +522,19 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(30, 41, 59);
-    doc.text(`Zona / Piano / Impianto Cantiere: `, 16, currentY);
+    doc.text(isEn ? 'Site Zone / System / Floor: ' : 'Zona / Piano / Impianto Cantiere: ', 16, currentY);
     doc.setFont('helvetica', 'normal');
     doc.text(report.areaOrFloor, 75, currentY);
     currentY += 7;
   }
 
   // Section 2: LAVORI ESEGUITI OGGI IN CANTIERE
-  currentY = drawSectionHeader('2. RELAZIONE LAVORI ESEGUITI OGGI (WORK PERFORMED TODAY)', currentY);
+  currentY = drawSectionHeader(
+    isEn
+      ? '2. TECHNICAL WORK PERFORMED TODAY ON SITE'
+      : '2. RELAZIONE LAVORI ESEGUITI OGGI IN CANTIERE',
+    currentY
+  );
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   doc.setTextColor(30, 41, 59);
@@ -516,7 +544,12 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
 
   // Section 3: MATERIALI INSTALLATI / USATI
   if (report.materialsUsed && report.materialsUsed.trim()) {
-    currentY = drawSectionHeader('3. MATERIALI E APPARECCHIATURE INSTALLATE / UTILIZZATE', currentY);
+    currentY = drawSectionHeader(
+      isEn
+        ? '3. MATERIALS & EQUIPMENT INSTALLED / USED TODAY'
+        : '3. MATERIALI E APPARECCHIATURE INSTALLATE / UTILIZZATE',
+      currentY
+    );
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     const splitMat = doc.splitTextToSize(report.materialsUsed, pageWidth - 32);
@@ -526,7 +559,12 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
 
   // Section 4: PROBLEMI RISCONTRATI / NOTE TECNICHE
   if (report.issuesFound && report.issuesFound.trim()) {
-    currentY = drawSectionHeader('4. PROBLEMI RISCONTRATI / NOTE DI CANTIERE (ISSUES & NOTES)', currentY);
+    currentY = drawSectionHeader(
+      isEn
+        ? '4. SITE ISSUES, CONSTRAINTS & TECHNICAL NOTES'
+        : '4. PROBLEMI RISCONTRATI / NOTE DI CANTIERE',
+      currentY
+    );
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     const splitIssues = doc.splitTextToSize(report.issuesFound, pageWidth - 32);
@@ -534,9 +572,29 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
     currentY += splitIssues.length * 4.8 + 6;
   }
 
-  // Section 5: PROGRAMMA PER DOMANI
+  // Section 5: MATERIALI MANCANTI / DA PROCURARE
+  if (report.missingMaterials && report.missingMaterials.trim()) {
+    currentY = drawSectionHeader(
+      isEn
+        ? '5. MISSING MATERIALS / ITEMS TO PROCURE ON SITE'
+        : '5. MATERIALI MANCANTI / DA COMPRARE PER IL CANTIERE',
+      currentY
+    );
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const splitMissing = doc.splitTextToSize(report.missingMaterials, pageWidth - 32);
+    doc.text(splitMissing, 16, currentY);
+    currentY += splitMissing.length * 4.8 + 6;
+  }
+
+  // Section 6: PROGRAMMA PER DOMANI
   if (report.nextDayPlan && report.nextDayPlan.trim()) {
-    currentY = drawSectionHeader('5. PROGRAMMA LAVORI PER DOMANI (NEXT DAY PLAN)', currentY);
+    currentY = drawSectionHeader(
+      isEn
+        ? '6. NEXT DAY WORK PLAN (SCHEDULE FOR TOMORROW)'
+        : '6. PROGRAMMA LAVORI PER DOMANI (NEXT DAY PLAN)',
+      currentY
+    );
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     const splitNext = doc.splitTextToSize(report.nextDayPlan, pageWidth - 32);
@@ -567,9 +625,17 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
 
   doc.setFontSize(8.5);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Firma Tecnico (${report.technicianName})`, 16, signatureLineY + 4.5);
   doc.text(
-    `Firma Referente Cantiere (${report.clientSignerName || report.projectName})`,
+    isEn
+      ? `Engineer Signature (${report.technicianName})`
+      : `Firma Tecnico (${report.technicianName})`,
+    16,
+    signatureLineY + 4.5
+  );
+  doc.text(
+    isEn
+      ? `Site Representative Signature (${report.clientSignerName || report.projectName})`
+      : `Firma Referente Cantiere (${report.clientSignerName || report.projectName})`,
     120,
     signatureLineY + 4.5
   );
@@ -577,7 +643,7 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    `Daily Site Report ${report.code} — Progetto ${report.projectName} — Data ${report.date} (${report.arrivalTime} - ${report.departureTime})`,
+    `Daily Site Report ${report.code} — ${report.projectName} — ${report.date} (${report.arrivalTime} - ${report.departureTime})`,
     14,
     285
   );
@@ -585,43 +651,59 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
   // Append all photos taken today
   const mappedPhotos = (report.photos || []).map((p, idx) => ({
     photo: p,
-    badgeLabel: `Foto #${idx + 1} (${report.date})`,
+    badgeLabel: isEn ? `Photo #${idx + 1} (${report.date})` : `Foto #${idx + 1} (${report.date})`,
   }));
 
   appendPhotoGalleryPages(
     doc,
     mappedPhotos,
-    `DOCUMENTAZIONE FOTOGRAFICA DI CANTIERE — ${report.projectName.toUpperCase()} (${report.date})`,
+    isEn
+      ? `SITE PHOTOGRAPHIC DOCUMENTATION — ${report.projectName.toUpperCase()} (${report.date})`
+      : `DOCUMENTAZIONE FOTOGRAFICA DI CANTIERE — ${report.projectName.toUpperCase()} (${report.date})`,
     `Daily Report: ${report.code}`
   );
 
   return doc;
 }
 
-export function downloadDailySiteReportPDF(report: DailySiteReport) {
-  const doc = generateDailySiteReportPDF(report);
+export function downloadDailySiteReportPDF(report: DailySiteReport, lang: 'it' | 'en' = 'it') {
+  const doc = generateDailySiteReportPDF(report, lang);
   const safeProj = report.projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
-  doc.save(`Daily_Report_${safeProj}_${report.date}_${report.code}.pdf`);
+  const langSuffix = lang === 'en' ? '_EN' : '';
+  doc.save(`Daily_Report_${safeProj}_${report.date}_${report.code}${langSuffix}.pdf`);
 }
 
-export async function shareDailySiteReportViaWhatsApp(report: DailySiteReport) {
+export async function shareDailySiteReportViaWhatsApp(report: DailySiteReport, lang: 'it' | 'en' = 'it') {
+  const isEn = lang === 'en';
   const safeProj = report.projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const fileName = `Daily_Report_${safeProj}_${report.date}.pdf`;
-  const doc = generateDailySiteReportPDF(report);
+  const fileName = `Daily_Report_${safeProj}_${report.date}${isEn ? '_EN' : ''}.pdf`;
+  const doc = generateDailySiteReportPDF(report, lang);
   const pdfBlob = doc.output('blob');
 
   const durWhatsApp = formatReportDuration(report.hoursWorked, report.arrivalTime, report.departureTime, report.breakMinutes);
-  const summaryText =
-    `📋 *DAILY SITE REPORT — ${report.projectName.toUpperCase()}*\n` +
-    `📅 Data: *${report.date}* (${report.code})\n` +
-    `👷 Tecnico: ${report.technicianName}\n` +
-    `🕒 Orario Cantiere: *Arrivo ${report.arrivalTime || '--:--'} → Uscita ${report.departureTime || '--:--'}* (${durWhatsApp})\n` +
-    (report.areaOrFloor ? `📍 Zona/Piano: ${report.areaOrFloor}\n` : '') +
-    `\n🛠️ *Lavori eseguiti oggi:*\n${report.workDone}\n` +
-    (report.materialsUsed ? `\n📦 *Materiali usati:* ${report.materialsUsed}\n` : '') +
-    (report.issuesFound ? `\n⚠️ *Note / Problemi:* ${report.issuesFound}\n` : '') +
-    (report.nextDayPlan ? `\n➡️ *Programma domani:* ${report.nextDayPlan}\n` : '') +
-    `\n📸 Foto allegate nel PDF: ${(report.photos || []).length}`;
+  const summaryText = isEn
+    ? `📋 *DAILY SITE REPORT — ${report.projectName.toUpperCase()}*\n` +
+      `📅 Date: *${report.date}* (${report.code})\n` +
+      `👷 Engineer: ${report.technicianName}\n` +
+      `🕒 Site Hours: *Arrival ${report.arrivalTime || '--:--'} → Departure ${report.departureTime || '--:--'}* (${durWhatsApp})\n` +
+      (report.areaOrFloor ? `📍 Zone/System: ${report.areaOrFloor}\n` : '') +
+      `\n🛠️ *Work performed today:*\n${report.workDone}\n` +
+      (report.materialsUsed ? `\n📦 *Materials used:* ${report.materialsUsed}\n` : '') +
+      (report.issuesFound ? `\n⚠️ *Site notes / Issues:* ${report.issuesFound}\n` : '') +
+      (report.missingMaterials ? `\n🛒 *Missing materials to procure:* ${report.missingMaterials}\n` : '') +
+      (report.nextDayPlan ? `\n➡️ *Next day plan:* ${report.nextDayPlan}\n` : '') +
+      `\n📸 Photos attached in PDF: ${(report.photos || []).length}`
+    : `📋 *DAILY SITE REPORT — ${report.projectName.toUpperCase()}*\n` +
+      `📅 Data: *${report.date}* (${report.code})\n` +
+      `👷 Tecnico: ${report.technicianName}\n` +
+      `🕒 Orario Cantiere: *Arrivo ${report.arrivalTime || '--:--'} → Uscita ${report.departureTime || '--:--'}* (${durWhatsApp})\n` +
+      (report.areaOrFloor ? `📍 Zona/Piano: ${report.areaOrFloor}\n` : '') +
+      `\n🛠️ *Lavori eseguiti oggi:*\n${report.workDone}\n` +
+      (report.materialsUsed ? `\n📦 *Materiali usati:* ${report.materialsUsed}\n` : '') +
+      (report.issuesFound ? `\n⚠️ *Note / Problemi:* ${report.issuesFound}\n` : '') +
+      (report.missingMaterials ? `\n🛒 *Materiali mancanti:* ${report.missingMaterials}\n` : '') +
+      (report.nextDayPlan ? `\n➡️ *Programma domani:* ${report.nextDayPlan}\n` : '') +
+      `\n📸 Foto allegate nel PDF: ${(report.photos || []).length}`;
 
   try {
     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
@@ -637,7 +719,7 @@ export async function shareDailySiteReportViaWhatsApp(report: DailySiteReport) {
     if (err?.name === 'AbortError') return;
   }
 
-  downloadDailySiteReportPDF(report);
+  downloadDailySiteReportPDF(report, lang);
   const waUrl = `https://wa.me/?text=${encodeURIComponent(summaryText)}`;
   window.open(waUrl, '_blank', 'noopener,noreferrer');
 }
@@ -645,7 +727,8 @@ export async function shareDailySiteReportViaWhatsApp(report: DailySiteReport) {
 /**
  * Generates and downloads a cumulative Timesheet + Daily Site Reports PDF for all logged days
  */
-export function downloadProjectTimesheetPDF(projectName: string, reports: DailySiteReport[]) {
+export function downloadProjectTimesheetPDF(projectName: string, reports: DailySiteReport[], lang: 'it' | 'en' = 'it') {
+  const isEn = lang === 'en';
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -665,13 +748,21 @@ export function downloadProjectTimesheetPDF(projectName: string, reports: DailyS
     doc.setTextColor(250, 204, 21);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
-    doc.text(`FOGLIO PRESENZE & DIARIO GIORNALIERO CANTIERE: ${projectName.toUpperCase()}`, 14, 15);
+    doc.text(
+      isEn
+        ? `SITE ATTENDANCE TIMESHEET & DAILY LOGS: ${projectName.toUpperCase()}`
+        : `FOGLIO PRESENZE & DIARIO GIORNALIERO CANTIERE: ${projectName.toUpperCase()}`,
+      14,
+      15
+    );
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(203, 213, 225);
     doc.text(
-      `Giornate Lavorate: ${sorted.length}   |   Totale Ore Accumulate: ${totalHours.toFixed(1)} ore   |   Foto Documentate: ${totalPhotos}   |   Pag. ${pageNum}`,
+      isEn
+        ? `Total Days Worked: ${sorted.length}   |   Total Duration: ${formatReportDuration(totalHours)}   |   Photos: ${totalPhotos}   |   Page ${pageNum}`
+        : `Giornate Lavorate: ${sorted.length}   |   Durata Totale: ${formatReportDuration(totalHours)}   |   Foto Documentate: ${totalPhotos}   |   Pag. ${pageNum}`,
       14,
       25
     );
@@ -685,9 +776,16 @@ export function downloadProjectTimesheetPDF(projectName: string, reports: DailyS
   let currentY = 44;
 
   sorted.forEach((r, idx) => {
-    const splitWork = doc.splitTextToSize(`Lavori svolti: ${r.workDone}`, pageWidth - 34);
-    const splitIssues = r.issuesFound ? doc.splitTextToSize(`Note/Problemi: ${r.issuesFound}`, pageWidth - 34) : [];
-    const splitNext = r.nextDayPlan ? doc.splitTextToSize(`Domani: ${r.nextDayPlan}`, pageWidth - 34) : [];
+    const splitWork = doc.splitTextToSize(
+      `${isEn ? 'Work performed' : 'Lavori svolti'}: ${r.workDone}`,
+      pageWidth - 34
+    );
+    const splitIssues = r.issuesFound
+      ? doc.splitTextToSize(`${isEn ? 'Notes/Issues' : 'Note/Problemi'}: ${r.issuesFound}`, pageWidth - 34)
+      : [];
+    const splitNext = r.nextDayPlan
+      ? doc.splitTextToSize(`${isEn ? 'Next day' : 'Domani'}: ${r.nextDayPlan}`, pageWidth - 34)
+      : [];
     const blockH =
       18 +
       splitWork.length * 4.3 +
@@ -710,7 +808,9 @@ export function downloadProjectTimesheetPDF(projectName: string, reports: DailyS
     doc.setTextColor(15, 23, 42);
     const dayDur = formatReportDuration(r.hoursWorked, r.arrivalTime, r.departureTime, r.breakMinutes);
     doc.text(
-      `Giorno #${idx + 1} — Data: ${r.date}  |  Arrivo: ${r.arrivalTime || '--:--'}  |  Uscita: ${r.departureTime || '--:--'}  |  Ore: ${dayDur}  (${r.code})`,
+      isEn
+        ? `Day #${idx + 1} — Date: ${r.date}  |  Arrival: ${r.arrivalTime || '--:--'}  |  Departure: ${r.departureTime || '--:--'}  |  Hours: ${dayDur}  (${r.code})`
+        : `Giorno #${idx + 1} — Data: ${r.date}  |  Arrivo: ${r.arrivalTime || '--:--'}  |  Uscita: ${r.departureTime || '--:--'}  |  Ore: ${dayDur}  (${r.code})`,
       16,
       currentY + 1.5
     );
