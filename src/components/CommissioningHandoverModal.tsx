@@ -163,7 +163,7 @@ export const CommissioningHandoverModal: React.FC<CommissioningHandoverModalProp
                 📜 Verbale Finale di Collaudo e Consegna Impianti — {projectName}
               </h3>
               <p className="text-xs text-slate-300">
-                Genera il documento ufficiale di fine collaudo dai tuoi report giornalieri e dalle checklist ({aiSettings.provider === 'deepseek' ? 'DeepSeek AI' : `Ollama: ${aiSettings.ollamaModel}`})
+                Genera il documento ufficiale di fine collaudo dai tuoi report giornalieri e dalle checklist (DeepSeek AI: {aiSettings.deepseekModel})
               </p>
             </div>
           </div>
