@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { 
-  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory, ProjectTrackingEntry, DailySiteReport 
+  InterventionRequest, InterventionStatus, InterventionPriority, UserAccount, Project, TechnicianReport, ClientFeedback, DefectPhoto, RecordCategory, ProjectTrackingEntry, DailySiteReport, SiteShoppingItem 
 } from './types';
 import { 
   fetchInterventions, saveIntervention, deleteIntervention,
   fetchProjects, saveProject, deleteProject,
   fetchUsers, saveUser, deleteUser,
   getCurrentSession, setCurrentSession, clearCurrentSession,
-  fetchDailySiteReports, saveDailySiteReport, deleteDailySiteReport
+  fetchDailySiteReports, saveDailySiteReport, deleteDailySiteReport,
+  fetchSiteShoppingList, saveSiteShoppingItem, toggleSiteShoppingItem, deleteSiteShoppingItem
 } from './lib/storage';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
@@ -38,6 +39,7 @@ export function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [interventions, setInterventions] = useState<InterventionRequest[]>([]);
   const [dailySiteReports, setDailySiteReports] = useState<DailySiteReport[]>([]);
+  const [shoppingList, setShoppingList] = useState<SiteShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Main View Tab: 'project_work' (Lavori & Azioni Progetto) | 'intervention' (Interventi & Guasti)
@@ -112,11 +114,13 @@ export function App() {
       const loadedProjects = fetchProjects();
       const loadedInterventions = await fetchInterventions();
       const loadedDailyReports = fetchDailySiteReports();
+      const loadedShopping = fetchSiteShoppingList();
 
       setUsers(loadedUsers);
       setProjects(loadedProjects);
       setInterventions(loadedInterventions);
       setDailySiteReports(loadedDailyReports);
+      setShoppingList(loadedShopping);
 
       const awashProj = loadedProjects.find(
         p =>
@@ -478,11 +482,54 @@ export function App() {
   }, [interventions]);
 
   // Daily Site Reports handlers (Addis / Awash Bank & Projects)
-  const handleSaveDailySiteReport = useCallback((report: DailySiteReport) => {
+  const handleSaveDailySiteReport = useCallback(async (
+    report: DailySiteReport,
+    completedTaskIds?: string[],
+    newMissingMaterialText?: string
+  ) => {
     const updated = saveDailySiteReport(report);
     setDailySiteReports(updated);
+
+    // Feature 4: Mark checked project tasks as completed & log tracking entry
+    if (completedTaskIds && completedTaskIds.length > 0) {
+      for (const taskId of completedTaskIds) {
+        const target = interventions.find(i => i.id === taskId);
+        if (target && target.status !== 'completed' && target.status !== 'completato') {
+          const updatedTask: InterventionRequest = {
+            ...target,
+            status: 'completed',
+            lastActionDate: report.date,
+            whatIDidSummary: `Completato nel Report Giornaliero ${report.code} (${report.date}): ${report.workDone}`,
+            updatedAt: new Date().toISOString(),
+          };
+          await saveIntervention(updatedTask);
+          setInterventions(prev => prev.map(i => (i.id === taskId ? updatedTask : i)));
+        }
+      }
+    }
+
+    // Feature 6: Sync missing materials into persistent shopping list if new
+    if (newMissingMaterialText && newMissingMaterialText.trim()) {
+      const exists = shoppingList.some(
+        s => s.projectId === report.projectId && s.text.toLowerCase() === newMissingMaterialText.trim().toLowerCase()
+      );
+      if (!exists) {
+        const newShopItem: SiteShoppingItem = {
+          id: `shop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          projectId: report.projectId,
+          projectName: report.projectName,
+          text: newMissingMaterialText.trim(),
+          zone: report.areaOrFloor,
+          bought: false,
+          createdAt: new Date().toISOString(),
+        };
+        const nextShop = saveSiteShoppingItem(newShopItem);
+        setShoppingList(nextShop);
+      }
+    }
+
     showToast(`📅 Report giornaliero ${report.code} (${report.date} — ${report.arrivalTime}-${report.departureTime}) salvato!`);
-  }, []);
+  }, [interventions, shoppingList]);
 
   const handleDeleteDailySiteReport = useCallback((id: string) => {
     const updated = deleteDailySiteReport(id);
@@ -490,10 +537,38 @@ export function App() {
     showToast('Report giornaliero eliminato.');
   }, []);
 
+  const handleAddShoppingItem = useCallback((text: string, zone?: string) => {
+    const projObj = projects.find(p => p.id === activeProjectId) || projects.find(p => p.id === 'proj-awash-bank') || projects[0];
+    const newItem: SiteShoppingItem = {
+      id: `shop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      projectId: projObj ? projObj.id : 'proj-awash-bank',
+      projectName: projObj ? projObj.name : 'Awash Bank',
+      text,
+      zone,
+      bought: false,
+      createdAt: new Date().toISOString(),
+    };
+    setShoppingList(saveSiteShoppingItem(newItem));
+    showToast(`🛒 Aggiunto alla lista: "${text}"`);
+  }, [projects, activeProjectId]);
+
+  const handleToggleShoppingItem = useCallback((id: string) => {
+    setShoppingList(toggleSiteShoppingItem(id));
+  }, []);
+
+  const handleDeleteShoppingItem = useCallback((id: string) => {
+    setShoppingList(deleteSiteShoppingItem(id));
+  }, []);
+
   const filteredDailySiteReports = useMemo(() => {
     if (activeProjectId === 'all') return dailySiteReports;
     return dailySiteReports.filter(r => r.projectId === activeProjectId);
   }, [dailySiteReports, activeProjectId]);
+
+  const filteredShoppingList = useMemo(() => {
+    if (activeProjectId === 'all') return shoppingList;
+    return shoppingList.filter(s => s.projectId === activeProjectId);
+  }, [shoppingList, activeProjectId]);
 
   // Project Summary PDF & WhatsApp (Feature #2)
   const handleDownloadProjectSummaryPDF = async () => {
@@ -1258,6 +1333,7 @@ export function App() {
         {/* 📅 DIARIO GIORNALIERO DI CANTIERE (ARRIVO, PARTENZA, LAVORI FATTI E FOTO) */}
         <DailySiteReportsSection
           reports={filteredDailySiteReports}
+          shoppingList={filteredShoppingList}
           activeProject={activeProjectObj}
           currentUserName={currentUser.name}
           onOpenNewReportModal={() => {
@@ -1270,6 +1346,9 @@ export function App() {
           }}
           onQuickSaveReport={handleSaveDailySiteReport}
           onDeleteReport={handleDeleteDailySiteReport}
+          onAddShoppingItem={handleAddShoppingItem}
+          onToggleShoppingItem={handleToggleShoppingItem}
+          onDeleteShoppingItem={handleDeleteShoppingItem}
           onPreviewPhoto={handlePreviewPhoto}
         />
 
@@ -1606,6 +1685,8 @@ export function App() {
             defaultProjectId={activeProjectId}
             currentUserName={currentUser.name}
             existingReport={editingDailyReport}
+            allDailyReports={dailySiteReports}
+            projectInterventions={interventions}
             totalExistingCount={dailySiteReports.length}
             onSave={handleSaveDailySiteReport}
           />
