@@ -707,11 +707,11 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                     key={photo.id}
                     className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 flex flex-col"
                   >
-                    <div className="relative aspect-video bg-slate-950">
+                    <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
                       <img
                         src={photo.url}
                         alt={photo.name}
-                        className="w-full h-full object-cover"
+                        className="max-w-full max-h-full w-auto h-auto object-contain"
                       />
                       <span className="absolute top-1.5 left-1.5 bg-black/75 text-[10px] font-mono font-bold text-white px-2 py-0.5 rounded border border-white/20">
                         Foto #{idx + 1}
