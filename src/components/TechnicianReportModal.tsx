@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, 
   PhoneCall, MessageCircle, Share2, Tag, Mic, MicOff,
-  Camera, Upload, Clipboard, Trash2, Image as ImageIcon, LogIn, LogOut, MapPin, ArrowRight
+  Camera, Upload, Clipboard, Trash2, Image as ImageIcon, LogIn, LogOut, MapPin, ArrowRight, Pencil
 } from 'lucide-react';
 import { InterventionRequest, InterventionStatus, TechnicianReport, DefectPhoto } from '../types';
 import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
@@ -11,6 +11,7 @@ import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
 import { COMMON_MATERIALS } from '../lib/materialsData';
 import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
 import { calculateNetHours } from './DailySiteReportModal';
+import { PhotoAnnotatorModal } from './PhotoAnnotatorModal';
 
 interface TechnicianReportModalProps {
   isOpen: boolean;
@@ -78,20 +79,30 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
   const [reportPhotos, setReportPhotos] = useState<DefectPhoto[]>(
     existingReport?.reportPhotos || []
   );
+  const [autoStampWatermark, setAutoStampWatermark] = useState<boolean>(true);
+  const [annotatingPhoto, setAnnotatingPhoto] = useState<DefectPhoto | null>(null);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const buildWatermarkString = () => {
+    const projName = intervention.projectName || intervention.siteName || 'Awash Bank';
+    const zoneStr = areaOrFloor.trim() ? ` • ${areaOrFloor.trim()}` : '';
+    const timeNow = new Date().toTimeString().slice(0, 5);
+    return `${projName}${zoneStr} • ${interventionDate} ${timeNow}`;
+  };
 
   const handleAddPhotos = async (files: (File | Blob)[], sourceLabel?: string) => {
     if (!files || files.length === 0) return;
     setIsProcessingPhotos(true);
     try {
       const processedList: DefectPhoto[] = [];
+      const stampText = autoStampWatermark ? buildWatermarkString() : undefined;
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const defaultName = sourceLabel ? `${sourceLabel}_${i + 1}.jpg` : undefined;
-        const photo = await compressAndProcessImage(file, defaultName);
+        const photo = await compressAndProcessImage(file, defaultName, 1280, 0.84, stampText);
         processedList.push(photo);
       }
       setReportPhotos(prev => [...prev, ...processedList]);
@@ -875,15 +886,26 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
                         #{index + 1}
                       </div>
 
-                      {/* Delete button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveReportPhoto(photo.id)}
-                        className="absolute top-1 right-1 p-1 rounded-lg bg-rose-600/90 text-white hover:bg-rose-500 opacity-90 group-hover:opacity-100 transition shadow"
-                        title="Rimuovi foto"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {/* Annotate & Delete buttons */}
+                      <div className="absolute top-1 right-1 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setAnnotatingPhoto(photo)}
+                          className="px-2 py-0.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-[10px] font-extrabold shadow flex items-center gap-1"
+                          title="Disegna cerchi, frecce o testo sulla foto"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Segna</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveReportPhoto(photo.id)}
+                          className="p-1 rounded-lg bg-rose-600/90 text-white hover:bg-rose-500 opacity-90 group-hover:opacity-100 transition shadow"
+                          title="Rimuovi foto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="p-1.5 bg-slate-950">
@@ -967,6 +989,19 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
         </form>
 
       </div>
+
+      {annotatingPhoto && (
+        <PhotoAnnotatorModal
+          photo={annotatingPhoto}
+          defaultWatermarkText={buildWatermarkString()}
+          onClose={() => setAnnotatingPhoto(null)}
+          onSaveAnnotated={(photoId, newDataUrl, newCaption) => {
+            setReportPhotos(prev =>
+              prev.map(p => (p.id === photoId ? { ...p, url: newDataUrl, caption: newCaption ?? p.caption } : p))
+            );
+          }}
+        />
+      )}
     </div>
   );
 };
