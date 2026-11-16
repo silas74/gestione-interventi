@@ -66,8 +66,24 @@ export function App() {
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isSmartEmailModalOpen, setIsSmartEmailModalOpen] = useState(false);
-  const [isDailyReportModalOpen, setIsDailyReportModalOpen] = useState(false);
+  const [isDailyReportModalOpen, setIsDailyReportModalOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('interventi_daily_modal_open_v1') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [editingDailyReport, setEditingDailyReport] = useState<DailySiteReport | null>(null);
+
+  useEffect(() => {
+    try {
+      if (isDailyReportModalOpen) {
+        localStorage.setItem('interventi_daily_modal_open_v1', 'true');
+      } else {
+        localStorage.removeItem('interventi_daily_modal_open_v1');
+      }
+    } catch {}
+  }, [isDailyReportModalOpen]);
   const [isAiSettingsModalOpen, setIsAiSettingsModalOpen] = useState(false);
   const [isCommissioningModalOpen, setIsCommissioningModalOpen] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
