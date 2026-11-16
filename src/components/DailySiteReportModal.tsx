@@ -37,12 +37,11 @@ interface DailySiteReportModalProps {
 }
 
 const AWASH_QUICK_ZONES = [
-  'Parking Area — Impianto CO',
-  'Sistemi Urmet / Videocitofonia',
-  'Quadri Elettrici & Cablaggio',
-  'Sala Tecnica / UPS & AVR',
-  'Piani Uffici / Automazione',
-  'Collaudo & Commissioning',
+  'Parking area LPR',
+  'Parking area CO',
+  'Solar system',
+  'CCTV',
+  'Main Power',
 ];
 
 export function calculateNetHours(arrival: string, departure: string, breakMins: number): number | null {
@@ -508,7 +507,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
               type="text"
               value={areaOrFloor}
               onChange={(e) => setAreaOrFloor(e.target.value)}
-              placeholder="Es. Parking Area Piano -1 / Sala Quadri / Urmet Piano 3..."
+              placeholder="Es. Parking area LPR, Parking area CO, Solar system, CCTV, Main Power..."
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
