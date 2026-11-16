@@ -28,19 +28,60 @@ function formatReportDuration(
 }
 
 /**
- * Helper to render a multi-page photo gallery appendix in any jsPDF document
+ * Helper to render a multi-page photo gallery appendix in any jsPDF document.
+ * Automatically pairs 'before' (PRIMA) and 'after' (DOPO) photos side-by-side on the same row!
  */
 function appendPhotoGalleryPages(
   doc: jsPDF,
   photos: { photo: DefectPhoto; badgeLabel: string }[],
   headerTitle: string,
-  footerCode: string
+  footerCode: string,
+  isEn = false
 ) {
   if (!photos || photos.length === 0) return;
 
+  // Separate 'before', 'after', and 'normal' photos so PRIMA & DOPO are placed side-by-side in pairs
+  const beforeList = photos.filter((p) => p.photo.stage === 'before');
+  const afterList = photos.filter((p) => p.photo.stage === 'after');
+  const normalList = photos.filter((p) => !p.photo.stage || p.photo.stage === 'normal');
+
+  const orderedGrid: { photo: DefectPhoto; badgeLabel: string; isPairedRow?: boolean }[] = [];
+  const maxPairs = Math.max(beforeList.length, afterList.length);
+
+  for (let i = 0; i < maxPairs; i++) {
+    const bItem = beforeList[i];
+    const aItem = afterList[i];
+    if (bItem && aItem) {
+      orderedGrid.push({
+        ...bItem,
+        badgeLabel: isEn ? `BEFORE #${i + 1}` : `PRIMA #${i + 1}`,
+        isPairedRow: true,
+      });
+      orderedGrid.push({
+        ...aItem,
+        badgeLabel: isEn ? `AFTER #${i + 1}` : `DOPO #${i + 1}`,
+        isPairedRow: true,
+      });
+    } else if (bItem) {
+      orderedGrid.push({
+        ...bItem,
+        badgeLabel: isEn ? `BEFORE #${i + 1}` : `PRIMA #${i + 1}`,
+      });
+    } else if (aItem) {
+      orderedGrid.push({
+        ...aItem,
+        badgeLabel: isEn ? `AFTER #${i + 1}` : `DOPO #${i + 1}`,
+      });
+    }
+  }
+
+  normalList.forEach((nItem) => {
+    orderedGrid.push(nItem);
+  });
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const photosPerPage = 6;
-  const totalPhotoPages = Math.ceil(photos.length / photosPerPage);
+  const totalPhotoPages = Math.ceil(orderedGrid.length / photosPerPage);
 
   for (let pIdx = 0; pIdx < totalPhotoPages; pIdx++) {
     doc.addPage();
@@ -63,7 +104,7 @@ function appendPhotoGalleryPages(
     const boxWidth = 85;
     const boxHeight = 56;
 
-    const pageSlice = photos.slice(pIdx * photosPerPage, (pIdx + 1) * photosPerPage);
+    const pageSlice = orderedGrid.slice(pIdx * photosPerPage, (pIdx + 1) * photosPerPage);
 
     pageSlice.forEach((entry, idx) => {
       const col = idx % 2;
@@ -72,11 +113,21 @@ function appendPhotoGalleryPages(
         currentPhotoY += 74;
       }
 
+      const stage = entry.photo.stage || 'normal';
+
       try {
-        // Light neutral frame so portrait & landscape photos stay aligned
+        // Frame with stage-specific border color (Red for PRIMA, Green for DOPO, Slate for normal)
         doc.setFillColor(248, 250, 252);
-        doc.setDrawColor(203, 213, 225);
-        doc.setLineWidth(0.3);
+        if (stage === 'before') {
+          doc.setDrawColor(225, 29, 72); // rose-600
+          doc.setLineWidth(0.7);
+        } else if (stage === 'after') {
+          doc.setDrawColor(16, 185, 129); // emerald-500
+          doc.setLineWidth(0.7);
+        } else {
+          doc.setDrawColor(203, 213, 225);
+          doc.setLineWidth(0.3);
+        }
         doc.rect(x, currentPhotoY, boxWidth, boxHeight, 'FD');
 
         // Calculate proportional dimensions preserving original aspect ratio
@@ -91,12 +142,56 @@ function appendPhotoGalleryPages(
 
         doc.addImage(entry.photo.url, 'JPEG', drawX, drawY, drawW, drawH);
 
+        // Stage ribbon badge on top-left corner of the photo box
+        if (stage === 'before' || stage === 'after') {
+          if (stage === 'before') {
+            doc.setFillColor(225, 29, 72); // rose-600
+          } else {
+            doc.setFillColor(5, 150, 105); // emerald-600
+          }
+          doc.rect(x, currentPhotoY, 34, 6, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(255, 255, 255);
+          const stageBannerText =
+            stage === 'before'
+              ? isEn
+                ? 'BEFORE WORK'
+                : 'PRIMA'
+              : isEn
+              ? 'AFTER WORK'
+              : 'DOPO';
+          doc.text(stageBannerText, x + 2, currentPhotoY + 4.2);
+        }
+
+        // Draw arrow '>>>' between PRIMA (col 0) and DOPO (col 1) when paired side-by-side
+        if (
+          col === 0 &&
+          stage === 'before' &&
+          pageSlice[idx + 1] &&
+          pageSlice[idx + 1].photo.stage === 'after'
+        ) {
+          doc.setFillColor(15, 23, 42);
+          doc.roundedRect(100.5, currentPhotoY + boxHeight / 2 - 4, 8, 8, 1.5, 1.5, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.setTextColor(250, 204, 21);
+          doc.text('>>', 102.2, currentPhotoY + boxHeight / 2 + 1);
+        }
+
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
-        doc.setTextColor(30, 41, 59);
+        if (stage === 'before') {
+          doc.setTextColor(190, 18, 60);
+        } else if (stage === 'after') {
+          doc.setTextColor(4, 120, 87);
+        } else {
+          doc.setTextColor(30, 41, 59);
+        }
+
         const captionText = entry.photo.caption
           ? `${entry.badgeLabel}: ${entry.photo.caption}`
-          : `${entry.badgeLabel}: ${entry.photo.name || 'Foto cantiere'}`;
+          : `${entry.badgeLabel}: ${entry.photo.name || (isEn ? 'Site photo' : 'Foto cantiere')}`;
         const splitCap = doc.splitTextToSize(captionText, boxWidth);
         doc.text(splitCap.slice(0, 2), x, currentPhotoY + boxHeight + 4.2);
       } catch (err) {
@@ -108,7 +203,7 @@ function appendPhotoGalleryPages(
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `${footerCode} | Allegato Fotografico Cantiere | Pagina Foto ${pIdx + 1} di ${totalPhotoPages}`,
+      `${footerCode} | ${isEn ? 'Site Photo Appendix' : 'Allegato Fotografico Cantiere'} | ${isEn ? 'Page' : 'Pagina Foto'} ${pIdx + 1}/${totalPhotoPages}`,
       14,
       286
     );
@@ -660,7 +755,8 @@ export function generateDailySiteReportPDF(report: DailySiteReport, lang: 'it' |
     isEn
       ? `SITE PHOTOGRAPHIC DOCUMENTATION — ${report.projectName.toUpperCase()} (${report.date})`
       : `DOCUMENTAZIONE FOTOGRAFICA DI CANTIERE — ${report.projectName.toUpperCase()} (${report.date})`,
-    `Daily Report: ${report.code}`
+    `Daily Report: ${report.code}`,
+    isEn
   );
 
   return doc;
