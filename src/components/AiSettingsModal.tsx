@@ -4,22 +4,18 @@ import {
   CheckCircle2,
   Sparkles,
   Key,
-  Server,
   RefreshCw,
   Eye,
   EyeOff,
   AlertCircle,
-  Cpu,
   Cloud,
   Wallet,
 } from 'lucide-react';
 import {
   AiSettings,
-  AiProvider,
   DeepSeekBalanceResponse,
   getAiSettings,
   saveAiSettings,
-  fetchLocalOllamaModels,
   fetchDeepSeekBalance,
   callAiCompletion,
 } from '../lib/aiService';
@@ -38,7 +34,6 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
   if (!isOpen) return null;
 
   const initial = getAiSettings();
-  const [provider, setProvider] = useState<AiProvider>(initial.provider);
   const [deepseekApiKey, setDeepseekApiKey] = useState<string>(initial.deepseekApiKey);
   const [deepseekBaseUrl, setDeepseekBaseUrl] = useState<string>(
     initial.deepseekBaseUrl || 'https://api.deepseek.com'
@@ -46,16 +41,8 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
   const [deepseekModel, setDeepseekModel] = useState<string>(
     initial.deepseekModel || 'deepseek-chat'
   );
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>(
-    initial.ollamaBaseUrl || 'http://127.0.0.1:11434'
-  );
-  const [ollamaModel, setOllamaModel] = useState<string>(
-    initial.ollamaModel === 'llama3.2' ? 'qwen2.5:1.5b' : initial.ollamaModel || 'qwen2.5:1.5b'
-  );
 
   const [showKey, setShowKey] = useState(false);
-  const [detectedOllamaModels, setDetectedOllamaModels] = useState<string[]>([]);
-  const [isDetectingOllama, setIsDetectingOllama] = useState(false);
   const [deepseekBalance, setDeepseekBalance] = useState<DeepSeekBalanceResponse | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
@@ -63,12 +50,10 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
-    if (provider === 'ollama') {
-      handleDetectOllamaModels(false);
-    } else if (provider === 'deepseek' && deepseekApiKey.trim().length > 8) {
+    if (deepseekApiKey.trim().length > 8) {
       handleCheckDeepSeekBalance(false);
     }
-  }, [provider]);
+  }, []);
 
   const handleCheckDeepSeekBalance = async (showAlertOnError = true) => {
     if (!deepseekApiKey.trim()) {
@@ -91,47 +76,11 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
     }
   };
 
-  const handleDetectOllamaModels = async (showAlertOnError = true) => {
-    setIsDetectingOllama(true);
-    setTestResult(null);
-    try {
-      const models = await fetchLocalOllamaModels(ollamaBaseUrl);
-      setDetectedOllamaModels(models);
-      if (models.length > 0 && !models.includes(ollamaModel)) {
-        setOllamaModel(models[0]);
-      }
-      if (models.length > 0) {
-        setTestResult({
-          ok: true,
-          msg: `Trovati ${models.length} modelli Ollama sul PC: ${models.join(', ')}`,
-        });
-      } else if (showAlertOnError) {
-        setTestResult({
-          ok: false,
-          msg: 'Connesso a Ollama, ma nessun modello trovato (esegui "ollama pull llama3.2" nel terminale).',
-        });
-      }
-    } catch (err: any) {
-      if (showAlertOnError) {
-        setTestResult({
-          ok: false,
-          msg:
-            err?.message ||
-            'Impossibile connettersi a Ollama su localhost:11434. Assicurati che Ollama sia avviato sul PC.',
-        });
-      }
-    } finally {
-      setIsDetectingOllama(false);
-    }
-  };
-
   const buildCurrentSettings = (): AiSettings => ({
-    provider,
+    provider: 'deepseek',
     deepseekApiKey: deepseekApiKey.trim(),
     deepseekBaseUrl: deepseekBaseUrl.trim() || 'https://api.deepseek.com',
     deepseekModel: deepseekModel.trim() || 'deepseek-chat',
-    ollamaBaseUrl: ollamaBaseUrl.trim() || 'http://localhost:11434',
-    ollamaModel: ollamaModel.trim() || 'llama3.2',
   });
 
   const handleTestConnection = async () => {
@@ -145,19 +94,15 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
         'Reply with the exact phrase: OK_CONNECTED',
         0.1
       );
-      if (provider === 'deepseek') {
-        handleCheckDeepSeekBalance(false);
-      }
+      handleCheckDeepSeekBalance(false);
       setTestResult({
         ok: true,
-        msg: `Connessione riuscita (${
-          provider === 'deepseek' ? `DeepSeek: ${deepseekModel}` : `Ollama: ${ollamaModel}`
-        })! Risposta: "${reply.slice(0, 60)}"`,
+        msg: `Connessione riuscita (DeepSeek: ${deepseekModel})! Risposta: "${reply.slice(0, 60)}"`,
       });
     } catch (err: any) {
       setTestResult({
         ok: false,
-        msg: err?.message || 'Errore durante il test di connessione.',
+        msg: err?.message || 'Errore durante il test di connessione DeepSeek.',
       });
     } finally {
       setIsTesting(false);
@@ -183,10 +128,10 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-white">
-                🤖 Impostazioni AI (DeepSeek API & Ollama Locale)
+                🤖 Impostazioni AI — DeepSeek Cloud API
               </h3>
               <p className="text-xs text-slate-300">
-                Configura il motore AI per formattare i report, tradurre in Inglese e generare i Verbali di Collaudo
+                Configura la tua API Key DeepSeek e controlla la quota rimasta per report, traduzioni e verbali
               </p>
             </div>
           </div>
@@ -201,328 +146,160 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
 
         {/* Body */}
         <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
-          {/* Provider Switcher */}
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-2">
-              Seleziona Motore AI da utilizzare:
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setProvider('deepseek');
-                  setTestResult(null);
-                }}
-                className={`p-3 rounded-xl border text-left transition flex items-start gap-2.5 ${
-                  provider === 'deepseek'
-                    ? 'bg-blue-600/25 border-blue-400 text-white shadow-md shadow-blue-950/50'
-                    : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Cloud className={`w-5 h-5 shrink-0 mt-0.5 ${provider === 'deepseek' ? 'text-blue-400' : 'text-slate-500'}`} />
-                <div>
-                  <div className="text-xs font-extrabold">☁️ DeepSeek Cloud API</div>
-                  <div className="text-[11px] opacity-80 mt-0.5">
-                    Ideale su smartphone e PC ovunque (DeepSeek-V3 / R1)
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setProvider('ollama');
-                  setTestResult(null);
-                }}
-                className={`p-3 rounded-xl border text-left transition flex items-start gap-2.5 ${
-                  provider === 'ollama'
-                    ? 'bg-emerald-600/25 border-emerald-400 text-white shadow-md shadow-emerald-950/50'
-                    : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Cpu className={`w-5 h-5 shrink-0 mt-0.5 ${provider === 'ollama' ? 'text-emerald-400' : 'text-slate-500'}`} />
-                <div>
-                  <div className="text-xs font-extrabold">💻 Ollama Locale sul PC</div>
-                  <div className="text-[11px] opacity-80 mt-0.5">
-                    100% Gratuito e Offline usando i modelli installati sul tuo computer
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-
           {/* DeepSeek Configuration Panel */}
-          {provider === 'deepseek' && (
-            <div className="p-4 rounded-xl bg-slate-950/80 border border-blue-500/40 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-blue-300 flex items-center gap-1.5">
-                  <Key className="w-4 h-4 text-blue-400" />
-                  <span>Configurazione DeepSeek API</span>
-                </span>
-                <a
-                  href="https://platform.deepseek.com/api_keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 underline"
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-blue-500/40 space-y-3.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-extrabold text-blue-300 flex items-center gap-1.5">
+                <Cloud className="w-4 h-4 text-blue-400" />
+                <span>☁️ Configurazione DeepSeek Cloud API</span>
+              </span>
+              <a
+                href="https://platform.deepseek.com/api_keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 underline"
+              >
+                Ottieni API Key su platform.deepseek.com ↗
+              </a>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-blue-400" />
+                <span>DeepSeek API Key (`sk-...`) *</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={deepseekApiKey}
+                  onChange={(e) => setDeepseekApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-10 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
-                  Ottieni API Key su platform.deepseek.com ↗
-                </a>
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                🔒 La chiave viene salvata esclusivamente nella memoria locale di questo dispositivo (`localStorage`) e non viene mai caricata su GitHub.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Modello DeepSeek
+                </label>
+                <select
+                  value={deepseekModel}
+                  onChange={(e) => setDeepseekModel(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-blue-400"
+                >
+                  <option value="deepseek-chat">deepseek-chat (DeepSeek-V3 — Veloce, Consigliato)</option>
+                  <option value="deepseek-reasoner">deepseek-reasoner (DeepSeek-R1 — Ragionamento)</option>
+                </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">
-                  DeepSeek API Key (`sk-...`) *
+                  Endpoint URL
                 </label>
-                <div className="relative">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={deepseekApiKey}
-                    onChange={(e) => setDeepseekApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-10 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                  >
-                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  🔒 La chiave viene salvata esclusivamente nella memoria locale di questo dispositivo (`localStorage`) e non viene mai caricata su GitHub.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    Modello DeepSeek
-                  </label>
-                  <select
-                    value={deepseekModel}
-                    onChange={(e) => setDeepseekModel(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-blue-400"
-                  >
-                    <option value="deepseek-chat">deepseek-chat (DeepSeek-V3 — Veloce, Consigliato)</option>
-                    <option value="deepseek-reasoner">deepseek-reasoner (DeepSeek-R1 — Ragionamento)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    Endpoint URL
-                  </label>
-                  <input
-                    type="text"
-                    value={deepseekBaseUrl}
-                    onChange={(e) => setDeepseekBaseUrl(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-400"
-                  />
-                </div>
-              </div>
-
-              {/* DeepSeek Remaining Quota / Balance Box */}
-              <div className="p-3 rounded-xl bg-slate-900/90 border border-blue-500/30 space-y-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
-                    <Wallet className="w-4 h-4 text-amber-400" />
-                    <span>💰 Quota Rimasta / Credito Residuo DeepSeek</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCheckDeepSeekBalance(true)}
-                    disabled={isLoadingBalance}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 text-[11px] font-bold transition"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingBalance ? 'animate-spin' : ''}`} />
-                    <span>{isLoadingBalance ? 'Verifica...' : 'Aggiorna Quota Rimasta'}</span>
-                  </button>
-                </div>
-
-                {balanceError && (
-                  <p className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-lg px-2.5 py-1.5">
-                    ⚠️ {balanceError}
-                  </p>
-                )}
-
-                {deepseekBalance ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                          deepseekBalance.is_available
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        }`}
-                      >
-                        {deepseekBalance.is_available ? '🟢 Credito Attivo e Disponibile' : '🔴 Credito Esaurito'}
-                      </span>
-                    </div>
-
-                    {deepseekBalance.balance_infos.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {deepseekBalance.balance_infos.map((b, idx) => {
-                          const totalNum = parseFloat(b.total_balance) || 0;
-                          const estimatedReports = Math.floor(totalNum / 0.0005);
-                          const symbol = b.currency === 'USD' ? '$' : b.currency === 'CNY' ? '¥' : b.currency;
-                          return (
-                            <div
-                              key={idx}
-                              className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between"
-                            >
-                              <div className="flex items-baseline justify-between">
-                                <span className="text-[11px] text-slate-400 font-semibold">
-                                  Saldo Totale ({b.currency}):
-                                </span>
-                                <span className="text-base font-extrabold text-emerald-400 font-mono">
-                                  {symbol} {b.total_balance} {b.currency}
-                                </span>
-                              </div>
-                              <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                                <span>Ricaricato: {symbol}{b.topped_up_balance}</span>
-                                <span>Bonus: {symbol}{b.granted_balance}</span>
-                              </div>
-                              {totalNum > 0 && (
-                                <div className="mt-1 text-[10px] text-blue-300 font-semibold">
-                                  📊 Autonomia stimata: ~{estimatedReports.toLocaleString('it-IT')} report cantiere
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-slate-400">Nessun dettaglio valuta restituito dall'API.</p>
-                    )}
-                  </div>
-                ) : (
-                  !balanceError && (
-                    <p className="text-[11px] text-slate-400">
-                      Inserisci la tua API Key DeepSeek e clicca su <strong>"Aggiorna Quota Rimasta"</strong> per vedere il saldo in dollari/valuta e il numero stimato di report generabili.
-                    </p>
-                  )
-                )}
+                <input
+                  type="text"
+                  value={deepseekBaseUrl}
+                  onChange={(e) => setDeepseekBaseUrl(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-400"
+                />
               </div>
             </div>
-          )}
 
-          {/* Local Ollama Configuration Panel */}
-          {provider === 'ollama' && (
-            <div className="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/40 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-xs font-extrabold text-emerald-300 flex items-center gap-1.5">
-                  <Server className="w-4 h-4 text-emerald-400" />
-                  <span>Configurazione Ollama Locale (sul tuo PC)</span>
+            {/* DeepSeek Remaining Quota / Balance Box */}
+            <div className="p-3.5 rounded-xl bg-slate-900/95 border border-amber-500/35 space-y-2.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                  <Wallet className="w-4 h-4 text-amber-400" />
+                  <span>💰 Quota Rimasta / Credito Residuo DeepSeek</span>
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleDetectOllamaModels(true)}
-                  disabled={isDetectingOllama}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-200 border border-emerald-500/40 text-[11px] font-bold transition"
+                  onClick={() => handleCheckDeepSeekBalance(true)}
+                  disabled={isLoadingBalance}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-[11px] font-bold transition"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isDetectingOllama ? 'animate-spin' : ''}`} />
-                  <span>Rileva Modelli dal PC</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingBalance ? 'animate-spin' : ''}`} />
+                  <span>{isLoadingBalance ? 'Verifica...' : 'Aggiorna Quota Rimasta'}</span>
                 </button>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
-                  <label className="block text-xs font-bold text-slate-300">
-                    Indirizzo Server Locale (Ollama / llama.cpp)
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOllamaBaseUrl('http://127.0.0.1:11434');
-                        setTestResult(null);
-                      }}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition ${
-                        ollamaBaseUrl.includes('11434')
-                          ? 'bg-emerald-500 text-slate-950 border-emerald-300'
-                          : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-emerald-400'
-                      }`}
-                    >
-                      🦙 Ollama (127.0.0.1:11434)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOllamaBaseUrl('http://127.0.0.1:8080');
-                        setTestResult(null);
-                      }}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition ${
-                        ollamaBaseUrl.includes('8080')
-                          ? 'bg-amber-500 text-slate-950 border-amber-300'
-                          : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-400'
-                      }`}
-                    >
-                      ⚡ llama.cpp (127.0.0.1:8080)
-                    </button>
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  value={ollamaBaseUrl}
-                  onChange={(e) => setOllamaBaseUrl(e.target.value)}
-                  placeholder="http://127.0.0.1:11434"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Modello Locale da usare
-                </label>
-                {detectedOllamaModels.length > 0 ? (
-                  <div className="space-y-2">
-                    <select
-                      value={ollamaModel}
-                      onChange={(e) => setOllamaModel(e.target.value)}
-                      className="w-full bg-slate-900 border border-emerald-500/50 rounded-xl px-3 py-2 text-xs font-bold text-yellow-300 focus:outline-none"
-                    >
-                      {detectedOllamaModels.map((m) => (
-                        <option key={m} value={m}>
-                          {m} (Installato sul PC)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    value={ollamaModel}
-                    onChange={(e) => setOllamaModel(e.target.value)}
-                    placeholder="Es. qwen2.5:1.5b, minicpm-v4.5:latest..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-400"
-                  />
-                )}
-
-                <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                  <span className="text-[10px] text-slate-400">Scelta rapida modelli sul tuo PC:</span>
-                  {['qwen2.5:1.5b', 'minicpm-v4.5:latest', 'minicpm-v4.6:q4_1'].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setOllamaModel(m)}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border transition ${
-                        ollamaModel === m
-                          ? 'bg-emerald-500 text-slate-950 border-emerald-300'
-                          : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-emerald-400'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-
-                <p className="text-[10px] text-emerald-300/90 mt-2">
-                  ✅ Bridge CORS locale attivo in background (`127.0.0.1:11436` / `8082`) per permettere la connessione diretta dal browser a Ollama e NVIDIA Personal AI Router.
+              {balanceError && (
+                <p className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-lg px-2.5 py-1.5">
+                  ⚠️ {balanceError}
                 </p>
-              </div>
+              )}
+
+              {deepseekBalance ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        deepseekBalance.is_available
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                      }`}
+                    >
+                      {deepseekBalance.is_available ? '🟢 Credito Attivo e Disponibile' : '🔴 Credito Esaurito'}
+                    </span>
+                  </div>
+
+                  {deepseekBalance.balance_infos.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {deepseekBalance.balance_infos.map((b, idx) => {
+                        const totalNum = parseFloat(b.total_balance) || 0;
+                        const estimatedReports = Math.floor(totalNum / 0.0005);
+                        const symbol = b.currency === 'USD' ? '$' : b.currency === 'CNY' ? '¥' : b.currency;
+                        return (
+                          <div
+                            key={idx}
+                            className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between"
+                          >
+                            <div className="flex items-baseline justify-between">
+                              <span className="text-[11px] text-slate-400 font-semibold">
+                                Saldo Totale ({b.currency}):
+                              </span>
+                              <span className="text-base font-extrabold text-emerald-400 font-mono">
+                                {symbol} {b.total_balance} {b.currency}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                              <span>Ricaricato: {symbol}{b.topped_up_balance}</span>
+                              <span>Bonus: {symbol}{b.granted_balance}</span>
+                            </div>
+                            {totalNum > 0 && (
+                              <div className="mt-1 text-[10px] text-blue-300 font-semibold">
+                                📊 Autonomia stimata: ~{estimatedReports.toLocaleString('it-IT')} report cantiere
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400">Nessun dettaglio valuta restituito dall'API.</p>
+                  )}
+                </div>
+              ) : (
+                !balanceError && (
+                  <p className="text-[11px] text-slate-400">
+                    Inserisci la tua API Key DeepSeek e clicca su <strong>"Aggiorna Quota Rimasta"</strong> per vedere il saldo disponibile e il numero stimato di report generabili.
+                  </p>
+                )
+              )}
             </div>
-          )}
+          </div>
 
           {/* Test Connection Result */}
           {testResult && (
@@ -551,7 +328,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isTesting ? 'animate-spin' : ''}`} />
-              <span>{isTesting ? 'Test in corso...' : '🔍 Testa Connessione AI'}</span>
+              <span>{isTesting ? 'Test in corso...' : '🔍 Testa Connessione DeepSeek'}</span>
             </button>
 
             <div className="flex items-center gap-2">
