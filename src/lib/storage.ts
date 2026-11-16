@@ -1,4 +1,4 @@
-import { InterventionRequest, UserAccount, Project } from '../types';
+import { InterventionRequest, UserAccount, Project, DailySiteReport } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
@@ -6,6 +6,7 @@ const STORAGE_PROJECT_WORKS_SEEDED = 'interventi_project_works_seeded_v10_gemb';
 const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
+const STORAGE_DAILY_REPORTS = 'interventi_daily_site_reports_v1';
 
 // 1. Initial Projects with German Embassy (GEMB), Awash Bank, Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
@@ -1383,6 +1384,44 @@ export function generateNextCode(currentItems: InterventionRequest[], projectCod
   return `${projectCode}-${year}-${pad}`;
 }
 
+// ================= DAILY SITE REPORTS (ADDIS / AWASH & PROJECTS) =================
+
+export function fetchDailySiteReports(): DailySiteReport[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_DAILY_REPORTS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+    return [];
+  } catch (err) {
+    console.warn('Error reading daily site reports:', err);
+    return [];
+  }
+}
+
+export function saveDailySiteReport(report: DailySiteReport): DailySiteReport[] {
+  const current = fetchDailySiteReports();
+  const idx = current.findIndex(r => r.id === report.id);
+  let updated: DailySiteReport[];
+  if (idx >= 0) {
+    updated = current.map(r => (r.id === report.id ? report : r));
+  } else {
+    updated = [report, ...current];
+  }
+  updated.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  localStorage.setItem(STORAGE_DAILY_REPORTS, JSON.stringify(updated));
+  return updated;
+}
+
+export function deleteDailySiteReport(id: string): DailySiteReport[] {
+  const current = fetchDailySiteReports();
+  const updated = current.filter(r => r.id !== id);
+  localStorage.setItem(STORAGE_DAILY_REPORTS, JSON.stringify(updated));
+  return updated;
+}
+
 // ================= BACKUP & RESTORE (JSON) =================
 
 export interface FullBackupPayload {
@@ -1392,20 +1431,23 @@ export interface FullBackupPayload {
   interventions: InterventionRequest[];
   projects: Project[];
   users: UserAccount[];
+  dailySiteReports?: DailySiteReport[];
 }
 
 export async function createFullBackupPayload(): Promise<FullBackupPayload> {
   const interventions = await fetchInterventions();
   const projects = fetchProjects();
   const users = fetchUsers();
+  const dailySiteReports = fetchDailySiteReports();
 
   return {
-    version: '1.0.0',
+    version: '1.1.0',
     exportedAt: new Date().toISOString(),
     app: 'FieldService_Interventi',
     interventions,
     projects,
-    users
+    users,
+    dailySiteReports
   };
 }
 
@@ -1436,6 +1478,7 @@ export function restoreBackupFromJson(jsonString: string): {
   interventions?: InterventionRequest[];
   projects?: Project[];
   users?: UserAccount[];
+  dailySiteReports?: DailySiteReport[];
 } {
   try {
     const data = JSON.parse(jsonString);
@@ -1451,6 +1494,7 @@ export function restoreBackupFromJson(jsonString: string): {
     const restoredInterventions: InterventionRequest[] = Array.isArray(data.interventions) ? data.interventions : [];
     const restoredProjects: Project[] = Array.isArray(data.projects) ? data.projects : [];
     const restoredUsers: UserAccount[] = Array.isArray(data.users) ? data.users : [];
+    const restoredDailyReports: DailySiteReport[] = Array.isArray(data.dailySiteReports) ? data.dailySiteReports : [];
 
     if (restoredInterventions.length > 0) {
       localStorage.setItem(STORAGE_INTERVENTIONS, JSON.stringify(restoredInterventions));
@@ -1461,13 +1505,17 @@ export function restoreBackupFromJson(jsonString: string): {
     if (restoredUsers.length > 0) {
       localStorage.setItem(STORAGE_USERS, JSON.stringify(restoredUsers));
     }
+    if (restoredDailyReports.length > 0) {
+      localStorage.setItem(STORAGE_DAILY_REPORTS, JSON.stringify(restoredDailyReports));
+    }
 
     return {
       success: true,
-      message: `Successfully restored ${restoredInterventions.length} interventions, ${restoredProjects.length} projects, and ${restoredUsers.length} users.`,
+      message: `Successfully restored ${restoredInterventions.length} interventions, ${restoredProjects.length} projects, ${restoredDailyReports.length} daily site reports, and ${restoredUsers.length} users.`,
       interventions: restoredInterventions,
       projects: restoredProjects,
-      users: restoredUsers
+      users: restoredUsers,
+      dailySiteReports: restoredDailyReports
     };
   } catch (err: any) {
     return { success: false, message: `Failed to parse backup JSON: ${err?.message || 'Syntax error'}` };
