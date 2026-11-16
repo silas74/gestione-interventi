@@ -11,13 +11,16 @@ import {
   AlertCircle,
   Cpu,
   Cloud,
+  Wallet,
 } from 'lucide-react';
 import {
   AiSettings,
   AiProvider,
+  DeepSeekBalanceResponse,
   getAiSettings,
   saveAiSettings,
   fetchLocalOllamaModels,
+  fetchDeepSeekBalance,
   callAiCompletion,
 } from '../lib/aiService';
 
@@ -53,14 +56,40 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
   const [showKey, setShowKey] = useState(false);
   const [detectedOllamaModels, setDetectedOllamaModels] = useState<string[]>([]);
   const [isDetectingOllama, setIsDetectingOllama] = useState(false);
+  const [deepseekBalance, setDeepseekBalance] = useState<DeepSeekBalanceResponse | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     if (provider === 'ollama') {
       handleDetectOllamaModels(false);
+    } else if (provider === 'deepseek' && deepseekApiKey.trim().length > 8) {
+      handleCheckDeepSeekBalance(false);
     }
   }, [provider]);
+
+  const handleCheckDeepSeekBalance = async (showAlertOnError = true) => {
+    if (!deepseekApiKey.trim()) {
+      if (showAlertOnError) {
+        setBalanceError('Inserisci prima la tua DeepSeek API Key (sk-...) per vedere la quota rimasta.');
+      }
+      return;
+    }
+    setIsLoadingBalance(true);
+    setBalanceError(null);
+    try {
+      const bal = await fetchDeepSeekBalance(deepseekApiKey, deepseekBaseUrl);
+      setDeepseekBalance(bal);
+    } catch (err: any) {
+      if (showAlertOnError) {
+        setBalanceError(err?.message || 'Impossibile recuperare il saldo DeepSeek.');
+      }
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
 
   const handleDetectOllamaModels = async (showAlertOnError = true) => {
     setIsDetectingOllama(true);
@@ -116,6 +145,9 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
         'Reply with the exact phrase: OK_CONNECTED',
         0.1
       );
+      if (provider === 'deepseek') {
+        handleCheckDeepSeekBalance(false);
+      }
       setTestResult({
         ok: true,
         msg: `Connessione riuscita (${
@@ -288,6 +320,89 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-400"
                   />
                 </div>
+              </div>
+
+              {/* DeepSeek Remaining Quota / Balance Box */}
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-blue-500/30 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-amber-400" />
+                    <span>💰 Quota Rimasta / Credito Residuo DeepSeek</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCheckDeepSeekBalance(true)}
+                    disabled={isLoadingBalance}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 text-[11px] font-bold transition"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingBalance ? 'animate-spin' : ''}`} />
+                    <span>{isLoadingBalance ? 'Verifica...' : 'Aggiorna Quota Rimasta'}</span>
+                  </button>
+                </div>
+
+                {balanceError && (
+                  <p className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-lg px-2.5 py-1.5">
+                    ⚠️ {balanceError}
+                  </p>
+                )}
+
+                {deepseekBalance ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          deepseekBalance.is_available
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        }`}
+                      >
+                        {deepseekBalance.is_available ? '🟢 Credito Attivo e Disponibile' : '🔴 Credito Esaurito'}
+                      </span>
+                    </div>
+
+                    {deepseekBalance.balance_infos.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {deepseekBalance.balance_infos.map((b, idx) => {
+                          const totalNum = parseFloat(b.total_balance) || 0;
+                          const estimatedReports = Math.floor(totalNum / 0.0005);
+                          const symbol = b.currency === 'USD' ? '$' : b.currency === 'CNY' ? '¥' : b.currency;
+                          return (
+                            <div
+                              key={idx}
+                              className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between"
+                            >
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-[11px] text-slate-400 font-semibold">
+                                  Saldo Totale ({b.currency}):
+                                </span>
+                                <span className="text-base font-extrabold text-emerald-400 font-mono">
+                                  {symbol} {b.total_balance} {b.currency}
+                                </span>
+                              </div>
+                              <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                                <span>Ricaricato: {symbol}{b.topped_up_balance}</span>
+                                <span>Bonus: {symbol}{b.granted_balance}</span>
+                              </div>
+                              {totalNum > 0 && (
+                                <div className="mt-1 text-[10px] text-blue-300 font-semibold">
+                                  📊 Autonomia stimata: ~{estimatedReports.toLocaleString('it-IT')} report cantiere
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">Nessun dettaglio valuta restituito dall'API.</p>
+                    )}
+                  </div>
+                ) : (
+                  !balanceError && (
+                    <p className="text-[11px] text-slate-400">
+                      Inserisci la tua API Key DeepSeek e clicca su <strong>"Aggiorna Quota Rimasta"</strong> per vedere il saldo in dollari/valuta e il numero stimato di report generabili.
+                    </p>
+                  )
+                )}
               </div>
             </div>
           )}
