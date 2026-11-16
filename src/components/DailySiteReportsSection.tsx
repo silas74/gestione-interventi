@@ -26,7 +26,7 @@ import {
   downloadProjectTimesheetPDF,
 } from '../lib/pdfGenerator';
 import { exportDailySiteReportsToExcel } from '../lib/excelExport';
-import { calculateNetHours } from './DailySiteReportModal';
+import { calculateNetHours, formatHoursAndMinutes } from './DailySiteReportModal';
 
 interface DailySiteReportsSectionProps {
   reports: DailySiteReport[];
@@ -92,9 +92,9 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
       technicianName: currentUserName || 'Pierluigi',
       arrivalTime: nowTime,
       departureTime: '17:30',
-      breakMinutes: 60,
-      hoursWorked: calculateNetHours(nowTime, '17:30', 60) ?? 8,
-      areaOrFloor: 'Parking Area / Cantiere Awash',
+      breakMinutes: 0,
+      hoursWorked: calculateNetHours(nowTime, '17:30', 0) ?? 8,
+      areaOrFloor: 'Parking area CO',
       workDone: `Arrivo in cantiere alle ore ${nowTime}. Avvio attività tecniche e sopralluogo.`,
       photos: [],
       createdAt: nowIso,
@@ -136,7 +136,7 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
                 {totalDays} {totalDays === 1 ? 'giorno' : 'giorni'}
               </span>
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/40">
-                ⏱️ {totalHours.toFixed(1)} ore totali
+                ⏱️ {formatHoursAndMinutes(totalHours)} totali
               </span>
               {totalPhotos > 0 && (
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/40">
@@ -327,13 +327,13 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
                       <div className="flex flex-col pl-1">
                         <span className="text-[10px] text-blue-400 font-semibold flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          <span>Totale Ore</span>
+                          <span>Durata Lavoro</span>
                         </span>
                         <span className="font-mono font-extrabold text-sm text-yellow-300">
-                          {rep.hoursWorked} h{' '}
+                          {formatHoursAndMinutes(rep.hoursWorked, rep.arrivalTime, rep.departureTime, rep.breakMinutes)}{' '}
                           {rep.breakMinutes > 0 && (
                             <span className="text-[10px] font-normal text-slate-400">
-                              (-{rep.breakMinutes}m)
+                              (-{rep.breakMinutes}m pausa)
                             </span>
                           )}
                         </span>
