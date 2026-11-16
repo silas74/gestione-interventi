@@ -39,12 +39,15 @@ export interface ProjectTrackingEntry {
   replyNotes?: string;         // Nota sulla risposta ricevuta
 }
 
+export type PhotoStage = 'normal' | 'before' | 'after';
+
 export interface DefectPhoto {
   id: string;
   url: string; // base64 data url or cloud URL
   name: string;
   uploadedAt: string;
   caption?: string; // Didascalia / descrizione della foto scattata in cantiere
+  stage?: PhotoStage; // 'normal' (default) | 'before' (PRIMA) | 'after' (DOPO)
 }
 
 export interface TechnicianReport {
