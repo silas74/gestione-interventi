@@ -60,8 +60,8 @@ function appendPhotoGalleryPages(
     doc.rect(0, 28, pageWidth, 2, 'F');
 
     let currentPhotoY = 38;
-    const photoWidth = 85;
-    const photoHeight = 56;
+    const boxWidth = 85;
+    const boxHeight = 56;
 
     const pageSlice = photos.slice(pIdx * photosPerPage, (pIdx + 1) * photosPerPage);
 
@@ -73,15 +73,32 @@ function appendPhotoGalleryPages(
       }
 
       try {
-        doc.addImage(entry.photo.url, 'JPEG', x, currentPhotoY, photoWidth, photoHeight);
+        // Light neutral frame so portrait & landscape photos stay aligned
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.3);
+        doc.rect(x, currentPhotoY, boxWidth, boxHeight, 'FD');
+
+        // Calculate proportional dimensions preserving original aspect ratio
+        const imgProps = doc.getImageProperties(entry.photo.url);
+        const origW = imgProps.width || boxWidth;
+        const origH = imgProps.height || boxHeight;
+        const scale = Math.min(boxWidth / origW, boxHeight / origH);
+        const drawW = origW * scale;
+        const drawH = origH * scale;
+        const drawX = x + (boxWidth - drawW) / 2;
+        const drawY = currentPhotoY + (boxHeight - drawH) / 2;
+
+        doc.addImage(entry.photo.url, 'JPEG', drawX, drawY, drawW, drawH);
+
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(30, 41, 59);
         const captionText = entry.photo.caption
           ? `${entry.badgeLabel}: ${entry.photo.caption}`
           : `${entry.badgeLabel}: ${entry.photo.name || 'Foto cantiere'}`;
-        const splitCap = doc.splitTextToSize(captionText, photoWidth);
-        doc.text(splitCap.slice(0, 2), x, currentPhotoY + photoHeight + 4.2);
+        const splitCap = doc.splitTextToSize(captionText, boxWidth);
+        doc.text(splitCap.slice(0, 2), x, currentPhotoY + boxHeight + 4.2);
       } catch (err) {
         console.warn('Could not add photo to PDF', err);
       }
