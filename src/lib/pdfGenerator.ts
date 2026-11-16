@@ -1036,3 +1036,149 @@ export function shareProjectSummaryViaWhatsApp(projectName: string, items: Inter
   const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
   window.open(waUrl, '_blank', 'noopener,noreferrer');
 }
+
+// ============================================================================
+// FEATURE E: FINAL COMMISSIONING & HANDOVER CERTIFICATE PDF GENERATOR
+// ============================================================================
+
+export function downloadFinalCommissioningCertificatePDF(params: {
+  projectName: string;
+  date: string;
+  technicianName: string;
+  clientSignerName: string;
+  title: string;
+  executiveSummary: string;
+  systemsCommissioned: string;
+  testsAndVerifications: string;
+  openPunchListOrNotes: string;
+  handoverConclusion: string;
+  technicianSignature?: string;
+  clientSignature?: string;
+  lang: 'it' | 'en';
+}) {
+  const isEn = params.lang === 'en';
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const drawHeader = (pageNum: number) => {
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, pageWidth, 36, 'F');
+
+    doc.setTextColor(250, 204, 21);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13.5);
+    doc.text((params.title || `COMMISSIONING & HANDOVER REPORT — ${params.projectName}`).slice(0, 68), 14, 15);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(203, 213, 225);
+    doc.text(
+      isEn
+        ? `Project: ${params.projectName}   |   Date: ${params.date}   |   Lead Engineer: ${params.technicianName}   |   Page ${pageNum}`
+        : `Progetto: ${params.projectName}   |   Data: ${params.date}   |   Tecnico Collaudatore: ${params.technicianName}   |   Pag. ${pageNum}`,
+      14,
+      25
+    );
+
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 36, pageWidth, 2.5, 'F');
+  };
+
+  let pageNum = 1;
+  drawHeader(pageNum);
+  let currentY = 46;
+
+  const drawSection = (secTitle: string, bodyText: string) => {
+    if (!bodyText || !bodyText.trim()) return;
+    const lines = doc.splitTextToSize(bodyText.trim(), pageWidth - 32);
+    const neededH = 12 + lines.length * 4.5;
+
+    if (currentY + neededH > pageHeight - 45) {
+      doc.addPage();
+      pageNum++;
+      drawHeader(pageNum);
+      currentY = 46;
+    }
+
+    doc.setFillColor(241, 245, 249);
+    doc.rect(14, currentY - 5, pageWidth - 28, 7.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(secTitle.toUpperCase(), 16, currentY);
+    currentY += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text(lines, 16, currentY);
+    currentY += lines.length * 4.5 + 6;
+  };
+
+  drawSection(
+    isEn ? '1. EXECUTIVE SUMMARY & SCOPE OF COMMISSIONING' : '1. SINTESI ESECUTIVA E OGGETTO DEL COLLAUDO',
+    params.executiveSummary
+  );
+  drawSection(
+    isEn ? '2. SYSTEMS & EQUIPMENT COMMISSIONED' : '2. IMPIANTI E APPARECCHIATURE CONFIGURATE E COLLAUDATE',
+    params.systemsCommissioned
+  );
+  drawSection(
+    isEn ? '3. FUNCTIONAL TESTS, TRIALS & VERIFICATIONS PERFORMED' : '3. PROVE FUNZIONALI, TEST E VERIFICHE ESEGUITE',
+    params.testsAndVerifications
+  );
+  drawSection(
+    isEn ? '4. PUNCH LIST, NOTES & OPERATIONAL RECOMMENDATIONS' : '4. PRESCRIZIONI TECNICHE, PUNTI APERTI E RACCOMANDAZIONI',
+    params.openPunchListOrNotes
+  );
+  drawSection(
+    isEn ? '5. OFFICIAL HANDOVER & ACCEPTANCE STATEMENT' : '5. DICHIARAZIONE DI COLLAUDO E CONSEGNA IMPIANTO',
+    params.handoverConclusion
+  );
+
+  const signatureLineY = 262;
+  if (currentY > signatureLineY - 25) {
+    doc.addPage();
+    pageNum++;
+    drawHeader(pageNum);
+  }
+
+  if (params.technicianSignature) {
+    try {
+      doc.addImage(params.technicianSignature, 'PNG', 16, signatureLineY - 20, 60, 18);
+    } catch {}
+  }
+  if (params.clientSignature) {
+    try {
+      doc.addImage(params.clientSignature, 'PNG', 120, signatureLineY - 20, 60, 18);
+    } catch {}
+  }
+
+  doc.setDrawColor(203, 213, 225);
+  doc.line(16, signatureLineY, 90, signatureLineY);
+  doc.line(120, signatureLineY, pageWidth - 16, signatureLineY);
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    isEn ? `Commissioning Engineer (${params.technicianName})` : `Tecnico Collaudatore (${params.technicianName})`,
+    16,
+    signatureLineY + 4.5
+  );
+  doc.text(
+    isEn
+      ? `Client / Site Acceptance (${params.clientSignerName || params.projectName})`
+      : `Per Accettazione Cliente / Cantiere (${params.clientSignerName || params.projectName})`,
+    120,
+    signatureLineY + 4.5
+  );
+
+  const safeProj = params.projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  doc.save(`Verbale_Collaudo_${safeProj}_${params.date}${isEn ? '_EN' : ''}.pdf`);
+}
