@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, CheckCircle2, Clock, Wrench, FileDown, AlertCircle, 
   PhoneCall, MessageCircle, Share2, Tag, Mic, MicOff,
-  Camera, Upload, Clipboard, Trash2, Image as ImageIcon
+  Camera, Upload, Clipboard, Trash2, Image as ImageIcon, LogIn, LogOut, MapPin, ArrowRight
 } from 'lucide-react';
 import { InterventionRequest, InterventionStatus, TechnicianReport, DefectPhoto } from '../types';
 import { downloadInterventionPDF, shareInterventionPDFViaWhatsApp } from '../lib/pdfGenerator';
@@ -10,6 +10,7 @@ import { SignaturePad } from './SignaturePad';
 import { getTelUri, getClientWhatsAppUri } from '../lib/contactUtils';
 import { COMMON_MATERIALS } from '../lib/materialsData';
 import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
+import { calculateNetHours } from './DailySiteReportModal';
 
 interface TechnicianReportModalProps {
   isOpen: boolean;
@@ -36,8 +37,20 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
   const [interventionDate, setInterventionDate] = useState(
     existingReport?.interventionDate || new Date().toISOString().split('T')[0]
   );
+  const [startTime, setStartTime] = useState(
+    existingReport?.startTime || '08:30'
+  );
+  const [endTime, setEndTime] = useState(
+    existingReport?.endTime || '17:30'
+  );
+  const [breakMinutes, setBreakMinutes] = useState<number>(
+    existingReport?.breakMinutes !== undefined ? existingReport.breakMinutes : 60
+  );
+  const [areaOrFloor, setAreaOrFloor] = useState(
+    existingReport?.areaOrFloor || ''
+  );
   const [hoursWorked, setHoursWorked] = useState<number>(
-    existingReport?.hoursWorked ?? 2
+    existingReport?.hoursWorked ?? 8
   );
   const [workDone, setWorkDone] = useState(
     existingReport?.workDone || ''
@@ -47,6 +60,9 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
   );
   const [technicalNotes, setTechnicalNotes] = useState(
     existingReport?.technicalNotes || ''
+  );
+  const [nextDayPlan, setNextDayPlan] = useState(
+    existingReport?.nextDayPlan || ''
   );
   const [statusOutcome, setStatusOutcome] = useState<'resolved' | 'partial' | 'waiting_for_parts'>(
     (existingReport?.statusOutcome as any) === 'risolto' ? 'resolved' :
@@ -111,6 +127,20 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
   const handleRemoveReportPhoto = (id: string) => {
     setReportPhotos(prev => prev.filter(p => p.id !== id));
   };
+
+  const handleUpdatePhotoCaption = (id: string, caption: string) => {
+    setReportPhotos(prev => prev.map(p => (p.id === id ? { ...p, caption } : p)));
+  };
+
+  // Automatically recalculate hours worked when arrival, departure, or break changes
+  useEffect(() => {
+    const computed = calculateNetHours(startTime, endTime, breakMinutes);
+    if (computed !== null && computed >= 0) {
+      setHoursWorked(computed);
+    }
+  }, [startTime, endTime, breakMinutes]);
+
+  const getCurrentTimeHHMM = () => new Date().toTimeString().slice(0, 5);
 
   // Global Paste listener for the modal window
   useEffect(() => {
@@ -237,10 +267,15 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
     const tempReport: TechnicianReport = {
       technicianName,
       interventionDate,
+      startTime,
+      endTime,
+      breakMinutes: Number(breakMinutes) || 0,
+      areaOrFloor: areaOrFloor.trim() || undefined,
       hoursWorked: Number(hoursWorked),
       workDone: workDone.trim() || 'On-site technical inspection, testing and maintenance performed.',
       materialsUsed: materialsUsed.trim(),
       technicalNotes: technicalNotes.trim(),
+      nextDayPlan: nextDayPlan.trim() || undefined,
       statusOutcome,
       technicianSignature,
       completedAt: new Date().toISOString(),
@@ -264,10 +299,15 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
     const tempReport: TechnicianReport = {
       technicianName,
       interventionDate,
+      startTime,
+      endTime,
+      breakMinutes: Number(breakMinutes) || 0,
+      areaOrFloor: areaOrFloor.trim() || undefined,
       hoursWorked: Number(hoursWorked),
       workDone: workDone.trim() || 'On-site technical inspection, testing and maintenance performed.',
       materialsUsed: materialsUsed.trim(),
       technicalNotes: technicalNotes.trim(),
+      nextDayPlan: nextDayPlan.trim() || undefined,
       statusOutcome,
       technicianSignature,
       completedAt: new Date().toISOString(),
@@ -296,12 +336,18 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
     }
 
     const report: TechnicianReport = {
+      id: `rep_${Date.now().toString(36)}`,
       technicianName,
       interventionDate,
+      startTime,
+      endTime,
+      breakMinutes: Number(breakMinutes) || 0,
+      areaOrFloor: areaOrFloor.trim() || undefined,
       hoursWorked: Number(hoursWorked),
       workDone: workDone.trim(),
       materialsUsed: materialsUsed.trim(),
       technicalNotes: technicalNotes.trim(),
+      nextDayPlan: nextDayPlan.trim() || undefined,
       statusOutcome,
       technicianSignature,
       completedAt: new Date().toISOString(),
@@ -381,11 +427,11 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           
-          {/* Technician, Date & Hours Worked */}
+          {/* Technician, Date & Zone */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950/50 p-3 sm:p-3.5 rounded-xl border border-slate-800">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Technician Name <span className="text-rose-400">*</span>
+                Tecnico in Cantiere <span className="text-rose-400">*</span>
               </label>
               <input
                 type="text"
@@ -398,7 +444,7 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Execution Date <span className="text-rose-400">*</span>
+                Data Giornata <span className="text-rose-400">*</span>
               </label>
               <input
                 type="date"
@@ -410,20 +456,107 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
-                Hours Worked <span className="text-rose-400">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                <span>Zona / Piano Cantiere</span>
               </label>
               <input
-                type="number"
-                step="0.5"
-                min="0.5"
-                max="24"
-                required
-                value={hoursWorked}
-                onChange={(e) => setHoursWorked(parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                type="text"
+                value={areaOrFloor}
+                onChange={(e) => setAreaOrFloor(e.target.value)}
+                placeholder="Es. Parking Area / Piano 2..."
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+          </div>
+
+          {/* Orario di Arrivo, Partenza, Pausa e Ore Lavorate */}
+          <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/35 via-slate-900 to-slate-950 border border-emerald-600/45 space-y-2">
+            <div className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Orario di Arrivo e Partenza dal Cantiere (Calcolo automatico ore)</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {/* Ora Arrivo */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                    <LogIn className="w-3 h-3" />
+                    <span>Ora Arrivo</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setStartTime(getCurrentTimeHHMM())}
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white"
+                  >
+                    📍 Ora
+                  </button>
+                </div>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono font-bold text-white"
+                />
+              </div>
+
+              {/* Ora Partenza */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                    <LogOut className="w-3 h-3" />
+                    <span>Ora Partenza</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEndTime(getCurrentTimeHHMM())}
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950"
+                  >
+                    🏁 Ora
+                  </button>
+                </div>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono font-bold text-white"
+                />
+              </div>
+
+              {/* Pausa */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Pausa (min)
+                </label>
+                <select
+                  value={breakMinutes}
+                  onChange={(e) => setBreakMinutes(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono text-white"
+                >
+                  <option value={0}>0 min</option>
+                  <option value={30}>30 min</option>
+                  <option value={60}>60 min</option>
+                  <option value={90}>90 min</option>
+                </select>
+              </div>
+
+              {/* Ore Lavorate */}
+              <div>
+                <label className="block text-[11px] font-bold text-blue-300 mb-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-blue-400" />
+                  <span>Ore Lavorate *</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0.25"
+                  max="24"
+                  required
+                  value={hoursWorked}
+                  onChange={(e) => setHoursWorked(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-900 border border-blue-500/60 rounded-lg px-2.5 py-1.5 text-sm text-yellow-300 font-mono font-extrabold"
+                />
+              </div>
             </div>
           </div>
 
@@ -533,6 +666,21 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
               onChange={(e) => setTechnicalNotes(e.target.value)}
               placeholder="e.g. System operating within nominal limits. Recommended follow-up inspection in 6 months... (or tap Voice Dictate)"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* Programma per Domani (Next Day Plan) */}
+          <div>
+            <label className="block text-xs font-semibold text-emerald-300 mb-1.5 flex items-center gap-1.5">
+              <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Programma per Domani / Prossima Giornata in Cantiere (opz.)</span>
+            </label>
+            <input
+              type="text"
+              value={nextDayPlan}
+              onChange={(e) => setNextDayPlan(e.target.value)}
+              placeholder="Es. Completamento cablaggio piano 2 e test sensori CO..."
+              className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -687,39 +835,45 @@ export const TechnicianReportModal: React.FC<TechnicianReportModalProps> = ({
               </div>
             )}
 
-            {/* Photos Preview Grid */}
+            {/* Photos Preview Grid with Editable Captions */}
             {reportPhotos.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                 {reportPhotos.map((photo, index) => (
                   <div
                     key={photo.id}
-                    className="relative group rounded-xl overflow-hidden border border-slate-700 bg-slate-900 aspect-video shadow-md"
+                    className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 shadow-md flex flex-col"
                   >
-                    <img
-                      src={photo.url}
-                      alt={photo.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition"
-                    />
-                    
-                    {/* Index badge */}
-                    <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-xs text-[9px] font-mono text-white px-1.5 py-0.2 rounded border border-white/20">
-                      #{index + 1}
+                    <div className="relative group aspect-video">
+                      <img
+                        src={photo.url}
+                        alt={photo.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                      />
+                      
+                      {/* Index badge */}
+                      <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-xs text-[9px] font-mono text-white px-1.5 py-0.2 rounded border border-white/20">
+                        #{index + 1}
+                      </div>
+
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveReportPhoto(photo.id)}
+                        className="absolute top-1 right-1 p-1 rounded-lg bg-rose-600/90 text-white hover:bg-rose-500 opacity-90 group-hover:opacity-100 transition shadow"
+                        title="Rimuovi foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    {/* Delete button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveReportPhoto(photo.id)}
-                      className="absolute top-1 right-1 p-1 rounded-lg bg-rose-600/90 text-white hover:bg-rose-500 opacity-90 group-hover:opacity-100 transition shadow"
-                      title="Rimuovi foto"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1">
-                      <p className="text-[10px] text-slate-300 truncate font-mono">
-                        {photo.name}
-                      </p>
+                    <div className="p-1.5 bg-slate-950">
+                      <input
+                        type="text"
+                        value={photo.caption || ''}
+                        onChange={(e) => handleUpdatePhotoCaption(photo.id, e.target.value)}
+                        placeholder={`Didascalia foto #${index + 1}...`}
+                        className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                      />
                     </div>
                   </div>
                 ))}
