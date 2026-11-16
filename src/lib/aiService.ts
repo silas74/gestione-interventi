@@ -18,8 +18,8 @@ const DEFAULT_AI_SETTINGS: AiSettings = {
   deepseekApiKey: '',
   deepseekBaseUrl: 'https://api.deepseek.com',
   deepseekModel: 'deepseek-chat',
-  ollamaBaseUrl: 'http://localhost:11434',
-  ollamaModel: 'llama3.2',
+  ollamaBaseUrl: 'http://127.0.0.1:11434',
+  ollamaModel: 'qwen2.5:1.5b',
 };
 
 export function getAiSettings(): AiSettings {
@@ -49,25 +49,75 @@ export function isAiConfigured(): boolean {
 }
 
 /**
- * Queries the local Ollama instance (/api/tags) to list all installed models on the computer
+ * Returns candidate base URLs including the automatic local CORS bridge ports
+ * (11436 for Ollama 11434, 8082 for llama.cpp 8080) so HTTPS GitHub Pages never gets 403 CORS blocked.
  */
-export async function fetchLocalOllamaModels(baseUrl?: string): Promise<string[]> {
-  const cleanBase = (baseUrl || getAiSettings().ollamaBaseUrl || 'http://localhost:11434').replace(/\/+$/, '');
-  const res = await fetch(`${cleanBase}/api/tags`, {
-    method: 'GET',
-  });
-  if (!res.ok) {
-    throw new Error(`Impossibile contattare Ollama su ${cleanBase} (HTTP ${res.status})`);
+function getCandidateLocalUrls(rawBaseUrl?: string): string[] {
+  const cleanBase = (rawBaseUrl || getAiSettings().ollamaBaseUrl || 'http://127.0.0.1:11434')
+    .trim()
+    .replace(/\/+$/, '');
+  const candidates: string[] = [];
+
+  if (cleanBase.includes(':11434')) {
+    candidates.push('http://127.0.0.1:11436');
+    candidates.push(cleanBase);
+  } else if (cleanBase.includes(':8080')) {
+    candidates.push('http://127.0.0.1:8082');
+    candidates.push(cleanBase);
+    candidates.push('http://127.0.0.1:11436');
+  } else {
+    candidates.push(cleanBase);
+    candidates.push('http://127.0.0.1:11436');
+    candidates.push('http://127.0.0.1:8082');
   }
-  const data = await res.json();
-  if (data && Array.isArray(data.models)) {
-    return data.models.map((m: any) => m.name).filter(Boolean);
-  }
-  return [];
+
+  return Array.from(new Set(candidates));
 }
 
 /**
- * Core AI completion call supporting both DeepSeek Cloud API and Local Ollama
+ * Queries the local Ollama (/api/tags) or llama.cpp (/v1/models) instance to list all installed models on the PC
+ */
+export async function fetchLocalOllamaModels(baseUrl?: string): Promise<string[]> {
+  const candidates = getCandidateLocalUrls(baseUrl);
+  let lastError = '';
+
+  for (const candidate of candidates) {
+    // 1. Try Ollama /api/tags
+    try {
+      const res = await fetch(`${candidate}/api/tags`, { method: 'GET' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.models) && data.models.length > 0) {
+          return data.models.map((m: any) => m.name || m.model).filter(Boolean);
+        }
+      } else {
+        lastError = `HTTP ${res.status}`;
+      }
+    } catch (e: any) {
+      lastError = e?.message || 'Connessione rifiutata';
+    }
+
+    // 2. Try OpenAI-compatible /v1/models (supported by both Ollama and llama.cpp / NVIDIA Personal AI Router)
+    try {
+      const resV1 = await fetch(`${candidate}/v1/models`, { method: 'GET' });
+      if (resV1.ok) {
+        const dataV1 = await resV1.json();
+        if (dataV1 && Array.isArray(dataV1.data) && dataV1.data.length > 0) {
+          return dataV1.data.map((m: any) => m.id).filter(Boolean);
+        }
+      }
+    } catch {
+      // ignore and try next candidate
+    }
+  }
+
+  throw new Error(
+    `Impossibile contattare il server AI locale (${lastError || 'Failed to fetch'}). Assicurati che Ollama / NVIDIA Personal AI Router sia attivo.`
+  );
+}
+
+/**
+ * Core AI completion call supporting DeepSeek Cloud API, Local Ollama (/api/chat) and llama.cpp (/v1/chat/completions)
  */
 export async function callAiCompletion(
   systemPrompt: string,
@@ -112,41 +162,88 @@ export async function callAiCompletion(
     }
     return content.trim();
   } else {
-    // Local Ollama provider
-    const cleanBase = (settings.ollamaBaseUrl || 'http://localhost:11434').replace(/\/+$/, '');
-    const model = settings.ollamaModel.trim() || 'llama3.2';
+    // Local Ollama / llama.cpp provider
+    const candidates = getCandidateLocalUrls(settings.ollamaBaseUrl);
+    let model = settings.ollamaModel.trim() || 'qwen2.5:1.5b';
 
-    const response = await fetch(`${cleanBase}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        options: {
-          temperature,
-        },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new Error(
-        `Errore Ollama Locale (${response.status}): ${errText || response.statusText}. Verifica che Ollama sia attivo sul PC.`
-      );
+    // Auto-verify model against installed models on PC if possible
+    try {
+      const installedModels = await fetchLocalOllamaModels(settings.ollamaBaseUrl);
+      if (installedModels.length > 0 && !installedModels.includes(model)) {
+        // Prefer qwen2.5:1.5b or minicpm-v4.5:latest if available, else first model
+        const preferred =
+          installedModels.find((m) => m.startsWith('qwen2.5')) ||
+          installedModels.find((m) => m.includes('minicpm')) ||
+          installedModels[0];
+        model = preferred;
+        saveAiSettings({ ...settings, ollamaModel: model });
+      }
+    } catch {
+      // proceed with selected model
     }
 
-    const data = await response.json();
-    const content = data?.message?.content;
-    if (!content) {
-      throw new Error('Risposta vuota da Ollama Locale.');
+    let lastErr = '';
+
+    for (const candidate of candidates) {
+      // 1. Try OpenAI-compatible /v1/chat/completions (works on BOTH Ollama and llama.cpp / Personal AI Router)
+      try {
+        const resV1 = await fetch(`${candidate}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            temperature,
+            stream: false,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        });
+
+        if (resV1.ok) {
+          const dataV1 = await resV1.json();
+          const contentV1 = dataV1?.choices?.[0]?.message?.content;
+          if (contentV1) return contentV1.trim();
+        } else {
+          lastErr = `HTTP ${resV1.status}`;
+        }
+      } catch (e: any) {
+        lastErr = e?.message || 'Failed to fetch';
+      }
+
+      // 2. Fallback to native Ollama /api/chat
+      try {
+        const response = await fetch(`${candidate}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            stream: false,
+            options: { temperature },
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data?.message?.content;
+          if (content) return content.trim();
+        } else {
+          const errText = await response.text().catch(() => '');
+          lastErr = `HTTP ${response.status}: ${errText || response.statusText}`;
+        }
+      } catch (e: any) {
+        lastErr = e?.message || 'Failed to fetch';
+      }
     }
-    return content.trim();
+
+    throw new Error(
+      `Errore connessione AI Locale (${lastErr}). Verifica che Ollama o NVIDIA Personal AI Router sia attivo.`
+    );
   }
 }
 
