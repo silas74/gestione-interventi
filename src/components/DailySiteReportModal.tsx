@@ -19,11 +19,18 @@ import {
   ArrowRight,
   AlertTriangle,
   Package,
+  RotateCcw,
+  Pencil,
+  CheckSquare,
+  Square,
+  ShoppingCart,
+  Globe,
 } from 'lucide-react';
-import { DailySiteReport, DefectPhoto, Project } from '../types';
+import { DailySiteReport, DefectPhoto, Project, InterventionRequest, PdfLanguage } from '../types';
 import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
 import { downloadDailySiteReportPDF, shareDailySiteReportViaWhatsApp } from '../lib/pdfGenerator';
 import { SignaturePad } from './SignaturePad';
+import { PhotoAnnotatorModal } from './PhotoAnnotatorModal';
 
 interface DailySiteReportModalProps {
   isOpen: boolean;
@@ -32,8 +39,10 @@ interface DailySiteReportModalProps {
   defaultProjectId: string;
   currentUserName: string;
   existingReport?: DailySiteReport | null;
+  allDailyReports?: DailySiteReport[];
+  projectInterventions?: InterventionRequest[];
   totalExistingCount: number;
-  onSave: (report: DailySiteReport) => void;
+  onSave: (report: DailySiteReport, completedTaskIds?: string[], newMissingMaterialText?: string) => void;
 }
 
 const AWASH_QUICK_ZONES = [
@@ -53,7 +62,6 @@ export function calculateNetHours(arrival: string, departure: string, breakMins:
   let startMinutes = arrH * 60 + arrM;
   let endMinutes = depH * 60 + depM;
   if (endMinutes < startMinutes) {
-    // Overnight shift support
     endMinutes += 24 * 60;
   }
   const netMinutes = Math.max(0, endMinutes - startMinutes - (Number(breakMins) || 0));
@@ -92,6 +100,8 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   defaultProjectId,
   currentUserName,
   existingReport,
+  allDailyReports = [],
+  projectInterventions = [],
   totalExistingCount,
   onSave,
 }) => {
@@ -129,6 +139,9 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   const [materialsUsed, setMaterialsUsed] = useState<string>(
     existingReport?.materialsUsed || ''
   );
+  const [missingMaterials, setMissingMaterials] = useState<string>(
+    existingReport?.missingMaterials || ''
+  );
   const [issuesFound, setIssuesFound] = useState<string>(
     existingReport?.issuesFound || ''
   );
@@ -148,13 +161,23 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     existingReport?.clientSignature || ''
   );
 
+  // Feature 3: Automatic Timestamp + Zone Watermark on photos
+  const [autoStampWatermark, setAutoStampWatermark] = useState<boolean>(true);
+  // Feature 2: Photo Annotator state
+  const [annotatingPhoto, setAnnotatingPhoto] = useState<DefectPhoto | null>(null);
+  // Feature 4: Checked project actions done today
+  const [checkedTaskIds, setCheckedTaskIds] = useState<string[]>(
+    existingReport?.completedActionIds || []
+  );
+  // Feature 5: PDF Language ('it' | 'en')
+  const [pdfLang, setPdfLang] = useState<PdfLanguage>('it');
+
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Recalculate hours automatically when arrival, departure, or break changes
   useEffect(() => {
     const computed = calculateNetHours(arrivalTime, departureTime, breakMinutes);
     if (computed !== null && computed >= 0) {
@@ -162,9 +185,68 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     }
   }, [arrivalTime, departureTime, breakMinutes]);
 
-  const getCurrentTimeHHMM = () => {
-    const now = new Date();
-    return now.toTimeString().slice(0, 5);
+  const getCurrentTimeHHMM = () => new Date().toTimeString().slice(0, 5);
+
+  const selectedProjObj = projects.find((p) => p.id === projectId) || projects[0];
+
+  // Feature 1: Find the most recent previous report for this project ("Riprendi da Ieri")
+  const previousProjectReport = allDailyReports
+    .filter((r) => r.projectId === projectId && r.id !== existingReport?.id)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+
+  const handleCopyFromYesterday = () => {
+    if (!previousProjectReport) {
+      alert('Nessun report precedente trovato per questo progetto.');
+      return;
+    }
+    if (previousProjectReport.areaOrFloor) {
+      setAreaOrFloor(previousProjectReport.areaOrFloor);
+    }
+    if (previousProjectReport.technicianName) {
+      setTechnicianName(previousProjectReport.technicianName);
+    }
+    if (previousProjectReport.clientSignerName) {
+      setClientSignerName(previousProjectReport.clientSignerName);
+    }
+    const carryOverWork =
+      previousProjectReport.nextDayPlan?.trim() || previousProjectReport.workDone?.trim() || '';
+    if (carryOverWork) {
+      setWorkDone((prev) =>
+        prev.trim() ? `${prev.trim()}\n${carryOverWork}` : carryOverWork
+      );
+    }
+    if (previousProjectReport.missingMaterials && !missingMaterials.trim()) {
+      setMissingMaterials(previousProjectReport.missingMaterials);
+    }
+  };
+
+  // Feature 4: Toggle an open project task/action as done today
+  const openProjectTasks = projectInterventions.filter(
+    (item) =>
+      item.projectId === projectId &&
+      item.status !== 'completed' &&
+      item.status !== 'completato'
+  );
+
+  const handleToggleProjectTaskToday = (task: InterventionRequest) => {
+    const isAlreadyChecked = checkedTaskIds.includes(task.id);
+    if (isAlreadyChecked) {
+      setCheckedTaskIds((prev) => prev.filter((id) => id !== task.id));
+    } else {
+      setCheckedTaskIds((prev) => [...prev, task.id]);
+      const bulletLine = `• [${task.code}] ${task.title}`;
+      setWorkDone((prev) => {
+        if (prev.includes(task.code)) return prev;
+        return prev.trim() ? `${prev.trim()}\n${bulletLine}` : bulletLine;
+      });
+    }
+  };
+
+  const buildWatermarkString = () => {
+    const projName = selectedProjObj ? selectedProjObj.name : 'Awash Bank';
+    const zoneStr = areaOrFloor.trim() ? ` • ${areaOrFloor.trim()}` : '';
+    const timeNow = getCurrentTimeHHMM();
+    return `${projName}${zoneStr} • ${date} ${timeNow}`;
   };
 
   const handleAddPhotos = async (files: (File | Blob)[], sourceLabel?: string) => {
@@ -172,12 +254,19 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     setIsProcessingPhotos(true);
     try {
       const processed: DefectPhoto[] = [];
+      const stampText = autoStampWatermark ? buildWatermarkString() : undefined;
       for (let i = 0; i < files.length; i++) {
         const defaultName = sourceLabel ? `${sourceLabel}_${i + 1}.jpg` : undefined;
-        const photo = await compressAndProcessImage(files[i], defaultName);
+        const photo = await compressAndProcessImage(
+          files[i],
+          defaultName,
+          1280,
+          0.84,
+          stampText
+        );
         processed.push({
           ...photo,
-          caption: '',
+          caption: areaOrFloor.trim() ? `${areaOrFloor.trim()}` : '',
         });
       }
       setPhotos((prev) => [...prev, ...processed]);
@@ -211,6 +300,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
 
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (annotatingPhoto) return;
       const images = extractImagesFromClipboard(e.clipboardData);
       if (images.length > 0) {
         e.preventDefault();
@@ -219,11 +309,21 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     };
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, []);
+  }, [annotatingPhoto, autoStampWatermark, areaOrFloor, date, projectId]);
 
   const handleUpdatePhotoCaption = (photoId: string, caption: string) => {
     setPhotos((prev) =>
       prev.map((p) => (p.id === photoId ? { ...p, caption } : p))
+    );
+  };
+
+  const handleSaveAnnotatedPhoto = (photoId: string, newDataUrl: string, newCaption?: string) => {
+    setPhotos((prev) =>
+      prev.map((p) =>
+        p.id === photoId
+          ? { ...p, url: newDataUrl, caption: newCaption !== undefined ? newCaption : p.caption }
+          : p
+      )
     );
   };
 
@@ -277,16 +377,15 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   };
 
   const buildReportObject = (): DailySiteReport => {
-    const selectedProj = projects.find((p) => p.id === projectId) || projects[0];
-    const projCode = selectedProj ? selectedProj.code.toUpperCase() : 'AWASH';
+    const projCode = selectedProjObj ? selectedProjObj.code.toUpperCase() : 'AWASH';
     const seq = String(totalExistingCount + 1).padStart(3, '0');
     const nowIso = new Date().toISOString();
 
     return {
       id: existingReport?.id || `day-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       code: existingReport?.code || `DAY-${projCode}-${seq}`,
-      projectId: selectedProj ? selectedProj.id : projectId,
-      projectName: selectedProj ? selectedProj.name : 'Awash Bank',
+      projectId: selectedProjObj ? selectedProjObj.id : projectId,
+      projectName: selectedProjObj ? selectedProjObj.name : 'Awash Bank',
       date,
       technicianName: technicianName.trim() || 'Pierluigi',
       arrivalTime,
@@ -296,8 +395,10 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
       areaOrFloor: areaOrFloor.trim() || undefined,
       workDone: workDone.trim() || 'Ispezione tecnica, verifiche impianti e lavori in cantiere.',
       materialsUsed: materialsUsed.trim() || undefined,
+      missingMaterials: missingMaterials.trim() || undefined,
       issuesFound: issuesFound.trim() || undefined,
       nextDayPlan: nextDayPlan.trim() || undefined,
+      completedActionIds: checkedTaskIds.length > 0 ? checkedTaskIds : undefined,
       photos,
       technicianSignature: technicianSignature || undefined,
       clientSignerName: clientSignerName.trim() || undefined,
@@ -314,7 +415,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
       return;
     }
     const reportObj = buildReportObject();
-    onSave(reportObj);
+    onSave(reportObj, checkedTaskIds, missingMaterials.trim() || undefined);
     onClose();
   };
 
@@ -322,14 +423,14 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 gap-2 flex-wrap">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
-                <span>Report Giornaliero di Cantiere (Daily Site Report)</span>
+              <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2 flex-wrap">
+                <span>Report Giornaliero di Cantiere</span>
                 {existingReport && (
                   <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-600/50">
                     {existingReport.code}
@@ -337,17 +438,33 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                 )}
               </h3>
               <p className="text-xs text-slate-300">
-                Orario di arrivo e partenza, attività svolte oggi, foto di cantiere e generazione PDF
+                Orario arrivo/uscita, lavori svolti, foto annotate con timbro e PDF Italiano/Inglese
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Feature 1: Riprendi da Ieri */}
+            {previousProjectReport && (
+              <button
+                type="button"
+                onClick={handleCopyFromYesterday}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold transition active:scale-95"
+                title={`Copia Zona e Programma dal report del ${previousProjectReport.date}`}
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>🔄 Riprendi da Ieri ({previousProjectReport.date})</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}
@@ -407,7 +524,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                 <span>ORARIO DI ARRIVO E PARTENZA DAL CANTIERE</span>
               </span>
               <span className="text-[11px] text-slate-300">
-                Usa i pulsanti <strong className="text-white">"Segna Ora"</strong> quando arrivi e quando esci dal cantiere
+                Usa i pulsanti <strong className="text-white">"📍 Ora"</strong> e <strong className="text-white">"🏁 Ora"</strong> in cantiere
               </span>
             </div>
 
@@ -507,7 +624,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
             </div>
           </div>
 
-          {/* Row 3: Zona / Piano / Area Cantiere */}
+          {/* Row 3: Zona / Piano / Impianto in Cantiere */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-blue-400" />
@@ -527,7 +644,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                         : z
                     )
                   }
-                  className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-blue-600/30 text-slate-300 hover:text-blue-200 border border-slate-700 transition"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-blue-600/30 text-slate-200 hover:text-blue-200 border border-slate-700 transition"
                 >
                   + {z}
                 </button>
@@ -541,6 +658,46 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
               className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Feature 4: Spunta le Azioni del Progetto fatte oggi */}
+          {openProjectTasks.length > 0 && (
+            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-700/50 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                  <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>
+                    ✅ Spunta i Lavori / Azioni di {selectedProjObj?.name} eseguiti oggi (li aggiunge in automatico al report):
+                  </span>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                {openProjectTasks.map((task) => {
+                  const isChecked = checkedTaskIds.includes(task.id);
+                  return (
+                    <div
+                      key={task.id}
+                      onClick={() => handleToggleProjectTaskToday(task)}
+                      className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
+                        isChecked
+                          ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-200 font-semibold'
+                          : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-300'
+                      }`}
+                    >
+                      {isChecked ? (
+                        <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0">
+                        <span className="font-mono text-[10px] text-indigo-300 mr-1">[{task.code}]</span>
+                        <span className="leading-snug">{task.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Row 4: Cose fatte oggi in cantiere */}
           <div>
@@ -571,17 +728,17 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
               rows={4}
               value={workDone}
               onChange={(e) => setWorkDone(e.target.value)}
-              placeholder="Elenca tutte le attività svolte oggi in cantiere (es. Verifica cablaggio sensori CO Parking Area, test centralina, montaggio apparecchiature, prove di funzionamento...)"
+              placeholder="Elenca tutte le attività svolte oggi in cantiere (es. Verifica cablaggio sensori CO Parking Area, test centralina LPR, montaggio apparecchiature...)"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed"
             />
           </div>
 
-          {/* Row 5: Materiali Usati + Problemi/Note + Programma per Domani */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Row 5: Materiali Usati + Materiali Mancanti (Feature 6) + Problemi + Programma Domani */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-sky-300 mb-1 flex items-center gap-1">
                 <Package className="w-3.5 h-3.5 text-sky-400" />
-                <span>Materiali Installati / Usati</span>
+                <span>Materiali Installati / Usati Oggi</span>
               </label>
               <textarea
                 rows={2}
@@ -589,6 +746,21 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                 onChange={(e) => setMaterialsUsed(e.target.value)}
                 placeholder="Es. 4x Sensori CO, 50m cavo schermato, morsetti..."
                 className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+              />
+            </div>
+
+            {/* Feature 6: Materiali Mancanti / Da Comprare Domani */}
+            <div>
+              <label className="block text-xs font-bold text-rose-300 mb-1 flex items-center gap-1">
+                <ShoppingCart className="w-3.5 h-3.5 text-rose-400" />
+                <span>🛒 Materiali Mancanti / Da Comprare per Cantiere</span>
+              </label>
+              <textarea
+                rows={2}
+                value={missingMaterials}
+                onChange={(e) => setMissingMaterials(e.target.value)}
+                placeholder="Es. Mancano 2 alimentatori 24V, tasselli M8, 20m cavo cat6..."
+                className="w-full bg-slate-800/90 border border-rose-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-400"
               />
             </div>
 
@@ -609,19 +781,19 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
             <div>
               <label className="block text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1">
                 <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Programma per Domani</span>
+                <span>Programma per Domani (verrà ripreso domani!)</span>
               </label>
               <textarea
                 rows={2}
                 value={nextDayPlan}
                 onChange={(e) => setNextDayPlan(e.target.value)}
-                placeholder="Es. Completare cablaggio zona Nord e avvio test..."
+                placeholder="Es. Completare cablaggio zona Nord e avvio test LPR..."
                 className="w-full bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
               />
             </div>
           </div>
 
-          {/* Row 6: FOTO DEL GIORNO IN CANTIERE CON DIDASCALIA */}
+          {/* Row 6: FOTO DEL GIORNO CON TIMBRO AUTOMATICO E DISEGNO/ANNOTAZIONE */}
           <div className="bg-slate-950/70 p-3.5 rounded-xl border border-blue-500/40 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
@@ -629,15 +801,21 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                   <Camera className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
                     <span>📸 Foto del Lavoro Fatto Oggi in Cantiere</span>
                     <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
                       {photos.length} foto
                     </span>
                   </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Scatta dal telefono, carica dalla galleria o incolla con Ctrl+V (puoi scrivere una nota sotto ogni foto)
-                  </p>
+                  <label className="flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={autoStampWatermark}
+                      onChange={(e) => setAutoStampWatermark(e.target.checked)}
+                      className="rounded accent-emerald-500"
+                    />
+                    <span>🕒 Imprimi automaticamente Timbro Data + Ora + Zona sulle foto caricate</span>
+                  </label>
                 </div>
               </div>
 
@@ -692,7 +870,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
 
             {isProcessingPhotos && (
               <div className="text-center py-2 text-xs text-blue-400 animate-pulse">
-                Compressione e ottimizzazione foto in corso...
+                Compressione, mantenimento proporzioni e timbro orario in corso...
               </div>
             )}
 
@@ -716,14 +894,28 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
                       <span className="absolute top-1.5 left-1.5 bg-black/75 text-[10px] font-mono font-bold text-white px-2 py-0.5 rounded border border-white/20">
                         Foto #{idx + 1}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(photo.id)}
-                        className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow"
-                        title="Rimuovi foto"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+
+                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                        {/* Feature 2: Annotate / Draw on photo */}
+                        <button
+                          type="button"
+                          onClick={() => setAnnotatingPhoto(photo)}
+                          className="px-2 py-1 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-[10px] font-extrabold shadow flex items-center gap-1"
+                          title="Disegna cerchi, frecce o testo sulla foto"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Segna</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(photo.id)}
+                          className="p-1 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow"
+                          title="Rimuovi foto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <div className="p-2">
                       <input
@@ -770,25 +962,52 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
             </div>
           </div>
 
-          {/* Footer Actions */}
+          {/* Footer Actions with PDF Language Switcher (Feature 5) */}
           <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Feature 5: Language Toggle */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-700">
+                <Globe className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-1" />
+                <button
+                  type="button"
+                  onClick={() => setPdfLang('it')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
+                    pdfLang === 'it'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🇮🇹 PDF IT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPdfLang('en')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
+                    pdfLang === 'en'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🇬🇧 PDF EN
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => downloadDailySiteReportPDF(buildReportObject())}
+                onClick={() => downloadDailySiteReportPDF(buildReportObject(), pdfLang)}
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
               >
                 <FileDown className="w-4 h-4 text-blue-400" />
-                <span>Anteprima PDF Giornaliero</span>
+                <span>Scarica PDF ({pdfLang.toUpperCase()})</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => shareDailySiteReportViaWhatsApp(buildReportObject())}
+                onClick={() => shareDailySiteReportViaWhatsApp(buildReportObject(), pdfLang)}
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-600/50 transition"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>Invia Report su WhatsApp</span>
+                <span>WhatsApp ({pdfLang.toUpperCase()})</span>
               </button>
             </div>
 
@@ -811,6 +1030,16 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Feature 2: Photo Annotator Modal */}
+      {annotatingPhoto && (
+        <PhotoAnnotatorModal
+          photo={annotatingPhoto}
+          defaultWatermarkText={buildWatermarkString()}
+          onClose={() => setAnnotatingPhoto(null)}
+          onSaveAnnotated={handleSaveAnnotatedPhoto}
+        />
+      )}
     </div>
   );
 };
