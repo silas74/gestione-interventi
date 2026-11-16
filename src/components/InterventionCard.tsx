@@ -1384,19 +1384,37 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Waiting for Parts Interim Report Section (PINK TONES) */}
-        {!isCompleted && isWaitingForParts && intervention.report && (
+        {/* Waiting for Parts or Partial Interim Report Section */}
+        {!isCompleted && intervention.report && (
           <div className="bg-pink-950/30 border border-pink-700/50 rounded-xl p-3.5 mb-3 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-pink-300">
                 <Clock className="w-4 h-4 text-pink-400 animate-pulse" />
-                <span>Working in Progress — Waiting for Parts (Tech: {intervention.report.technicianName})</span>
+                <span>
+                  {isWaitingForParts
+                    ? `Working in Progress — Waiting for Parts (Tech: ${intervention.report.technicianName})`
+                    : `Report Giornaliero / Parziale (Tech: ${intervention.report.technicianName})`}
+                </span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-200 border border-pink-500/30">
-                <Clock className="w-3 h-3 text-pink-400" />
-                <span>{intervention.report.hoursWorked} hours logged</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(intervention.report.startTime || intervention.report.endTime) && (
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-900 text-emerald-300 border border-emerald-500/40">
+                    🕒 Arrivo {intervention.report.startTime || '--:--'} → Uscita {intervention.report.endTime || '--:--'}
+                  </span>
+                )}
+                <div className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-200 border border-pink-500/30">
+                  <Clock className="w-3 h-3 text-pink-400" />
+                  <span>{intervention.report.hoursWorked} hours logged</span>
+                </div>
               </div>
             </div>
+
+            {intervention.report.areaOrFloor && (
+              <div className="text-xs text-blue-200">
+                <strong className="text-blue-400">📍 Zona / Piano: </strong>
+                {intervention.report.areaOrFloor}
+              </div>
+            )}
 
             <div className="text-xs text-slate-200">
               <strong className="text-pink-300">Work performed: </strong>
@@ -1414,6 +1432,13 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               <div className="text-xs text-slate-300">
                 <strong className="text-pink-400">Notes: </strong>
                 {intervention.report.technicalNotes}
+              </div>
+            )}
+
+            {intervention.report.nextDayPlan && (
+              <div className="text-xs text-emerald-300">
+                <strong className="text-emerald-400">➡️ Programma Domani: </strong>
+                {intervention.report.nextDayPlan}
               </div>
             )}
 
@@ -1452,11 +1477,25 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>Service Completed by {intervention.report.technicianName}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
-                <Clock className="w-3 h-3 text-emerald-400" />
-                <span>{intervention.report.hoursWorked} hours worked</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(intervention.report.startTime || intervention.report.endTime) && (
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-900 text-emerald-300 border border-emerald-500/40">
+                    🕒 Arrivo {intervention.report.startTime || '--:--'} → Uscita {intervention.report.endTime || '--:--'}
+                  </span>
+                )}
+                <div className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
+                  <Clock className="w-3 h-3 text-emerald-400" />
+                  <span>{intervention.report.hoursWorked} hours worked</span>
+                </div>
               </div>
             </div>
+
+            {intervention.report.areaOrFloor && (
+              <div className="text-xs text-blue-200">
+                <strong className="text-blue-400">📍 Zona / Piano: </strong>
+                {intervention.report.areaOrFloor}
+              </div>
+            )}
 
             <div className="text-xs text-slate-200">
               <strong className="text-emerald-300">Work performed: </strong>
@@ -1467,6 +1506,13 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
               <div className="text-xs text-slate-300">
                 <strong className="text-emerald-400">Materials: </strong>
                 {intervention.report.materialsUsed}
+              </div>
+            )}
+
+            {intervention.report.nextDayPlan && (
+              <div className="text-xs text-emerald-300">
+                <strong className="text-emerald-400">➡️ Programma Domani: </strong>
+                {intervention.report.nextDayPlan}
               </div>
             )}
 
