@@ -399,13 +399,13 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
                             <div
                               key={photo.id}
                               onClick={() => onPreviewPhoto(photo)}
-                              className="group relative cursor-pointer w-20 h-16 rounded-lg overflow-hidden border border-blue-500/50 hover:border-yellow-400 shrink-0 bg-slate-900"
+                              className="group relative cursor-pointer w-24 h-20 rounded-lg overflow-hidden border border-blue-500/50 hover:border-yellow-400 shrink-0 bg-slate-950 flex items-center justify-center"
                               title={photo.caption || photo.name}
                             >
                               <img
                                 src={photo.url}
                                 alt={photo.caption || photo.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition"
+                                className="max-w-full max-h-full w-auto h-auto object-contain group-hover:scale-105 transition"
                               />
                               {photo.caption && (
                                 <div className="absolute bottom-0 inset-x-0 bg-black/75 px-1 py-0.5 text-[9px] text-white truncate">
