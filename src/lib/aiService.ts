@@ -11,6 +11,18 @@ export interface AiSettings {
   ollamaModel: string;
 }
 
+export interface DeepSeekBalanceCurrency {
+  currency: string;
+  total_balance: string;
+  granted_balance: string;
+  topped_up_balance: string;
+}
+
+export interface DeepSeekBalanceResponse {
+  is_available: boolean;
+  balance_infos: DeepSeekBalanceCurrency[];
+}
+
 const STORAGE_AI_SETTINGS = 'interventi_ai_settings_v1';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
@@ -46,6 +58,42 @@ export function isAiConfigured(): boolean {
     return Boolean(s.deepseekApiKey && s.deepseekApiKey.trim().length > 5);
   }
   return Boolean(s.ollamaBaseUrl && s.ollamaBaseUrl.trim().length > 0 && s.ollamaModel.trim().length > 0);
+}
+
+/**
+ * Queries DeepSeek API (/user/balance) to get remaining account balance and quota availability
+ */
+export async function fetchDeepSeekBalance(
+  customApiKey?: string,
+  customBaseUrl?: string
+): Promise<DeepSeekBalanceResponse> {
+  const settings = getAiSettings();
+  const apiKey = (customApiKey !== undefined ? customApiKey : settings.deepseekApiKey).trim();
+  if (!apiKey) {
+    throw new Error('Inserisci prima la tua DeepSeek API Key (sk-...) per controllare il credito residuo.');
+  }
+  const baseUrl = (customBaseUrl || settings.deepseekBaseUrl || 'https://api.deepseek.com')
+    .trim()
+    .replace(/\/+$/, '');
+
+  const res = await fetch(`${baseUrl}/user/balance`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Impossibile leggere il saldo DeepSeek (HTTP ${res.status}): ${errText || res.statusText}`);
+  }
+
+  const data = await res.json();
+  return {
+    is_available: Boolean(data?.is_available),
+    balance_infos: Array.isArray(data?.balance_infos) ? data.balance_infos : [],
+  };
 }
 
 /**
