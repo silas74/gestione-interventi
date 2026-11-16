@@ -25,10 +25,14 @@ import {
   Square,
   ShoppingCart,
   Globe,
+  Sparkles,
+  RefreshCw,
+  Settings,
 } from 'lucide-react';
 import { DailySiteReport, DefectPhoto, Project, InterventionRequest, PdfLanguage } from '../types';
 import { compressAndProcessImage, extractImagesFromClipboard, readClipboardImagesAsync } from '../lib/photoUtils';
 import { downloadDailySiteReportPDF, shareDailySiteReportViaWhatsApp } from '../lib/pdfGenerator';
+import { formatRawNotesWithAi, translateDailyReportFieldsWithAi } from '../lib/aiService';
 import { SignaturePad } from './SignaturePad';
 import { PhotoAnnotatorModal } from './PhotoAnnotatorModal';
 
@@ -43,6 +47,7 @@ interface DailySiteReportModalProps {
   projectInterventions?: InterventionRequest[];
   totalExistingCount: number;
   onSave: (report: DailySiteReport, completedTaskIds?: string[], newMissingMaterialText?: string) => void;
+  onOpenAiSettings?: () => void;
 }
 
 const AWASH_QUICK_ZONES = [
@@ -104,6 +109,7 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
   projectInterventions = [],
   totalExistingCount,
   onSave,
+  onOpenAiSettings,
 }) => {
   if (!isOpen) return null;
 
@@ -174,9 +180,84 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
 
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [isRunningAi, setIsRunningAi] = useState(false);
+  const [aiErrorMsg, setAiErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Feature A: Structure raw notes into a technical report using DeepSeek / Local Ollama
+  const handleFormatNotesWithAi = async (targetLang: PdfLanguage) => {
+    if (!workDone.trim()) {
+      alert('Scrivi o detta prima qualche appunto in "Cose Fatte Oggi" per farlo strutturare dall\'AI.');
+      return;
+    }
+    setIsRunningAi(true);
+    setAiErrorMsg(null);
+    try {
+      const res = await formatRawNotesWithAi({
+        rawNotes: workDone,
+        projectName: selectedProjObj ? selectedProjObj.name : 'Awash Bank',
+        areaOrFloor,
+        existingMaterials: materialsUsed,
+        existingIssues: issuesFound,
+        existingMissing: missingMaterials,
+        existingNextPlan: nextDayPlan,
+        targetLang,
+      });
+      if (res.workDone) setWorkDone(res.workDone);
+      if (res.materialsUsed) setMaterialsUsed(res.materialsUsed);
+      if (res.issuesFound) setIssuesFound(res.issuesFound);
+      if (res.missingMaterials) setMissingMaterials(res.missingMaterials);
+      if (res.nextDayPlan) setNextDayPlan(res.nextDayPlan);
+      setPdfLang(targetLang);
+    } catch (err: any) {
+      setAiErrorMsg(err?.message || 'Errore AI.');
+    } finally {
+      setIsRunningAi(false);
+    }
+  };
+
+  // Feature B: Translate all fields & photo captions into English (or Italian)
+  const handleTranslateReportWithAi = async (targetLang: PdfLanguage) => {
+    if (!workDone.trim()) {
+      alert('Compila prima "Cose Fatte Oggi" per tradurre il report.');
+      return;
+    }
+    setIsRunningAi(true);
+    setAiErrorMsg(null);
+    try {
+      const res = await translateDailyReportFieldsWithAi({
+        areaOrFloor,
+        workDone,
+        materialsUsed,
+        issuesFound,
+        missingMaterials,
+        nextDayPlan,
+        photoCaptions: photos.map((p) => p.caption || ''),
+        targetLang,
+      });
+      if (res.areaOrFloor !== undefined) setAreaOrFloor(res.areaOrFloor);
+      if (res.workDone) setWorkDone(res.workDone);
+      if (res.materialsUsed !== undefined) setMaterialsUsed(res.materialsUsed);
+      if (res.issuesFound !== undefined) setIssuesFound(res.issuesFound);
+      if (res.missingMaterials !== undefined) setMissingMaterials(res.missingMaterials);
+      if (res.nextDayPlan !== undefined) setNextDayPlan(res.nextDayPlan);
+      if (Array.isArray(res.photoCaptions) && res.photoCaptions.length === photos.length) {
+        setPhotos((prev) =>
+          prev.map((p, idx) => ({
+            ...p,
+            caption: res.photoCaptions[idx] ?? p.caption,
+          }))
+        );
+      }
+      setPdfLang(targetLang);
+    } catch (err: any) {
+      setAiErrorMsg(err?.message || 'Errore traduzione AI.');
+    } finally {
+      setIsRunningAi(false);
+    }
+  };
 
   useEffect(() => {
     const computed = calculateNetHours(arrivalTime, departureTime, breakMinutes);
@@ -787,36 +868,95 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
             </div>
           )}
 
-          {/* Row 4: Cose fatte oggi in cantiere */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
+          {/* Row 4: Cose fatte oggi in cantiere + AI Action Bar (Feature A & Feature B) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="block text-xs font-bold text-yellow-300 flex items-center gap-1.5">
                 <Wrench className="w-3.5 h-3.5 text-yellow-400" />
                 <span>Cose Fatte Oggi in Cantiere (Lavori Eseguiti) *</span>
               </label>
-              <button
-                type="button"
-                onClick={toggleVoiceDictation}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition active:scale-95 ${
-                  isRecordingVoice
-                    ? 'bg-rose-600 text-white animate-pulse shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                }`}
-              >
-                {isRecordingVoice ? (
-                  <MicOff className="w-3.5 h-3.5 text-white" />
-                ) : (
-                  <Mic className="w-3.5 h-3.5 text-blue-400" />
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {/* Voice Dictation */}
+                <button
+                  type="button"
+                  onClick={toggleVoiceDictation}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition active:scale-95 ${
+                    isRecordingVoice
+                      ? 'bg-rose-600 text-white animate-pulse shadow-md'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  {isRecordingVoice ? (
+                    <MicOff className="w-3.5 h-3.5 text-white" />
+                  ) : (
+                    <Mic className="w-3.5 h-3.5 text-blue-400" />
+                  )}
+                  <span>{isRecordingVoice ? 'In ascolto...' : '🎤 Detta a Voce'}</span>
+                </button>
+
+                {/* Feature A: Format raw notes into structured technical report (IT) */}
+                <button
+                  type="button"
+                  disabled={isRunningAi}
+                  onClick={() => handleFormatNotesWithAi('it')}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-400/50 text-xs font-bold transition active:scale-95 disabled:opacity-50"
+                  title="Trasforma i tuoi appunti veloci in una relazione tecnica strutturata (Lavori, Materiali, Problemi e Programma Domani)"
+                >
+                  {isRunningAi ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-300" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                  )}
+                  <span>✨ Formatta Appunti (AI)</span>
+                </button>
+
+                {/* Feature B: Translate to Technical English for Addis Client */}
+                <button
+                  type="button"
+                  disabled={isRunningAi}
+                  onClick={() => handleTranslateReportWithAi('en')}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 border border-blue-400/50 text-xs font-bold transition active:scale-95 disabled:opacity-50"
+                  title="Traduci automaticamente Lavori, Note, Programma e Didascalie Foto in Inglese Tecnico per il PDF EN"
+                >
+                  <Globe className="w-3.5 h-3.5 text-blue-400" />
+                  <span>🇬🇧 Traduci in Inglese (AI)</span>
+                </button>
+
+                {onOpenAiSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenAiSettings}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                    title="Impostazioni AI (DeepSeek API / Ollama Locale)"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-indigo-400" />
+                  </button>
                 )}
-                <span>{isRecordingVoice ? 'In ascolto (Premi per fermare)...' : '🎤 Detta a Voce'}</span>
-              </button>
+              </div>
             </div>
+
+            {aiErrorMsg && (
+              <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-xs text-rose-200 flex items-center justify-between gap-2">
+                <span>{aiErrorMsg}</span>
+                {onOpenAiSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenAiSettings}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shrink-0"
+                  >
+                    Configura DeepSeek / Ollama
+                  </button>
+                )}
+              </div>
+            )}
+
             <textarea
               required
               rows={4}
               value={workDone}
               onChange={(e) => setWorkDone(e.target.value)}
-              placeholder="Elenca tutte le attività svolte oggi in cantiere (es. Verifica cablaggio sensori CO Parking Area, test centralina LPR, montaggio apparecchiature...)"
+              placeholder="Scrivi o detta a voce anche solo appunti veloci (es. 'configurato 20 telecamere, 2 non prendevano PoE sullo switch 3, domani finisco NVR') e premi '✨ Formatta Appunti (AI)' o '🇬🇧 Traduci in Inglese (AI)'!"
               className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed"
             />
           </div>
