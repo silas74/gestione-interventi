@@ -627,25 +627,43 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
                           <span>Foto Cantiere del {rep.date} ({rep.photos.length}):</span>
                         </div>
                         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                          {rep.photos.map((photo) => (
-                            <div
-                              key={photo.id}
-                              onClick={() => onPreviewPhoto(photo)}
-                              className="group relative cursor-pointer w-24 h-20 rounded-lg overflow-hidden border border-blue-500/50 hover:border-yellow-400 shrink-0 bg-slate-950 flex items-center justify-center"
-                              title={photo.caption || photo.name}
-                            >
-                              <img
-                                src={photo.url}
-                                alt={photo.caption || photo.name}
-                                className="max-w-full max-h-full w-auto h-auto object-contain group-hover:scale-105 transition"
-                              />
-                              {photo.caption && (
-                                <div className="absolute bottom-0 inset-x-0 bg-black/75 px-1 py-0.5 text-[9px] text-white truncate">
-                                  {photo.caption}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                          {rep.photos.map((photo) => {
+                            const st = photo.stage || 'normal';
+                            const thumbBorder =
+                              st === 'before'
+                                ? 'border-rose-500 ring-1 ring-rose-500/40'
+                                : st === 'after'
+                                ? 'border-emerald-500 ring-1 ring-emerald-500/40'
+                                : 'border-blue-500/50';
+                            return (
+                              <div
+                                key={photo.id}
+                                onClick={() => onPreviewPhoto(photo)}
+                                className={`group relative cursor-pointer w-24 h-20 rounded-lg overflow-hidden border ${thumbBorder} hover:border-yellow-400 shrink-0 bg-slate-950 flex items-center justify-center`}
+                                title={photo.caption || photo.name}
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={photo.caption || photo.name}
+                                  className="max-w-full max-h-full w-auto h-auto object-contain group-hover:scale-105 transition"
+                                />
+                                {(st === 'before' || st === 'after') && (
+                                  <span
+                                    className={`absolute top-0.5 left-0.5 px-1.5 py-0.2 rounded text-[8px] font-extrabold text-white shadow ${
+                                      st === 'before' ? 'bg-rose-600' : 'bg-emerald-600'
+                                    }`}
+                                  >
+                                    {st === 'before' ? 'PRIMA' : 'DOPO'}
+                                  </span>
+                                )}
+                                {photo.caption && (
+                                  <div className="absolute bottom-0 inset-x-0 bg-black/75 px-1 py-0.5 text-[9px] text-white truncate">
+                                    {photo.caption}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
