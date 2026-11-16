@@ -228,17 +228,50 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
       item.status !== 'completato'
   );
 
-  const handleToggleProjectTaskToday = (task: InterventionRequest) => {
-    const isAlreadyChecked = checkedTaskIds.includes(task.id);
+  const handleToggleProjectStepToday = (
+    task: InterventionRequest,
+    stepId: string,
+    stepText: string
+  ) => {
+    const compositeId = `${task.id}::${stepId}`;
+    const isAlreadyChecked = checkedTaskIds.includes(compositeId);
+
+    // Infer short system label & quick zone
+    const titleLower = task.title.toLowerCase();
+    let sysTag = task.code;
+    let autoZone = '';
+    if (titleLower.includes('cctv')) {
+      sysTag = 'CCTV';
+      autoZone = 'CCTV';
+    } else if (titleLower.includes('solar')) {
+      sysTag = 'Solar System';
+      autoZone = 'Solar system';
+    } else if (titleLower.includes('parking') && titleLower.includes('lpr')) {
+      sysTag = 'Parking LPR';
+      autoZone = 'Parking area LPR';
+    } else if (titleLower.includes('co ')) {
+      sysTag = 'Parking CO';
+      autoZone = 'Parking area CO';
+    }
+
     if (isAlreadyChecked) {
-      setCheckedTaskIds((prev) => prev.filter((id) => id !== task.id));
+      setCheckedTaskIds((prev) => prev.filter((id) => id !== compositeId));
     } else {
-      setCheckedTaskIds((prev) => [...prev, task.id]);
-      const bulletLine = `• [${task.code}] ${task.title}`;
+      setCheckedTaskIds((prev) => [...prev, compositeId]);
+      const bulletLine = `• [${sysTag}] ${stepText}`;
       setWorkDone((prev) => {
-        if (prev.includes(task.code)) return prev;
+        if (prev.includes(stepText)) return prev;
         return prev.trim() ? `${prev.trim()}\n${bulletLine}` : bulletLine;
       });
+      if (autoZone) {
+        setAreaOrFloor((prev) =>
+          prev.trim()
+            ? prev.includes(autoZone)
+              ? prev
+              : `${prev.trim()} | ${autoZone}`
+            : autoZone
+        );
+      }
     }
   };
 
@@ -659,39 +692,94 @@ export const DailySiteReportModal: React.FC<DailySiteReportModalProps> = ({
             />
           </div>
 
-          {/* Feature 4: Spunta le Azioni del Progetto fatte oggi */}
+          {/* Feature 4: Spunta le Azioni / Step del Progetto fatte oggi (CCTV, Solar System, Parking System, CO...) */}
           {openProjectTasks.length > 0 && (
-            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-700/50 space-y-2">
+            <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-700/50 space-y-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                  <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-xs font-extrabold text-indigo-300 flex items-center gap-1.5">
+                  <CheckSquare className="w-4 h-4 text-indigo-400" />
                   <span>
-                    ✅ Spunta i Lavori / Azioni di {selectedProjObj?.name} eseguiti oggi (li aggiunge in automatico al report):
+                    ✅ Spunta le Attività di {selectedProjObj?.name} fatte oggi (le scrive da solo nel report e aggiorna l'avanzamento):
                   </span>
                 </span>
+                {checkedTaskIds.length > 0 && (
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    {checkedTaskIds.length} selezionate oggi
+                  </span>
+                )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+
+              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
                 {openProjectTasks.map((task) => {
-                  const isChecked = checkedTaskIds.includes(task.id);
+                  const steps = task.actionSteps || [];
+                  const openSteps = steps.filter((s) => !s.completed);
+                  const doneCount = steps.filter((s) => s.completed).length;
+
                   return (
                     <div
                       key={task.id}
-                      onClick={() => handleToggleProjectTaskToday(task)}
-                      className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
-                        isChecked
-                          ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-200 font-semibold'
-                          : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-300'
-                      }`}
+                      className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5"
                     >
-                      {isChecked ? (
-                        <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                      ) : (
-                        <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                      )}
-                      <div className="min-w-0">
-                        <span className="font-mono text-[10px] text-indigo-300 mr-1">[{task.code}]</span>
-                        <span className="leading-snug">{task.title}</span>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="text-xs font-bold text-yellow-300 flex items-center gap-1.5">
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-700/50">
+                            {task.code}
+                          </span>
+                          <span>{task.title}</span>
+                        </div>
+                        {steps.length > 0 && (
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {doneCount}/{steps.length} completati
+                          </span>
+                        )}
                       </div>
+
+                      {openSteps.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-1 pt-1">
+                          {openSteps.map((step) => {
+                            const compositeId = `${task.id}::${step.id}`;
+                            const isChecked = checkedTaskIds.includes(compositeId);
+                            return (
+                              <div
+                                key={step.id}
+                                onClick={() =>
+                                  handleToggleProjectStepToday(task, step.id, step.text)
+                                }
+                                className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
+                                  isChecked
+                                    ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-200 font-semibold'
+                                    : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-200'
+                                }`}
+                              >
+                                {isChecked ? (
+                                  <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                                )}
+                                <span className="leading-snug">{step.text}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() =>
+                            handleToggleProjectStepToday(task, 'MAIN', task.title)
+                          }
+                          className={`p-2 rounded-lg border text-xs cursor-pointer flex items-start gap-2 transition ${
+                            checkedTaskIds.includes(`${task.id}::MAIN`)
+                              ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-200 font-semibold'
+                              : 'bg-slate-900/90 border-slate-800 hover:border-indigo-500/50 text-slate-200'
+                          }`}
+                        >
+                          {checkedTaskIds.includes(`${task.id}::MAIN`) ? (
+                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          ) : (
+                            <Square className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                          )}
+                          <span>Segna intera attività come eseguita oggi</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
