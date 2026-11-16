@@ -23,6 +23,8 @@ import {
   Square,
   Plus,
   Globe,
+  FileCheck2,
+  Sparkles,
 } from 'lucide-react';
 import { DailySiteReport, DefectPhoto, Project, SiteShoppingItem, PdfLanguage } from '../types';
 import {
@@ -46,6 +48,8 @@ interface DailySiteReportsSectionProps {
   onToggleShoppingItem: (id: string) => void;
   onDeleteShoppingItem: (id: string) => void;
   onPreviewPhoto: (photo: DefectPhoto) => void;
+  onOpenCommissioningModal?: () => void;
+  onOpenAiSettingsModal?: () => void;
 }
 
 export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = ({
@@ -61,6 +65,8 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
   onToggleShoppingItem,
   onDeleteShoppingItem,
   onPreviewPhoto,
+  onOpenCommissioningModal,
+  onOpenAiSettingsModal,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showShoppingBox, setShowShoppingBox] = useState(false);
@@ -262,6 +268,32 @@ export const DailySiteReportsSection: React.FC<DailySiteReportsSectionProps> = (
             <PlusCircle className="w-4 h-4" />
             <span>+ Report Giornaliero (Oggi)</span>
           </button>
+
+          {/* Feature E: Verbale Finale di Collaudo e Consegna Impianti (AI + PDF) */}
+          {onOpenCommissioningModal && (
+            <button
+              type="button"
+              onClick={onOpenCommissioningModal}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-extrabold shadow-md transition active:scale-95 border border-indigo-300/40"
+              title="Genera il Verbale Finale di Collaudo e Consegna Impianto (AI + PDF Italiano/Inglese)"
+            >
+              <FileCheck2 className="w-4 h-4 text-yellow-300" />
+              <span>📜 Verbale Collaudo (AI)</span>
+            </button>
+          )}
+
+          {/* AI Settings Quick Button */}
+          {onOpenAiSettingsModal && (
+            <button
+              type="button"
+              onClick={onOpenAiSettingsModal}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition active:scale-95"
+              title="Configura DeepSeek API Key oppure Ollama Locale sul PC"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+              <span>AI Config</span>
+            </button>
+          )}
 
           {/* Cumulative Timesheet PDF & Excel */}
           {reports.length > 0 && (
