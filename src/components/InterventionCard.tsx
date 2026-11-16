@@ -1343,7 +1343,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                     alt={photo.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover group-hover:scale-105 transition"
+                    className="w-full h-full object-contain bg-slate-950 group-hover:scale-105 transition"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                     <span className="text-[10px] text-white font-semibold">View</span>
@@ -1373,7 +1373,7 @@ export const InterventionCard: React.FC<InterventionCardProps> = React.memo(({
                     alt={photo.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover group-hover:scale-105 transition"
+                    className="w-full h-full object-contain bg-slate-950 group-hover:scale-105 transition"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                     <span className="text-[10px] text-white font-semibold">View</span>
