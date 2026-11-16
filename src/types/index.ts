@@ -44,22 +44,51 @@ export interface DefectPhoto {
   url: string; // base64 data url or cloud URL
   name: string;
   uploadedAt: string;
+  caption?: string; // Didascalia / descrizione della foto scattata in cantiere
 }
 
 export interface TechnicianReport {
+  id?: string;
   technicianName: string;
   interventionDate: string;
-  startTime?: string;
-  endTime?: string;
+  startTime?: string;      // Ora di arrivo in cantiere (HH:mm)
+  endTime?: string;        // Ora di partenza dal cantiere (HH:mm)
+  breakMinutes?: number;   // Pausa pranzo in minuti (es. 60)
+  areaOrFloor?: string;    // Piano / Zona cantiere (es. "Parking Area / Piano 2")
   hoursWorked: number;
   workDone: string;
   materialsUsed?: string;
   technicalNotes?: string;
+  nextDayPlan?: string;    // Programma / cose da fare il giorno successivo
   statusOutcome: 'resolved' | 'partial' | 'waiting_for_parts' | 'risolto' | 'parziale' | 'in_attesa_ricambi';
   technicianSignature?: string; // Base64 digital signature PNG
   pdfDataUri?: string;
   completedAt: string;
   reportPhotos?: DefectPhoto[]; // Photos attached directly to report (uploaded or pasted)
+}
+
+export interface DailySiteReport {
+  id: string;
+  code: string;                 // es. DAY-AWASH-001
+  projectId: string;            // es. 'proj-awash-bank'
+  projectName: string;          // es. 'Awash Bank'
+  date: string;                 // Data giornata (YYYY-MM-DD)
+  technicianName: string;       // es. 'Pierluigi' / 'Costantino'
+  arrivalTime: string;          // Ora di arrivo in cantiere (HH:mm)
+  departureTime: string;        // Ora di partenza dal cantiere (HH:mm)
+  breakMinutes: number;         // Pausa in minuti (es. 0, 30, 60)
+  hoursWorked: number;          // Ore nette lavorate
+  areaOrFloor?: string;         // Zona / Piano / Edificio (es. "Parking Area - CO System")
+  workDone: string;             // Descrizione lavori svolti nella giornata
+  materialsUsed?: string;       // Materiali / apparecchiature installate oggi
+  issuesFound?: string;         // Problemi riscontrati / blocchi / note tecniche
+  nextDayPlan?: string;         // Cosa fare domani in cantiere
+  photos: DefectPhoto[];        // Foto scattate nella giornata con didascalia
+  technicianSignature?: string; // Firma digitale tecnico
+  clientSignerName?: string;    // Nome referente cantiere (es. Dodic / Site Engineer)
+  clientSignature?: string;     // Firma digitale referente cantiere
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ClientFeedback {
@@ -103,6 +132,7 @@ export interface InterventionRequest {
   updatedAt: string;
   assignedTechnician?: string;
   report?: TechnicianReport;
+  dailyReports?: TechnicianReport[]; // Storico report giornalieri (con orario arrivo/partenza e foto)
   clientFeedback?: ClientFeedback;
   emailSource?: EmailSourceInfo;
   emailHistory?: EmailMessageLog[];
