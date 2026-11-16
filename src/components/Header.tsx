@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Shield, User, PlusCircle, LogOut, Users, FolderKanban, 
-  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff, Database, Mail 
+  FileSpreadsheet, Download, Smartphone, Wifi, WifiOff, Database, Mail, Sparkles 
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -16,6 +16,7 @@ interface HeaderProps {
   onOpenInstallModal?: () => void;
   onOpenBackupModal?: () => void;
   onOpenSmartEmailModal?: () => void;
+  onOpenAiSettingsModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,7 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
   isOnline,
   onOpenInstallModal,
   onOpenBackupModal,
-  onOpenSmartEmailModal
+  onOpenSmartEmailModal,
+  onOpenAiSettingsModal,
 }) => {
   const isAdmin = currentUser.role === 'admin';
 
@@ -87,6 +89,16 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Smart Inbound Email Assistant"
               >
                 <Mail className="w-3.5 h-3.5 text-blue-400" />
+              </button>
+            )}
+
+            {onOpenAiSettingsModal && (
+              <button
+                onClick={onOpenAiSettingsModal}
+                className="p-1.5 rounded-lg bg-indigo-600/30 text-indigo-200 hover:text-white border border-indigo-500/45 active:scale-95"
+                title="Impostazioni AI (DeepSeek API / Ollama Locale)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
               </button>
             )}
 
@@ -200,6 +212,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Mail className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-[11px] sm:text-xs">Smart Email</span>
+            </button>
+          )}
+
+          {/* AI Settings (DeepSeek API / Local Ollama) */}
+          {onOpenAiSettingsModal && (
+            <button
+              onClick={onOpenAiSettingsModal}
+              className="flex items-center gap-1.5 bg-indigo-600/25 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-400/45 text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition active:scale-95 shadow-sm shrink-0"
+              title="Configura DeepSeek API Key oppure Ollama Locale sul PC"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+              <span className="text-[11px] sm:text-xs">Impostazioni AI</span>
             </button>
           )}
 
