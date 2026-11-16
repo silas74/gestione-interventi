@@ -44,10 +44,10 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
     initial.deepseekModel || 'deepseek-chat'
   );
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>(
-    initial.ollamaBaseUrl || 'http://localhost:11434'
+    initial.ollamaBaseUrl || 'http://127.0.0.1:11434'
   );
   const [ollamaModel, setOllamaModel] = useState<string>(
-    initial.ollamaModel || 'llama3.2'
+    initial.ollamaModel === 'llama3.2' ? 'qwen2.5:1.5b' : initial.ollamaModel || 'qwen2.5:1.5b'
   );
 
   const [showKey, setShowKey] = useState(false);
@@ -312,24 +312,56 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Indirizzo Server Ollama Locale
-                </label>
+                <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Indirizzo Server Locale (Ollama / llama.cpp)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOllamaBaseUrl('http://127.0.0.1:11434');
+                        setTestResult(null);
+                      }}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition ${
+                        ollamaBaseUrl.includes('11434')
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-300'
+                          : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-emerald-400'
+                      }`}
+                    >
+                      🦙 Ollama (127.0.0.1:11434)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOllamaBaseUrl('http://127.0.0.1:8080');
+                        setTestResult(null);
+                      }}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition ${
+                        ollamaBaseUrl.includes('8080')
+                          ? 'bg-amber-500 text-slate-950 border-amber-300'
+                          : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-400'
+                      }`}
+                    >
+                      ⚡ llama.cpp (127.0.0.1:8080)
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="text"
                   value={ollamaBaseUrl}
                   onChange={(e) => setOllamaBaseUrl(e.target.value)}
-                  placeholder="http://localhost:11434"
+                  placeholder="http://127.0.0.1:11434"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-400"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Modello Ollama da usare
+                  Modello Locale da usare
                 </label>
                 {detectedOllamaModels.length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <select
                       value={ollamaModel}
                       onChange={(e) => setOllamaModel(e.target.value)}
@@ -347,12 +379,31 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
                     type="text"
                     value={ollamaModel}
                     onChange={(e) => setOllamaModel(e.target.value)}
-                    placeholder="Es. llama3.2, qwen2.5:7b, deepseek-r1:8b, mistral..."
+                    placeholder="Es. qwen2.5:1.5b, minicpm-v4.5:latest..."
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-400"
                   />
                 )}
-                <p className="text-[10px] text-slate-400 mt-1">
-                  💡 Nota: se usi l'app dal sito HTTPS su GitHub Pages con Ollama sul PC, assicurati che Ollama sia avviato con variabile d'ambiente <code className="text-emerald-300">OLLAMA_ORIGINS="*"</code>.
+
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <span className="text-[10px] text-slate-400">Scelta rapida modelli sul tuo PC:</span>
+                  {['qwen2.5:1.5b', 'minicpm-v4.5:latest', 'minicpm-v4.6:q4_1'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setOllamaModel(m)}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border transition ${
+                        ollamaModel === m
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-300'
+                          : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-emerald-400'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-[10px] text-emerald-300/90 mt-2">
+                  ✅ Bridge CORS locale attivo in background (`127.0.0.1:11436` / `8082`) per permettere la connessione diretta dal browser a Ollama e NVIDIA Personal AI Router.
                 </p>
               </div>
             </div>
