@@ -1,4 +1,4 @@
-import { InterventionRequest, UserAccount, Project, DailySiteReport } from '../types';
+import { InterventionRequest, UserAccount, Project, DailySiteReport, SiteShoppingItem } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_INTERVENTIONS = 'interventi_data_v3';
@@ -7,6 +7,7 @@ const STORAGE_USERS = 'interventi_users_v3';
 const STORAGE_PROJECTS = 'interventi_projects_v3';
 const STORAGE_SESSION = 'interventi_session_v3';
 const STORAGE_DAILY_REPORTS = 'interventi_daily_site_reports_v1';
+const STORAGE_SHOPPING_LIST = 'interventi_site_shopping_list_v1';
 
 // 1. Initial Projects with German Embassy (GEMB), Awash Bank, Eagle Hills, Hilton (GIAA), Panvac & Workbank Projects
 const INITIAL_PROJECTS: Project[] = [
@@ -1419,6 +1420,40 @@ export function deleteDailySiteReport(id: string): DailySiteReport[] {
   const current = fetchDailySiteReports();
   const updated = current.filter(r => r.id !== id);
   localStorage.setItem(STORAGE_DAILY_REPORTS, JSON.stringify(updated));
+  return updated;
+}
+
+// ================= SITE SHOPPING / MISSING MATERIALS LIST =================
+
+export function fetchSiteShoppingList(): SiteShoppingItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_SHOPPING_LIST);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSiteShoppingItem(item: SiteShoppingItem): SiteShoppingItem[] {
+  const current = fetchSiteShoppingList();
+  const updated = [item, ...current];
+  localStorage.setItem(STORAGE_SHOPPING_LIST, JSON.stringify(updated));
+  return updated;
+}
+
+export function toggleSiteShoppingItem(id: string): SiteShoppingItem[] {
+  const current = fetchSiteShoppingList();
+  const updated = current.map(i => (i.id === id ? { ...i, bought: !i.bought } : i));
+  localStorage.setItem(STORAGE_SHOPPING_LIST, JSON.stringify(updated));
+  return updated;
+}
+
+export function deleteSiteShoppingItem(id: string): SiteShoppingItem[] {
+  const current = fetchSiteShoppingList();
+  const updated = current.filter(i => i.id !== id);
+  localStorage.setItem(STORAGE_SHOPPING_LIST, JSON.stringify(updated));
   return updated;
 }
 
