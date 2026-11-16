@@ -2,6 +2,31 @@ import { jsPDF } from 'jspdf';
 import { InterventionRequest, DailySiteReport, DefectPhoto } from '../types';
 import { getWhatsAppPhoneDigits } from './contactUtils';
 
+function formatReportDuration(
+  hoursDecimal: number,
+  arrival?: string,
+  departure?: string,
+  breakMins = 0
+): string {
+  if (arrival && departure) {
+    const [arrH, arrM] = arrival.split(':').map(Number);
+    const [depH, depM] = departure.split(':').map(Number);
+    if (!isNaN(arrH) && !isNaN(arrM) && !isNaN(depH) && !isNaN(depM)) {
+      let startM = arrH * 60 + arrM;
+      let endM = depH * 60 + depM;
+      if (endM < startM) endM += 24 * 60;
+      const netM = Math.max(0, endM - startM - (Number(breakMins) || 0));
+      const h = Math.floor(netM / 60);
+      const m = netM % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+  }
+  const totalMins = Math.round((Number(hoursDecimal) || 0) * 60);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 /**
  * Helper to render a multi-page photo gallery appendix in any jsPDF document
  */
@@ -448,7 +473,8 @@ export function generateDailySiteReportPDF(report: DailySiteReport): jsPDF {
   doc.text(`Tecnico: ${report.technicianName}`, 18, currentY + 11);
   doc.text(`Pausa: ${report.breakMinutes || 0} min`, 68, currentY + 11);
   doc.setFont('helvetica', 'bold');
-  doc.text(`TOTALE ORE LAVORATE: ${report.hoursWorked} ore`, 132, currentY + 11);
+  const durStr = formatReportDuration(report.hoursWorked, report.arrivalTime, report.departureTime, report.breakMinutes);
+  doc.text(`DURATA NETTA LAVORO: ${durStr}`, 132, currentY + 11);
 
   currentY += 22;
 
@@ -567,11 +593,12 @@ export async function shareDailySiteReportViaWhatsApp(report: DailySiteReport) {
   const doc = generateDailySiteReportPDF(report);
   const pdfBlob = doc.output('blob');
 
+  const durWhatsApp = formatReportDuration(report.hoursWorked, report.arrivalTime, report.departureTime, report.breakMinutes);
   const summaryText =
     `📋 *DAILY SITE REPORT — ${report.projectName.toUpperCase()}*\n` +
     `📅 Data: *${report.date}* (${report.code})\n` +
     `👷 Tecnico: ${report.technicianName}\n` +
-    `🕒 Orario Cantiere: *Arrivo ${report.arrivalTime || '--:--'} → Uscita ${report.departureTime || '--:--'}* (${report.hoursWorked} ore)\n` +
+    `🕒 Orario Cantiere: *Arrivo ${report.arrivalTime || '--:--'} → Uscita ${report.departureTime || '--:--'}* (${durWhatsApp})\n` +
     (report.areaOrFloor ? `📍 Zona/Piano: ${report.areaOrFloor}\n` : '') +
     `\n🛠️ *Lavori eseguiti oggi:*\n${report.workDone}\n` +
     (report.materialsUsed ? `\n📦 *Materiali usati:* ${report.materialsUsed}\n` : '') +
@@ -664,8 +691,9 @@ export function downloadProjectTimesheetPDF(projectName: string, reports: DailyS
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.2);
     doc.setTextColor(15, 23, 42);
+    const dayDur = formatReportDuration(r.hoursWorked, r.arrivalTime, r.departureTime, r.breakMinutes);
     doc.text(
-      `Giorno #${idx + 1} — Data: ${r.date}  |  Arrivo: ${r.arrivalTime || '--:--'}  |  Uscita: ${r.departureTime || '--:--'}  |  Ore: ${r.hoursWorked}h  (${r.code})`,
+      `Giorno #${idx + 1} — Data: ${r.date}  |  Arrivo: ${r.arrivalTime || '--:--'}  |  Uscita: ${r.departureTime || '--:--'}  |  Ore: ${dayDur}  (${r.code})`,
       16,
       currentY + 1.5
     );
